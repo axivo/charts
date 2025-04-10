@@ -191,7 +191,7 @@ jobs:
             const runGit = async (args) => (await exec.getExecOutput('git', args)).stdout.trim();
             try {
               const changedFiles = (await runGit(['diff-tree', '--no-commit-id', '--name-only', '-r', 'HEAD'])).split('\n');
-              const themeChanged = changedFiles.includes(themePath) || process.env.GITHUB_EVENT_NAME === 'workflow_dispatch';
+              const themeChanged = changedFiles.includes(themePath) || context.eventName === 'workflow_dispatch';
               if (!themeChanged) {
                 core.info('Theme file has not changed. Skipping independent _config.yml update.');
                 return;
