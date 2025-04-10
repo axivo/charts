@@ -1,0 +1,22 @@
+apiVersion: v1
+entries:
+  common:
+  - apiVersion: v2
+    created: "2025-04-10T17:00:58.474760914Z"
+    description: Common library for Helm charts
+    digest: 351acd2960e122a02cc60007de6c1bf2adf013111dd6a86faa8a028def39ed1a
+    home: https://github.com/axivo/charts
+    icon: https://raw.githubusercontent.com/axivo/charts/refs/heads/main/library/common/icon.png
+    keywords:
+    - common
+    - library
+    kubeVersion: '>=1.22.0-0'
+    maintainers:
+    - name: AXIVO
+      url: https://axivo.com
+    name: common
+    type: library
+    urls:
+    - https://github.com/axivo/charts/releases/download/common-1.0.0/common-1.0.0.tgz
+    version: 1.0.0
+generated: "2025-04-10T17:00:58.474773037Z"
