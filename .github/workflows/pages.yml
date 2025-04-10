@@ -3,10 +3,11 @@ name: Deploy GitHub Pages
 on:
   workflow_run:
     branches:
-      - gh-pages
+      - main
     types:
       - completed
-    workflows: ["Charts Release"]
+    workflows:
+      - release.yml
   workflow_dispatch:
 
 concurrency:
