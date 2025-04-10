@@ -7,7 +7,7 @@
 [![Kubernetes](https://img.shields.io/badge/kubernetes-%23326ce5.svg?style=flat&logo=kubernetes&logoColor=white)](https://kubernetes.io)
 [![License](https://img.shields.io/github/license/axivo/charts)](https://github.com/axivo/charts/blob/main/LICENSE)
 
-This Helm repository contains charts designed for deploying applications in Kubernetes clusters using ArgoCD. The charts follow best practices for Kubernetes deployments, with proper documentation and schema validation.
+This Helm repository contains charts designed to deploy applications in Kubernetes clusters, using ArgoCD. The charts follow best practices for Kubernetes deployments, with proper documentation and schema validation.
 
 ### Repository Usage
 
