@@ -1,5 +1,4 @@
 ---
-layout: default
 ---
 
 <img align="right" style="padding: 0 50px;" width="350" height="350" src="https://raw.githubusercontent.com/axivo/charts/main/docs/images/logo-services.svg" alt="AXIVO Helm Charts" />
