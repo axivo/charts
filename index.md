@@ -1,8 +1,4 @@
 ---
-title: AXIVO Helm Charts
-description: Kubernetes Helm charts for deploying applications with ArgoCD
-keywords: argocd, kubernetes, helm, chart, container, devops
-name: AXIVO Helm Charts
 ---
 
 <img align="right" style="padding: 0 50px;" width="350" height="350" src="https://raw.githubusercontent.com/axivo/charts/main/docs/images/logo-services.svg" alt="AXIVO Helm Charts" />
@@ -28,10 +24,8 @@ For detailed documentation about each chart, visit our [GitHub repository](https
 
 ### Available Charts
 
+See below the list of a available Helm charts.
+
 | Chart | Version | Type | Description |
 |-------|---------|------|-------------|
 | `common` | 1.0.0 | library | Common library for Helm charts |
-
-### License
-
-This project is licensed under the [BSD 3-Clause License](https://github.com/axivo/charts/blob/main/LICENSE).
