@@ -7,7 +7,7 @@ on:
     types:
       - completed
     workflows:
-      - "Charts Release"
+      - release.yml
   workflow_dispatch:
 
 concurrency:
