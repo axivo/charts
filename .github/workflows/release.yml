@@ -8,7 +8,6 @@ on:
       - .github/workflows/release.yml
       - .github/cr-config.yml
       - .github/repository.md.gotmpl
-      - .github/theme.md.gotmpl
       - apps/**
       - library/**
   workflow_dispatch:

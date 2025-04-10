@@ -14,7 +14,7 @@ concurrency:
   group: pages
 
 permissions:
-  contents: read
+  contents: write
   id-token: write
   pages: write
 
@@ -23,10 +23,58 @@ jobs:
     name: Build Documentation
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout gh-pages branch
+      - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          ref: gh-pages
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install js-yaml package
+        run: npm install js-yaml
+
+      - name: Update theme on gh-pages
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require('fs');
+            const yaml = require('js-yaml');
+            const themePath = '.github/theme.md.gotmpl';
+            const runGit = async (args) => (await exec.getExecOutput('git', args)).stdout.trim();
+            try {
+              const mainThemeContent = fs.readFileSync(themePath, 'utf8');
+              await runGit(['fetch', 'origin', 'gh-pages']);
+              await runGit(['checkout', '-f', 'gh-pages']);
+              let contentChanged = true;
+              if (fs.existsSync('_config.yml')) {
+                const ghPagesConfigContent = fs.readFileSync('_config.yml', 'utf8');
+                contentChanged = mainThemeContent !== ghPagesConfigContent;
+              }
+              if (!contentChanged) {
+                core.info('Theme file content matches _config.yml on gh-pages. No update needed.');
+              } else {
+                core.info('Theme file content differs from _config.yml. Updating on gh-pages branch.');
+                fs.writeFileSync('_config.yml', mainThemeContent);
+                await runGit(['add', '_config.yml']);
+                const configChanged = (await runGit(['diff', '--staged', '--name-only'])).includes('_config.yml');
+                if (configChanged) {
+                  await runGit(['config', 'user.name', 'github-actions[bot]']);
+                  await runGit(['config', 'user.email', '41898282+github-actions[bot]@users.noreply.github.com']);
+                  await runGit(['commit', '-m', 'chore(github-action): update Jekyll theme configuration']);
+                  await runGit(['push', 'origin', 'gh-pages']);
+                  core.info('Successfully updated _config.yml with latest theme settings.');
+                } else {
+                  core.info('No changes detected in _config.yml staging area.');
+                }
+              }
+              await runGit(['checkout', '--force', 'gh-pages']);
+            } catch (error) {
+              core.setFailed(error.message);
+            }
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
