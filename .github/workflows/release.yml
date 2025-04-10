@@ -7,7 +7,6 @@ on:
     paths:
       - .github/workflows/release.yml
       - .github/cr-config.yml
-      - .github/repository.md.gotmpl
       - apps/**
       - library/**
   workflow_dispatch:
@@ -157,14 +156,6 @@ jobs:
                   await runGit(['add', placeholderPath]);
                 }
                 await runGit(['commit', '-m', 'chore(github-action): update chart releases documentation']);
-                await runGit(['checkout', 'main', themePath]);
-                const configTemplate = fs.readFileSync(themePath, 'utf8');
-                fs.writeFileSync('_config.yml', configTemplate);
-                await runGit(['add', '_config.yml']);
-                const configChanged = (await runGit(['diff', '--staged', '--name-only'])).includes('_config.yml');
-                if (configChanged) {
-                  await runGit(['commit', '-m', 'chore(github-action): update Jekyll config']);
-                }
                 await runGit(['push', 'origin', 'gh-pages']);
               } else {
                 core.info('No changes to index.md detected.');
@@ -175,54 +166,6 @@ jobs:
               core.setFailed(error.message);
               try {
                 await runGit(['checkout', 'main']);
-              } catch (checkoutError) {
-                core.setFailed(checkoutError.message);
-              }
-            }
-
-      - name: Update theme configuration
-        uses: actions/github-script@v7
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            const fs = require('fs');
-            const themePath = '.github/theme.md.gotmpl';
-            const runGit = async (args) => (await exec.getExecOutput('git', args)).stdout.trim();
-            try {
-              const mainThemeContent = fs.readFileSync(themePath, 'utf8');
-              await runGit(['fetch', 'origin', 'gh-pages']);
-              const currentBranch = await runGit(['rev-parse', '--abbrev-ref', 'HEAD']);
-              await runGit(['checkout', '-f', 'gh-pages']);
-              let contentChanged = true;
-              if (fs.existsSync('_config.yml')) {
-                const ghPagesConfigContent = fs.readFileSync('_config.yml', 'utf8');
-                contentChanged = mainThemeContent !== ghPagesConfigContent;
-              }
-              if (!contentChanged) {
-                core.info('Theme file content matches _config.yml on gh-pages. No update needed.');
-                await runGit(['checkout', currentBranch]);
-                return;
-              }
-              core.info('Theme file content differs from _config.yml. Updating on gh-pages branch.');
-              fs.writeFileSync('_config.yml', mainThemeContent);
-              await runGit(['add', '_config.yml']);
-              const configChanged = (await runGit(['diff', '--staged', '--name-only'])).includes('_config.yml');
-              if (configChanged) {
-                await runGit(['commit', '-m', 'chore(github-action): update Jekyll theme configuration']);
-                await runGit(['push', 'origin', 'gh-pages']);
-                core.info('Successfully updated _config.yml with latest theme settings.');
-              } else {
-                core.info('No changes detected in _config.yml staging area.');
-              }
-              await runGit(['checkout', currentBranch]);
-            } catch (error) {
-              core.setFailed(error.message);
-              try {
-                // Get current branch for recovery
-                const currentBranch = await runGit(['rev-parse', '--abbrev-ref', 'HEAD']);
-                if (currentBranch !== 'main') {
-                  await runGit(['checkout', 'main']);
-                }
               } catch (checkoutError) {
                 core.setFailed(checkoutError.message);
               }
