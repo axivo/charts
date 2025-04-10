@@ -3,7 +3,10 @@ name: Deploy GitHub Pages
 on:
   push:
     branches:
-      - gh-pages
+      - main
+    paths:
+      - .github/repository.md.gotmpl
+      - .github/theme.md.gotmpl
   workflow_dispatch:
 
 concurrency:
