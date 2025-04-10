@@ -128,11 +128,15 @@ jobs:
                 .sort(([a], [b]) => a.localeCompare(b))
                 .map(([name, versions]) => {
                   if (!versions || !versions.length) return null;
-                  return '| `' + name + '` | ' + versions[0].version + ' | ' + (versions[0].description || '') + ' |';
+                  const chartName = name;
+                  const version = versions[0].version;
+                  const type = versions[0].type || 'application';
+                  const description = versions[0].description || '';
+                  return `| \`${chartName}\` | ${version} | ${type} | ${description} |`;
                 })
                 .filter(Boolean)
                 .join('\n');
-              const templatePattern = '{{ range .Charts }}| `{{ .Name }}` | {{ .Version }} | {{ .Description }} |\n{{ end }}';
+              const templatePattern = '{{ range .Charts }}| `{{ .Name }}` | {{ .Version }} | {{ .Type }} | {{ .Description }} |\n{{ end }}';
               const templateContent = template.replace(templatePattern, chartTable);
               const indexMdPath = indexPath.replace('.yaml', '.md');
               fs.writeFileSync(indexMdPath, templateContent);
