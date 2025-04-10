@@ -5,17 +5,21 @@ keywords: argocd, kubernetes, helm, chart, container, devops
 url: https://axivo.github.io
 baseurl: /charts
 timezone: America/New_York
-footer_content: '&nbsp;'
+# Hide the footer
+footer_content: ""
+show_footer: false
+is_project_page: false
 github:
   is_project_page: false
   is_user_page: false
   repository_url: https://github.com/axivo/charts
   show_downloads: false
 
-# Custom CSS to hide footer
-head_custom: |
-  <style>
-    .footer { display: none !important; }
+# Custom head content to hide footer
+head_includes: |
+  <style type="text/css">
+    .footer {display: none !important;}
+    div.footer {display: none !important;}
   </style>
 
 # Jekyll build settings
