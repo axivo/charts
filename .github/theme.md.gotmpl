@@ -1,6 +1,7 @@
 name: AXIVO Helm Charts
 page-title: AXIVO Helm Charts
 title: AXIVO Helm Charts
+theme: jekyll-theme-primer
 description: Kubernetes Helm charts for deploying applications with ArgoCD
 keywords: argocd, kubernetes, helm, chart, container, devops
 baseurl: ""
@@ -12,6 +13,19 @@ github:
 github_edit_link: false
 show_downloads: false
 timezone: America/New_York
+
+# Jekyll build settings
+markdown: kramdown
+highlighter: rouge
+kramdown:
+  syntax_highlighter_opts:
+    block:
+      line_numbers: false
+
+# Jekyll plugins
+plugins:
+  - jekyll-seo-tag
+  - jekyll-github-metadata
 
 # Initial README content for gh-pages branch
 readme_content: |
