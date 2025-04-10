@@ -8,6 +8,7 @@ on:
       - .github/workflows/release.yml
       - .github/cr-config.yml
       - .github/repository.md.gotmpl
+      - .github/theme.md.gotmpl
       - apps/**
       - library/**
   workflow_dispatch:
@@ -42,12 +43,22 @@ jobs:
         with:
           version: v3.17.3
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install js-yaml package
+        run: npm install js-yaml
+
       - name: Prepare gh-pages branch
         uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const fs = require('fs');
+            const yaml = require('js-yaml');
+            const themePath = '.github/theme.md.gotmpl';
             const runGit = async (args) => (await exec.getExecOutput('git', args)).stdout.trim();
             try {
               const configContent = fs.readFileSync('.github/cr-config.yml', 'utf8');
@@ -58,10 +69,15 @@ jobs:
                 core.info('Creating gh-pages branch.');
                 await runGit(['checkout', '--orphan', 'gh-pages']);
                 await runGit(['rm', '-rf', '.']);
-                const placeholderContent = '# AXIVO Helm Charts\n\nThis repository contains Helm charts published by chart-releaser.\n';
-                fs.writeFileSync('README.md', placeholderContent);
+                await runGit(['checkout', 'main', themePath]);
+                const configTemplate = fs.readFileSync(themePath, 'utf8');
+                const config = yaml.load(configTemplate);
+                fs.writeFileSync('README.md', config.readme_content);
                 await runGit(['add', 'README.md']);
                 await runGit(['commit', '-m', 'chore(github-action): initialize gh-pages branch']);
+                fs.writeFileSync('_config.yml', configTemplate);
+                await runGit(['add', '_config.yml']);
+                await runGit(['commit', '-m', 'chore(github-action): add Jekyll configuration']);
                 await runGit(['push', 'origin', 'gh-pages']);
                 await runGit(['checkout', 'main']);
               }
@@ -89,21 +105,14 @@ jobs:
           config: .github/cr-config.yml
           skip_existing: true
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-
-      - name: Install js-yaml package
-        run: npm install js-yaml
-
       - name: Update index.md on gh-pages
         uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const fs = require('fs');
-            const yaml = require(process.cwd() + '/node_modules/js-yaml');
+            const yaml = require('js-yaml');
+            const themePath = '.github/theme.md.gotmpl';
             const runGit = async (args) => (await exec.getExecOutput('git', args)).stdout.trim();
             try {
               await runGit(['fetch', 'origin', 'gh-pages']);
@@ -149,6 +158,14 @@ jobs:
                   await runGit(['add', placeholderPath]);
                 }
                 await runGit(['commit', '-m', 'chore(github-action): update chart releases documentation']);
+                await runGit(['checkout', 'main', themePath]);
+                const configTemplate = fs.readFileSync(themePath, 'utf8');
+                fs.writeFileSync('_config.yml', configTemplate);
+                await runGit(['add', '_config.yml']);
+                const configChanged = (await runGit(['diff', '--staged', '--name-only'])).includes('_config.yml');
+                if (configChanged) {
+                  await runGit(['commit', '-m', 'chore(github-action): update Jekyll config']);
+                }
                 await runGit(['push', 'origin', 'gh-pages']);
               } else {
                 core.info('No changes to index.md detected.');
