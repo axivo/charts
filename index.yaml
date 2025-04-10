@@ -19,4 +19,27 @@ entries:
     urls:
     - https://github.com/axivo/charts/releases/download/common-1.0.0/common-1.0.0.tgz
     version: 1.0.0
-generated: "2025-04-10T17:00:58.474773037Z"
+  ubuntu:
+  - apiVersion: v2
+    appVersion: "24.04"
+    created: "2025-04-10T19:49:01.072204889Z"
+    description: Ubuntu Server LTS troubleshooting container for Kubernetes
+    digest: a227ef317ec343ccac5031c4421fb6b6dec3809671f458186e759fdefab964bf
+    home: https://github.com/axivo/charts
+    icon: https://raw.githubusercontent.com/axivo/charts/refs/heads/main/apps/ubuntu/icon.png
+    keywords:
+    - ubuntu
+    - server
+    - troubleshooting
+    kubeVersion: '>=1.22.0-0'
+    maintainers:
+    - name: AXIVO
+      url: https://axivo.com
+    name: ubuntu
+    sources:
+    - https://ubuntu.com/server
+    type: application
+    urls:
+    - https://github.com/axivo/charts/releases/download/ubuntu-1.0.0/ubuntu-1.0.0.tgz
+    version: 1.0.0
+generated: "2025-04-10T19:49:01.072209899Z"
