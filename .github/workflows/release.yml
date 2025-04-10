@@ -5,10 +5,10 @@ on:
     branches:
       - main
     paths:
-      - .github/workflows/release.yml # Workflow definition
-      - .github/cr-config.yml # Chart releaser config
-      - .github/repository.md.gotmpl # Repository template
-      - .github/theme.md.gotmpl # Theme and site config
+      - .github/workflows/release.yml
+      - .github/cr-config.yml
+      - .github/repository.md.gotmpl
+      - .github/theme.md.gotmpl
       - apps/**
       - library/**
   workflow_dispatch:
