@@ -1,13 +1,10 @@
 name: Deploy GitHub Pages
 
 on:
-  workflow_run:
+  push:
     branches:
+      - gh-pages
       - main
-    types:
-      - completed
-    workflows:
-      - release.yml
   workflow_dispatch:
 
 concurrency:
@@ -23,7 +20,6 @@ jobs:
   build:
     name: Build Documentation
     runs-on: ubuntu-latest
-    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
     steps:
       - name: Checkout gh-pages branch
         uses: actions/checkout@v4
