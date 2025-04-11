@@ -38,7 +38,7 @@ jobs:
           node-version: 20
 
       - name: Install js-yaml package
-        run: npm install js-yaml
+        run: npm install js-yaml handlebars
 
       - name: Prepare gh-pages branch
         uses: actions/github-script@v7
@@ -50,7 +50,7 @@ jobs:
             const yaml = require('js-yaml');
             const createSignedCommit = require('./.github/scripts/git-signed-commit.js');
             const branchName = 'gh-pages';
-            const crConfigPath = '.github/cr-config.yml';
+            const crConfigPath = '.github/chart-releaser.yml';
             const themeConfigPath = '.github/pages/config.yml';
             const defaultBranchName = context.payload.repository.default_branch;
             const runGit = async (args) => (await exec.getExecOutput('git', args)).stdout.trim();
@@ -110,7 +110,7 @@ jobs:
           CR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           charts_dir: application
-          config: .github/cr-config.yml
+          config: .github/chart-releaser.yml
           skip_existing: true
 
       - name: Run chart-releaser for libraries
@@ -120,7 +120,7 @@ jobs:
           CR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           charts_dir: library
-          config: .github/cr-config.yml
+          config: .github/chart-releaser.yml
           skip_existing: true
 
       - name: Update index.md on gh-pages branch
@@ -131,14 +131,24 @@ jobs:
             const fs = require('fs/promises');
             const fsSync = require('fs');
             const yaml = require('js-yaml');
+            const Handlebars = require('handlebars');
             const createSignedCommit = require('./.github/scripts/git-signed-commit.js');
             const branchName = 'gh-pages';
             const defaultBranchName = context.payload.repository.default_branch;
-            const crConfigPath = '.github/cr-config.yml';
+            const crConfigPath = '.github/chart-releaser.yml';
             const themeConfigPath = '.github/pages/config.yml';
             const themeIndexPath = '.github/pages/index.md.gotmpl';
             const runGit = async (args) => (await exec.getExecOutput('git', args)).stdout.trim();
+            Handlebars.registerHelper('rawGithubUrl', function(repoUrl, branch, path) {
+              const rawUrl = String(repoUrl).replace("github.com", "raw.githubusercontent.com");
+              return `${rawUrl}/refs/heads/${branch}/${path}`;
+            });
+            let hasStash = false;
             try {
+              core.info('Stashing untracked files before branch switch');
+              await runGit(['stash', 'push', '--include-untracked', '--message', 'Stash for gh-pages update']);
+              const stashList = await runGit(['stash', 'list']);
+              hasStash = stashList.includes('Stash for gh-pages update');
               await runGit(['fetch', 'origin', branchName]);
               await runGit(['switch', branchName]);
               await runGit(['checkout', defaultBranchName, crConfigPath]);
@@ -149,6 +159,9 @@ jobs:
               if (!indexExists) {
                 core.warning(indexPath + ' not found, skipping index.md update.');
                 await runGit(['checkout', defaultBranchName]);
+                if (hasStash) {
+                  await runGit(['stash', 'pop']);
+                }
                 return;
               }
               await runGit(['checkout', defaultBranchName, themeIndexPath]);
@@ -158,23 +171,32 @@ jobs:
               if (!index || !index.entries) {
                 core.warning('Invalid or empty index.yaml file, skipping index.md update.');
                 await runGit(['checkout', defaultBranchName]);
+                if (hasStash) {
+                  await runGit(['stash', 'pop']);
+                }
                 return;
               }
               const repoUrl = context.payload.repository.html_url;
-              const chartTable = Object.entries(index.entries)
+              const charts = Object.entries(index.entries)
                 .sort(([a], [b]) => a.localeCompare(b))
                 .map(([name, versions]) => {
                   if (!versions || !versions.length) return null;
-                  const version = versions[0].version || '';
-                  const type = versions[0].type || 'application';
-                  const description = versions[0].description || '';
-                  const link = [repoUrl, 'tree', defaultBranchName, type, name].join('/');
-                  return ['[`' + name + '`](' + link + ')', version, type, description.replace(/\|/g, '\\|')].join(' | ');
+                  return {
+                    Name: name,
+                    Version: versions[0].version || '',
+                    Type: versions[0].type || 'application',
+                    Description: versions[0].description || ''
+                  };
                 })
-                .filter(Boolean)
-                .join('\n');
+                .filter(Boolean);
+              const templateContext = {
+                Charts: charts,
+                RepoURL: repoUrl,
+                Branch: defaultBranchName
+              };
+              const compiledTemplate = Handlebars.compile(template);
+              const templateContent = compiledTemplate(templateContext);
               const indexMdPath = indexPath.replace('.yaml', '.md');
-              const templateContent = template.replace(/{{ range \.Charts }}[\s\S]*?{{ end }}/, chartTable);
               await fs.writeFile(indexMdPath, templateContent);
               await runGit(['add', indexMdPath]);
               const files = (await runGit(['diff', '--staged', '--name-only'])).split('\n').filter(file => file.length > 0);
@@ -216,11 +238,18 @@ jobs:
                 core.info('No changes to index.md detected.');
               }
               await runGit(['checkout', defaultBranchName]);
+              if (hasStash) {
+                core.info('Restoring stashed changes');
+                await runGit(['stash', 'pop']);
+              }
               core.info('Successfully processed index.md for gh-pages branch.');
             } catch (error) {
               core.setFailed(error.message);
               try {
                 await runGit(['checkout', defaultBranchName]);
+                if (hasStash) {
+                  await runGit(['stash', 'pop']);
+                }
               } catch (checkoutError) {
                 core.setFailed(checkoutError.message);
               }
