@@ -28,5 +28,5 @@ See below the list of a available Helm charts.
 
 | Chart | Version | Type | Description |
 |-------|---------|------|-------------|
-| `common` | 1.0.0 | library | Common library for Helm charts |
-| `ubuntu` | 1.0.0 | application | Ubuntu Server LTS troubleshooting container for Kubernetes |
+{{ range .Charts }}| `{{ .Name }}` | {{ .Version }} | {{ .Type }} | {{ .Description }} |
+{{ end }}
