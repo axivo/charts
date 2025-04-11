@@ -24,7 +24,7 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            import configureGit from './.github/scripts/git-config.js';
+            const configureGit = require('./.github/scripts/git-config.js');
             await configureGit({github, context, core, exec});
 
       - name: Setup Helm
@@ -45,10 +45,10 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            import fs from 'fs/promises';
-            import fsSync from 'fs';
-            import yaml from 'js-yaml';
-            import createSignedCommit from './.github/scripts/git-signed-commit.js';
+            const fs = require('fs/promises');
+            const fsSync = require('fs');
+            const yaml = require('js-yaml');
+            const createSignedCommit = require('./.github/scripts/git-signed-commit.js');
             const branchName = 'gh-pages';
             const crConfigPath = '.github/cr-config.yml';
             const themeConfigPath = '.github/pages/config.yml';
@@ -128,10 +128,10 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            import fs from 'fs/promises';
-            import fsSync from 'fs';
-            import yaml from 'js-yaml';
-            import createSignedCommit from './.github/scripts/git-signed-commit.js';
+            const fs = require('fs/promises');
+            const fsSync = require('fs');
+            const yaml = require('js-yaml');
+            const createSignedCommit = require('./.github/scripts/git-signed-commit.js');
             const branchName = 'gh-pages';
             const defaultBranchName = context.payload.repository.default_branch;
             const crConfigPath = '.github/cr-config.yml';

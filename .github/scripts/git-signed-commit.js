@@ -15,7 +15,7 @@
  * @returns {string} - OID of the created commit
  * 
  * @example
- * import createSignedCommit from './.github/scripts/git-signed-commit.js';
+ * const createSignedCommit = require('./.github/scripts/git-signed-commit.js');
  * 
  * // Example for files already staged in git
  * const runGit = async (args) => (await exec.getExecOutput('git', args)).stdout.trim();
@@ -46,7 +46,7 @@
  *   commitMessage: 'feat: update files'
  * });
  */
-export default async function createSignedCommit({
+async function createSignedCommit({
   github,
   context,
   core,
@@ -115,7 +115,7 @@ export default async function createSignedCommit({
  * @param {Object} fs - Node.js fs/promises module
  * @returns {Object} - Object containing additions and deletions arrays
  */
-export async function getGitStagedChanges(runGit, fs) {
+async function getGitStagedChanges(runGit, fs) {
   const additions = await Promise.all(
     (await runGit(['diff', '--name-only', '--staged', '--diff-filter=ACMR']))
       .split('\n')
@@ -133,3 +133,7 @@ export async function getGitStagedChanges(runGit, fs) {
 
   return { additions, deletions };
 }
+
+// Export functions
+module.exports = createSignedCommit;
+module.exports.getGitStagedChanges = getGitStagedChanges;

@@ -12,11 +12,11 @@
  * @returns {Function} runGit - Async function to run Git commands
  * 
  * @example
- * import configureGit from '../scripts/git-config.js';
+ * const configureGit = require('../scripts/git-config.js');
  * const runGit = await configureGit({github, context, core, exec});
  * // Now use runGit for other Git operations
  */
-export default async ({ github, context, core, exec }) => {
+module.exports = async ({ github, context, core, exec }) => {
   const runGit = async (args) => (await exec.getExecOutput('git', args)).stdout.trim();
 
   try {

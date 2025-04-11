@@ -34,7 +34,7 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            import configureGit from './.github/scripts/git-config.js';
+            const configureGit = require('./.github/scripts/git-config.js');
             await configureGit({github, context, core, exec});
 
       - name: Setup Node.js
@@ -50,10 +50,10 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            import fs from 'fs/promises';
-            import path from 'path';
-            import yaml from 'js-yaml';
-            import createSignedCommit from './.github/scripts/git-signed-commit.js';
+            const fs = require('fs/promises');
+            const path = require('path');
+            const yaml = require('js-yaml');
+            const createSignedCommit = require('./.github/scripts/git-signed-commit.js');
             const branchName = 'gh-pages';
             const themePath = '.github/pages/config.yml';
             const runGit = async (args) => (await exec.getExecOutput('git', args)).stdout.trim();

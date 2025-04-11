@@ -34,7 +34,7 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            import configureGit from './.github/scripts/git-config.js';
+            const configureGit = require('./.github/scripts/git-config.js');
             await configureGit({github, context, core, exec});
 
       - name: Install helm-docs package
@@ -65,8 +65,9 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            import fs from 'fs/promises';
-            import createSignedCommit, { getGitStagedChanges } from './.github/scripts/git-signed-commit.js';
+            const fs = require('fs/promises');
+            const createSignedCommit = require('./.github/scripts/git-signed-commit.js');
+            const { getGitStagedChanges } = require('./.github/scripts/git-signed-commit.js');
             const runGit = async (args) => (await exec.getExecOutput('git', args)).stdout.trim();
             try {
               await runGit(['fetch', 'origin', process.env.GITHUB_HEAD_REF]);
