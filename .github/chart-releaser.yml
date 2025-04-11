@@ -3,3 +3,5 @@
 
 charts-repo-url: https://axivo.github.io/charts/
 index-path: index.yaml
+release-name-template: "{{ .Name }}-v{{ .Version }}"
+release-template: .github/chart-releaser-template.md

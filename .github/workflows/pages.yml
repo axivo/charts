@@ -5,7 +5,7 @@ on:
     branches:
       - main
     paths:
-      - .github/cr-config.yml
+      - .github/chart-releaser.yml
       - .github/pages/config.yml
       - .github/pages/index.md.gotmpl
   workflow_dispatch:
@@ -57,8 +57,13 @@ jobs:
             const branchName = 'gh-pages';
             const themePath = '.github/pages/config.yml';
             const runGit = async (args) => (await exec.getExecOutput('git', args)).stdout.trim();
+            let hasStash = false;
             try {
               const mainThemeContent = await fs.readFile(themePath, 'utf8');
+              core.info('Stashing untracked files before branch switch');
+              await runGit(['stash', 'push', '--include-untracked', '--message', 'Stash for gh-pages update']);
+              const stashList = await runGit(['stash', 'list']);
+              hasStash = stashList.includes('Stash for gh-pages update');
               await runGit(['fetch', 'origin', branchName]);
               await runGit(['switch', branchName]);
               let contentChanged = true;
@@ -68,6 +73,10 @@ jobs:
               } catch {}
               if (!contentChanged) {
                 core.info('Theme content matches, no update needed.');
+                await runGit(['checkout', 'main']);
+                if (hasStash) {
+                  await runGit(['stash', 'pop']);
+                }
                 return;
               }
               core.info('Updating theme content ...');
@@ -76,6 +85,10 @@ jobs:
               const configChanged = (await runGit(['diff', '--staged', '--name-only'])).includes('_config.yml');
               if (!configChanged) {
                 core.info('Theme configuration matches, no update needed.');
+                await runGit(['checkout', 'main']);
+                if (hasStash) {
+                  await runGit(['stash', 'pop']);
+                }
                 return;
               }
               const additions = [{
@@ -92,8 +105,21 @@ jobs:
                 commitMessage: 'chore(github-action): update theme configuration'
               });
               core.info('Theme configuration updated with latest settings.');
+              await runGit(['checkout', 'main']);
+              if (hasStash) {
+                core.info('Restoring stashed changes');
+                await runGit(['stash', 'pop']);
+              }
             } catch (error) {
               core.setFailed(error.message);
+              try {
+                await runGit(['checkout', 'main']);
+                if (hasStash) {
+                  await runGit(['stash', 'pop']);
+                }
+              } catch (checkoutError) {
+                core.setFailed(checkoutError.message);
+              }
             }
 
       - name: Configure environment
