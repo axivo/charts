@@ -37,7 +37,7 @@ jobs:
         with:
           node-version: 20
 
-      - name: Install js-yaml package
+      - name: Install required packages
         run: npm install js-yaml handlebars
 
       - name: Prepare gh-pages branch
@@ -46,7 +46,7 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const fs = require('fs/promises');
-            const fsSync = require('fs');
+            const path = require('path');
             const yaml = require('js-yaml');
             const createSignedCommit = require('./.github/scripts/git-signed-commit.js');
             const branchName = 'gh-pages';
@@ -54,20 +54,24 @@ jobs:
             const themeConfigPath = '.github/pages/config.yml';
             const defaultBranchName = context.payload.repository.default_branch;
             const runGit = async (args) => (await exec.getExecOutput('git', args)).stdout.trim();
+
             try {
               const configContent = await fs.readFile(crConfigPath, 'utf8');
               const indexPathLine = configContent.split('\n').find(line => line.trim().startsWith('index-path:'));
               const indexPath = indexPathLine?.split(':')[1]?.trim() || 'index.yaml';
               const branchExists = (await runGit(['ls-remote', '--heads', 'origin', branchName])).length > 0;
+
               if (!branchExists) {
                 core.info('Creating gh-pages branch ...');
                 await runGit(['checkout', '--orphan', branchName]);
                 await runGit(['rm', '-rf', '.']);
                 await runGit(['checkout', defaultBranchName, themeConfigPath]);
+
                 const configTemplate = await fs.readFile(themeConfigPath, 'utf8');
                 const config = yaml.load(configTemplate);
                 await fs.writeFile('README.md', config.readme_content);
                 await runGit(['add', 'README.md']);
+
                 const headSha = await runGit(['rev-parse', 'HEAD']);
                 await createSignedCommit({
                   github,
@@ -81,8 +85,10 @@ jobs:
                   }],
                   commitMessage: 'chore(github-action): initialize gh-pages branch'
                 });
+
                 await fs.writeFile('_config.yml', configTemplate);
                 await runGit(['add', '_config.yml']);
+
                 const newHeadSha = await runGit(['rev-parse', 'HEAD']);
                 await createSignedCommit({
                   github,
@@ -96,6 +102,7 @@ jobs:
                   }],
                   commitMessage: 'chore(github-action): add theme configuration'
                 });
+
                 await runGit(['push', 'origin', branchName]);
                 await runGit(['checkout', defaultBranchName]);
               }
@@ -129,33 +136,39 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const fs = require('fs/promises');
-            const fsSync = require('fs');
+            const path = require('path');
             const yaml = require('js-yaml');
             const Handlebars = require('handlebars');
             const createSignedCommit = require('./.github/scripts/git-signed-commit.js');
+            const fileExists = require('./.github/scripts/fs-helpers.js');
             const branchName = 'gh-pages';
             const defaultBranchName = context.payload.repository.default_branch;
             const crConfigPath = '.github/chart-releaser.yml';
             const themeConfigPath = '.github/pages/config.yml';
             const themeIndexPath = '.github/pages/index.md.gotmpl';
             const runGit = async (args) => (await exec.getExecOutput('git', args)).stdout.trim();
+
             Handlebars.registerHelper('rawGithubUrl', function(repoUrl, branch, path) {
               const rawUrl = String(repoUrl).replace("github.com", "raw.githubusercontent.com");
               return `${rawUrl}/refs/heads/${branch}/${path}`;
             });
+
             let hasStash = false;
             try {
               core.info('Stashing untracked files before branch switch');
               await runGit(['stash', 'push', '--include-untracked', '--message', 'Stash for gh-pages update']);
               const stashList = await runGit(['stash', 'list']);
               hasStash = stashList.includes('Stash for gh-pages update');
+
               await runGit(['fetch', 'origin', branchName]);
               await runGit(['switch', branchName]);
               await runGit(['checkout', defaultBranchName, crConfigPath]);
+
               const crConfigContent = await fs.readFile(crConfigPath, 'utf8');
               const crConfig = yaml.load(crConfigContent);
               const indexPath = crConfig['index-path'];
-              const indexExists = fsSync.existsSync(indexPath);
+
+              const indexExists = await fileExists(indexPath);
               if (!indexExists) {
                 core.warning(indexPath + ' not found, skipping index.md update.');
                 await runGit(['checkout', defaultBranchName]);
@@ -164,10 +177,12 @@ jobs:
                 }
                 return;
               }
+
               await runGit(['checkout', defaultBranchName, themeIndexPath]);
               const template = await fs.readFile(themeIndexPath, 'utf8');
               const indexContent = await fs.readFile(indexPath, 'utf8');
               const index = yaml.load(indexContent);
+
               if (!index || !index.entries) {
                 core.warning('Invalid or empty index.yaml file, skipping index.md update.');
                 await runGit(['checkout', defaultBranchName]);
@@ -176,6 +191,7 @@ jobs:
                 }
                 return;
               }
+
               const repoUrl = context.payload.repository.html_url;
               const charts = Object.entries(index.entries)
                 .sort(([a], [b]) => a.localeCompare(b))
@@ -189,39 +205,55 @@ jobs:
                   };
                 })
                 .filter(Boolean);
+
               const templateContext = {
                 Charts: charts,
                 RepoURL: repoUrl,
                 Branch: defaultBranchName
               };
+
               const compiledTemplate = Handlebars.compile(template);
               const templateContent = compiledTemplate(templateContext);
               const indexMdPath = indexPath.replace('.yaml', '.md');
+
               await fs.writeFile(indexMdPath, templateContent);
               await runGit(['add', indexMdPath]);
-              const files = (await runGit(['diff', '--staged', '--name-only'])).split('\n').filter(file => file.length > 0);
+
+              const files = (await runGit(['diff', '--staged', '--name-only']))
+                .split('\n')
+                .filter(file => file.length > 0);
+
               if (files.length > 0) {
                 const placeholderPath = '.placeholder';
-                if (fsSync.existsSync(placeholderPath)) {
+                const placeholderExists = await fileExists(placeholderPath);
+
+                if (placeholderExists) {
                   await fs.unlink(placeholderPath);
                   await runGit(['add', placeholderPath]);
                 }
-                const additions = await Promise.all(
-                  files.filter(file => !file.includes(placeholderPath) || !fsSync.existsSync(file))
-                    .map(async file => {
-                      try {
-                        const contents = await fs.readFile(file, 'utf-8');
-                        return { 
-                          path: file, 
-                          contents: Buffer.from(contents).toString('base64') 
-                        };
-                      } catch (err) {
+
+                const filePromises = files
+                  .filter(file => !file.includes(placeholderPath))
+                  .map(async (file) => {
+                    try {
+                      const exists = await fileExists(file);
+                      if (!exists) {
                         return null;
                       }
-                    })
-                );
-                const validAdditions = additions.filter(item => item !== null);
-                const deletions = fsSync.existsSync(placeholderPath) ? [{ path: placeholderPath }] : [];
+
+                      const contents = await fs.readFile(file, 'utf-8');
+                      return {
+                        path: file,
+                        contents: Buffer.from(contents).toString('base64')
+                      };
+                    } catch (err) {
+                      return null;
+                    }
+                  });
+
+                const validAdditions = (await Promise.all(filePromises)).filter(Boolean);
+                const deletions = placeholderExists ? [{ path: placeholderPath }] : [];
+
                 const headSha = await runGit(['rev-parse', 'HEAD']);
                 await createSignedCommit({
                   github,
@@ -233,15 +265,18 @@ jobs:
                   deletions: deletions,
                   commitMessage: 'chore(github-action): update chart release documentation'
                 });
+
                 await runGit(['push', 'origin', branchName]);
               } else {
                 core.info('No changes to index.md detected.');
               }
+
               await runGit(['checkout', defaultBranchName]);
               if (hasStash) {
                 core.info('Restoring stashed changes');
                 await runGit(['stash', 'pop']);
               }
+
               core.info('Successfully processed index.md for gh-pages branch.');
             } catch (error) {
               core.setFailed(error.message);
