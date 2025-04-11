@@ -6,8 +6,8 @@ on:
       - main
     paths:
       - .github/cr-config.yml
-      - .github/repository.md.gotmpl
-      - .github/theme.md.gotmpl
+      - .github/pages/config.yml
+      - .github/pages/index.md.gotmpl
   workflow_dispatch:
 
 concurrency:
@@ -29,6 +29,14 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Configure repository
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            import configureGit from './.github/scripts/git-config.js';
+            await configureGit({github, context, core, exec});
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -42,11 +50,12 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const fs = require('fs/promises');
-            const path = require('path');
-            const yaml = require('js-yaml');
+            import fs from 'fs/promises';
+            import path from 'path';
+            import yaml from 'js-yaml';
+            import createSignedCommit from './.github/scripts/git-signed-commit.js';
             const branchName = 'gh-pages';
-            const themePath = '.github/theme.md.gotmpl';
+            const themePath = '.github/pages/config.yml';
             const runGit = async (args) => (await exec.getExecOutput('git', args)).stdout.trim();
             try {
               const mainThemeContent = await fs.readFile(themePath, 'utf8');
@@ -69,30 +78,19 @@ jobs:
                 core.info('Theme configuration matches, no update needed.');
                 return;
               }
-              await Promise.all([
-                runGit(['config', 'user.name', 'github-actions[bot]']),
-                runGit(['config', 'user.email', '41898282+github-actions[bot]@users.noreply.github.com'])
-              ]);
               const additions = [{
                 path: '_config.yml',
                 contents: Buffer.from(mainThemeContent).toString('base64')
               }];
-              const input = {
-                branch: {
-                  repositoryNameWithOwner: context.payload.repository.full_name,
-                  branchName: branchName
-                },
+              await createSignedCommit({
+                github,
+                context,
+                core,
+                branchName: branchName,
                 expectedHeadOid: await runGit(['rev-parse', 'HEAD']),
-                fileChanges: { additions: additions, deletions: [] },
-                message: { headline: 'chore(github-action): update theme configuration' }
-              };
-              const mutation = `
-                mutation CreateCommitOnBranch($input: CreateCommitOnBranchInput!) {
-                  createCommitOnBranch(input: $input) { commit { oid } }
-                }
-              `;
-              const { createCommitOnBranch } = await github.graphql(mutation, { input });
-              core.info('Signed commit created with OID: ' + createCommitOnBranch.commit.oid);
+                additions: additions,
+                commitMessage: 'chore(github-action): update theme configuration'
+              });
               core.info('Theme configuration updated with latest settings.');
             } catch (error) {
               core.setFailed(error.message);

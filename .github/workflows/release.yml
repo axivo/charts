@@ -24,17 +24,10 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const runGit = async (args) => (await exec.getExecOutput('git', args)).stdout.trim();
-            try {
-              await Promise.all([
-                runGit(['config', 'user.name', 'github-actions[bot]']),
-                runGit(['config', 'user.email', '41898282+github-actions[bot]@users.noreply.github.com'])
-              ]);
-            } catch (error) {
-              core.setFailed(error.message);
-            }
+            import configureGit from './.github/scripts/git-config.js';
+            await configureGit({github, context, core, exec});
 
-      - name: Install Helm
+      - name: Setup Helm
         uses: azure/setup-helm@v4
         with:
           version: v3.17.3
@@ -52,36 +45,65 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const fs = require('fs');
-            const yaml = require('js-yaml');
-            const themePath = '.github/theme.md.gotmpl';
+            import fs from 'fs/promises';
+            import fsSync from 'fs';
+            import yaml from 'js-yaml';
+            import createSignedCommit from './.github/scripts/git-signed-commit.js';
+            const branchName = 'gh-pages';
+            const crConfigPath = '.github/cr-config.yml';
+            const themeConfigPath = '.github/pages/config.yml';
+            const defaultBranchName = context.payload.repository.default_branch;
             const runGit = async (args) => (await exec.getExecOutput('git', args)).stdout.trim();
             try {
-              const configContent = fs.readFileSync('.github/cr-config.yml', 'utf8');
+              const configContent = await fs.readFile(crConfigPath, 'utf8');
               const indexPathLine = configContent.split('\n').find(line => line.trim().startsWith('index-path:'));
               const indexPath = indexPathLine?.split(':')[1]?.trim() || 'index.yaml';
-              const branchExists = (await runGit(['ls-remote', '--heads', 'origin', 'gh-pages'])).length > 0;
+              const branchExists = (await runGit(['ls-remote', '--heads', 'origin', branchName])).length > 0;
               if (!branchExists) {
-                core.info('Creating gh-pages branch.');
-                await runGit(['checkout', '--orphan', 'gh-pages']);
+                core.info('Creating gh-pages branch ...');
+                await runGit(['checkout', '--orphan', branchName]);
                 await runGit(['rm', '-rf', '.']);
-                await runGit(['checkout', 'main', themePath]);
-                const configTemplate = fs.readFileSync(themePath, 'utf8');
+                await runGit(['checkout', defaultBranchName, themeConfigPath]);
+                const configTemplate = await fs.readFile(themeConfigPath, 'utf8');
                 const config = yaml.load(configTemplate);
-                fs.writeFileSync('README.md', config.readme_content);
+                await fs.writeFile('README.md', config.readme_content);
                 await runGit(['add', 'README.md']);
-                await runGit(['commit', '-m', 'chore(github-action): initialize gh-pages branch']);
-                fs.writeFileSync('_config.yml', configTemplate);
+                const headSha = await runGit(['rev-parse', 'HEAD']);
+                await createSignedCommit({
+                  github,
+                  context,
+                  core,
+                  branchName: branchName,
+                  expectedHeadOid: headSha,
+                  additions: [{
+                    path: 'README.md',
+                    contents: Buffer.from(config.readme_content).toString('base64')
+                  }],
+                  commitMessage: 'chore(github-action): initialize gh-pages branch'
+                });
+                await fs.writeFile('_config.yml', configTemplate);
                 await runGit(['add', '_config.yml']);
-                await runGit(['commit', '-m', 'chore(github-action): add Jekyll configuration']);
-                await runGit(['push', 'origin', 'gh-pages']);
-                await runGit(['checkout', 'main']);
+                const newHeadSha = await runGit(['rev-parse', 'HEAD']);
+                await createSignedCommit({
+                  github,
+                  context,
+                  core,
+                  branchName: branchName,
+                  expectedHeadOid: newHeadSha,
+                  additions: [{
+                    path: '_config.yml',
+                    contents: Buffer.from(configTemplate).toString('base64')
+                  }],
+                  commitMessage: 'chore(github-action): add theme configuration'
+                });
+                await runGit(['push', 'origin', branchName]);
+                await runGit(['checkout', defaultBranchName]);
               }
             } catch (error) {
               core.setFailed(error.message);
             }
 
-      - name: Run chart-releaser for application
+      - name: Run chart-releaser for applications
         uses: helm/chart-releaser-action@v1
         id: release-application
         env:
@@ -91,7 +113,7 @@ jobs:
           config: .github/cr-config.yml
           skip_existing: true
 
-      - name: Run chart-releaser for library
+      - name: Run chart-releaser for libraries
         uses: helm/chart-releaser-action@v1
         id: release-library
         env:
@@ -101,36 +123,44 @@ jobs:
           config: .github/cr-config.yml
           skip_existing: true
 
-      - name: Update index.md on gh-pages
+      - name: Update index.md on gh-pages branch
         uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const fs = require('fs');
-            const yaml = require('js-yaml');
-            const themePath = '.github/theme.md.gotmpl';
+            import fs from 'fs/promises';
+            import fsSync from 'fs';
+            import yaml from 'js-yaml';
+            import createSignedCommit from './.github/scripts/git-signed-commit.js';
+            const branchName = 'gh-pages';
+            const defaultBranchName = context.payload.repository.default_branch;
+            const crConfigPath = '.github/cr-config.yml';
+            const themeConfigPath = '.github/pages/config.yml';
+            const themeIndexPath = '.github/pages/index.md.gotmpl';
             const runGit = async (args) => (await exec.getExecOutput('git', args)).stdout.trim();
             try {
-              await runGit(['fetch', 'origin', 'gh-pages']);
-              await runGit(['checkout', '-f', 'gh-pages']);
-              await runGit(['checkout', 'main', '.github/cr-config.yml']);
-              const crConfig = yaml.load(fs.readFileSync('.github/cr-config.yml', 'utf8'));
+              await runGit(['fetch', 'origin', branchName]);
+              await runGit(['switch', branchName]);
+              await runGit(['checkout', defaultBranchName, crConfigPath]);
+              const crConfigContent = await fs.readFile(crConfigPath, 'utf8');
+              const crConfig = yaml.load(crConfigContent);
               const indexPath = crConfig['index-path'];
-              if (!fs.existsSync(indexPath)) {
+              const indexExists = fsSync.existsSync(indexPath);
+              if (!indexExists) {
                 core.warning(indexPath + ' not found, skipping index.md update.');
-                await runGit(['checkout', 'main']);
+                await runGit(['checkout', defaultBranchName]);
                 return;
               }
-              await runGit(['checkout', 'main', '.github/repository.md.gotmpl']);
-              const template = fs.readFileSync('.github/repository.md.gotmpl', 'utf8');
-              const index = yaml.load(fs.readFileSync(indexPath, 'utf8'));
+              await runGit(['checkout', defaultBranchName, themeIndexPath]);
+              const template = await fs.readFile(themeIndexPath, 'utf8');
+              const indexContent = await fs.readFile(indexPath, 'utf8');
+              const index = yaml.load(indexContent);
               if (!index || !index.entries) {
                 core.warning('Invalid or empty index.yaml file, skipping index.md update.');
-                await runGit(['checkout', 'main']);
+                await runGit(['checkout', defaultBranchName]);
                 return;
               }
               const repoUrl = context.payload.repository.html_url;
-              const defaultBranch = context.payload.repository.default_branch;
               const chartTable = Object.entries(index.entries)
                 .sort(([a], [b]) => a.localeCompare(b))
                 .map(([name, versions]) => {
@@ -138,33 +168,59 @@ jobs:
                   const version = versions[0].version || '';
                   const type = versions[0].type || 'application';
                   const description = versions[0].description || '';
-                  const link = [repoUrl, 'tree', defaultBranch, type, name].join('/');
+                  const link = [repoUrl, 'tree', defaultBranchName, type, name].join('/');
                   return ['[`' + name + '`](' + link + ')', version, type, description.replace(/\|/g, '\\|')].join(' | ');
                 })
                 .filter(Boolean)
                 .join('\n');
               const indexMdPath = indexPath.replace('.yaml', '.md');
               const templateContent = template.replace(/{{ range \.Charts }}[\s\S]*?{{ end }}/, chartTable);
-              fs.writeFileSync(indexMdPath, templateContent);
+              await fs.writeFile(indexMdPath, templateContent);
               await runGit(['add', indexMdPath]);
               const files = (await runGit(['diff', '--staged', '--name-only'])).split('\n').filter(file => file.length > 0);
               if (files.length > 0) {
                 const placeholderPath = '.placeholder';
-                if (fs.existsSync(placeholderPath)) {
-                  fs.unlinkSync(placeholderPath);
+                if (fsSync.existsSync(placeholderPath)) {
+                  await fs.unlink(placeholderPath);
                   await runGit(['add', placeholderPath]);
                 }
-                await runGit(['commit', '-m', 'chore(github-action): update chart releases documentation']);
-                await runGit(['push', 'origin', 'gh-pages']);
+                const additions = await Promise.all(
+                  files.filter(file => !file.includes(placeholderPath) || !fsSync.existsSync(file))
+                    .map(async file => {
+                      try {
+                        const contents = await fs.readFile(file, 'utf-8');
+                        return { 
+                          path: file, 
+                          contents: Buffer.from(contents).toString('base64') 
+                        };
+                      } catch (err) {
+                        return null;
+                      }
+                    })
+                );
+                const validAdditions = additions.filter(item => item !== null);
+                const deletions = fsSync.existsSync(placeholderPath) ? [] : [{ path: placeholderPath }];
+                const headSha = await runGit(['rev-parse', 'HEAD']);
+                await createSignedCommit({
+                  github,
+                  context,
+                  core,
+                  branchName: branchName,
+                  expectedHeadOid: headSha,
+                  additions: validAdditions,
+                  deletions: deletions,
+                  commitMessage: 'chore(github-action): update chart release documentation'
+                });
+                await runGit(['push', 'origin', branchName]);
               } else {
                 core.info('No changes to index.md detected.');
               }
-              await runGit(['checkout', 'main']);
+              await runGit(['checkout', defaultBranchName]);
               core.info('Successfully processed index.md for gh-pages branch.');
             } catch (error) {
               core.setFailed(error.message);
               try {
-                await runGit(['checkout', 'main']);
+                await runGit(['checkout', defaultBranchName]);
               } catch (checkoutError) {
                 core.setFailed(checkoutError.message);
               }
