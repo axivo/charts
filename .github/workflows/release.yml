@@ -135,18 +135,16 @@ jobs:
                 .sort(([a], [b]) => a.localeCompare(b))
                 .map(([name, versions]) => {
                   if (!versions || !versions.length) return null;
-                  const version = versions[0].version;
+                  const version = versions[0].version || '';
                   const type = versions[0].type || 'application';
                   const description = versions[0].description || '';
-                  const link = repoUrl + '/tree/' + defaultBranch + '/' + type + '/' + name;
-                  return '| [`' + name + '`](' + link + ') | ' + version + ' | ' + type + ' | ' + description + ' |';
+                  const link = [repoUrl, 'tree', defaultBranch, type, name].join('/');
+                  return ['[`' + name + '`](' + link + ')', version, type, description.replace(/\|/g, '\\|')].join(' | ');
                 })
                 .filter(Boolean)
                 .join('\n');
-              const templatePattern = '{{ range .Charts }}(.|\n)*?{{ end }}';
-              const replacement = '{{ range .Charts }}\n' + chartTable + '\n{{ end }}';
-              const templateContent = template.replace(new RegExp(templatePattern), replacement);
               const indexMdPath = indexPath.replace('.yaml', '.md');
+              const templateContent = template.replace(/{{ range \.Charts }}[\s\S]*?{{ end }}/, chartTable);
               fs.writeFileSync(indexMdPath, templateContent);
               await runGit(['add', indexMdPath]);
               const files = (await runGit(['diff', '--staged', '--name-only'])).split('\n').filter(file => file.length > 0);
