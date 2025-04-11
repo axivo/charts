@@ -28,5 +28,5 @@ See below the list of a available Helm charts.
 
 | Chart | Version | Type | Description |
 |-------|---------|------|-------------|
-{{ range .Charts }}| `{{ .Name }}` | {{ .Version }} | {{ .Type }} | {{ .Description }} |
+{{ range .Charts }}| {{ .Name }} | {{ .Version }} | {{ .Type }} | {{ .Description }} |
 {{ end }}
