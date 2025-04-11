@@ -137,11 +137,16 @@ jobs:
                   const version = versions[0].version;
                   const type = versions[0].type || 'application';
                   const description = versions[0].description || '';
-                  return `| \`${chartName}\` | ${version} | ${type} | ${description} |`;
+                  const repoUrl = context.payload.repository.html_url;
+                  return '| [\`' + chartName + '\`](' + repoUrl + '/tree/main/' + type + '/' 
+                    + chartName + ') | ' + version + ' | ' + type + ' | ' + description + ' |';
                 })
                 .filter(Boolean)
                 .join('\n');
-              const templatePattern = '{{ range .Charts }}| `{{ .Name }}` | {{ .Version }} | {{ .Type }} | {{ .Description }} |\n{{ end }}';
+              const templatePattern = 
+                '{{ range .Charts }}| ' +
+                '[`{{ .Name }}`]({{ .RepositoryURL }}/tree/main/{{ .Type }}/{{ .Name }}) | ' +
+                '{{ .Version }} | {{ .Type }} | {{ .Description }} |\n{{ end }}';
               const templateContent = template.replace(templatePattern, chartTable);
               const indexMdPath = indexPath.replace('.yaml', '.md');
               fs.writeFileSync(indexMdPath, templateContent);
