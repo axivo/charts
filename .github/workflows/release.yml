@@ -221,7 +221,7 @@ jobs:
                     })
                 );
                 const validAdditions = additions.filter(item => item !== null);
-                const deletions = fsSync.existsSync(placeholderPath) ? [] : [{ path: placeholderPath }];
+                const deletions = fsSync.existsSync(placeholderPath) ? [{ path: placeholderPath }] : [];
                 const headSha = await runGit(['rev-parse', 'HEAD']);
                 await createSignedCommit({
                   github,
