@@ -28,5 +28,6 @@ See below the list of a available Helm charts.
 
 | Chart | Version | Type | Description |
 |-------|---------|------|-------------|
-{{ range .Charts }}| `{{ .Name }}` | {{ .Version }} | {{ .Type }} | {{ .Description }} |
-{{ end }}
+[`common`](https://github.com/axivo/charts/tree/main/library/common) | 1.0.0 | library | Common library for Helm charts
+[`sealed-secrets`](https://github.com/axivo/charts/tree/main/application/sealed-secrets) | 1.0.0 | application | Kubernetes secrets controller used for secure Git storage
+[`ubuntu`](https://github.com/axivo/charts/tree/main/application/ubuntu) | 1.0.1 | application | Ubuntu Server LTS troubleshooting container for Kubernetes
