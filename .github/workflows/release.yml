@@ -131,22 +131,20 @@ jobs:
               }
               const repoUrl = context.payload.repository.html_url;
               const defaultBranch = context.payload.repository.default_branch;
-              const rowFormat = '| %name% | %version% | %type% | %description% |';
-              const rowPattern = '{{ range .Charts }}| {{ .Name }} | {{ .Version }} | {{ .Type }} | {{ .Description }} |\n{{ end }}';
-              const chartTable = Object.keys(index.entries)
-                .sort()
-                .filter(name => index.entries[name]?.length)
-                .map(name => {
-                  const chart = index.entries[name][0];
-                  const type = chart.type || 'application';
-                  return rowFormat
-                    .replace('%name%', '[`' + name + '`](' + `${repoUrl}/tree/${defaultBranch}/${type}/${name}` + ')')
-                    .replace('%version%', chart.version)
-                    .replace('%type%', type)
-                    .replace('%description%', chart.description || '');
+              const pattern = '{{ range .Charts }}| {{ .Name }} | {{ .Version }} | {{ .Type }} | {{ .Description }} |\n{{ end }}';
+              const chartTable = Object.entries(index.entries)
+                .sort(([a], [b]) => a.localeCompare(b))
+                .map(([name, versions]) => {
+                  if (!versions || !versions.length) return null;
+                  const version = versions[0].version;
+                  const type = versions[0].type || 'application';
+                  const description = versions[0].description || '';
+                  const link = repoUrl + '/tree/' + defaultBranch + '/' + type + '/' + name;
+                  return '| [`' + name + '`](' + link + ') | ' + version + ' | ' + type + ' | ' + description + ' |';
                 })
+                .filter(Boolean)
                 .join('\n');
-              const templateContent = template.replace(rowPattern, chartTable);
+              const templateContent = template.replace(pattern, chartTable);
               const indexMdPath = indexPath.replace('.yaml', '.md');
               fs.writeFileSync(indexMdPath, templateContent);
               await runGit(['add', indexMdPath]);
