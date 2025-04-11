@@ -19,7 +19,54 @@ entries:
     urls:
     - https://github.com/axivo/charts/releases/download/common-1.0.0/common-1.0.0.tgz
     version: 1.0.0
+  sealed-secrets:
+  - apiVersion: v2
+    created: "2025-04-11T15:20:26.571111419Z"
+    dependencies:
+    - name: sealed-secrets
+      repository: https://bitnami-labs.github.io/sealed-secrets
+      version: 2.17.2
+    description: Kubernetes secrets controller used for secure Git storage
+    digest: 282363a909d3f754d844fdf9867b94e053cb7604dc6c224812666311fcb1b56a
+    home: https://github.com/axivo/charts
+    icon: https://raw.githubusercontent.com/axivo/charts/refs/heads/main/application/sealed-secrets/icon.png
+    keywords:
+    - sealed-secrets
+    - secrets
+    kubeVersion: '>=1.16.0-0'
+    maintainers:
+    - name: AXIVO
+      url: https://axivo.com
+    name: sealed-secrets
+    sources:
+    - https://github.com/bitnami-labs/sealed-secrets
+    type: application
+    urls:
+    - https://github.com/axivo/charts/releases/download/sealed-secrets-1.0.0/sealed-secrets-1.0.0.tgz
+    version: 1.0.0
   ubuntu:
+  - apiVersion: v2
+    appVersion: "24.04"
+    created: "2025-04-11T15:20:26.732383288Z"
+    description: Ubuntu Server LTS troubleshooting container for Kubernetes
+    digest: 8da536608c9ee28894b382ed41c3c9a5b2e00d0e2c448cdc656a239da7d7fc76
+    home: https://github.com/axivo/charts
+    icon: https://raw.githubusercontent.com/axivo/charts/refs/heads/main/application/ubuntu/icon.png
+    keywords:
+    - ubuntu
+    - server
+    - troubleshooting
+    kubeVersion: '>=1.22.0-0'
+    maintainers:
+    - name: AXIVO
+      url: https://axivo.com
+    name: ubuntu
+    sources:
+    - https://ubuntu.com/server
+    type: application
+    urls:
+    - https://github.com/axivo/charts/releases/download/ubuntu-1.0.1/ubuntu-1.0.1.tgz
+    version: 1.0.1
   - apiVersion: v2
     appVersion: "24.04"
     created: "2025-04-10T19:49:01.072204889Z"
@@ -42,4 +89,4 @@ entries:
     urls:
     - https://github.com/axivo/charts/releases/download/ubuntu-1.0.0/ubuntu-1.0.0.tgz
     version: 1.0.0
-generated: "2025-04-10T19:49:01.072209899Z"
+generated: "2025-04-11T15:20:26.732396793Z"
