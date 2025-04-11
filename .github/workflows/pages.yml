@@ -8,6 +8,8 @@ on:
       - .github/chart-releaser.yml
       - .github/pages/config.yml
       - .github/pages/index.md.gotmpl
+      - application/*/Chart.yaml
+      - library/*/Chart.yaml
   workflow_dispatch:
 
 concurrency:
@@ -69,6 +71,7 @@ jobs:
 
               await runGit(['fetch', 'origin', branchName]);
               await runGit(['switch', branchName]);
+              await runGit(['pull', 'origin', branchName]);
 
               let contentChanged = true;
               try {
@@ -165,6 +168,7 @@ jobs:
 
               await runGit(['fetch', 'origin', branchName]);
               await runGit(['switch', branchName]);
+              await runGit(['pull', 'origin', branchName]);
 
               await runGit(['checkout', defaultBranchName, crConfigPath]);
               const crConfigContent = await fs.readFile(crConfigPath, 'utf8');
@@ -245,6 +249,10 @@ jobs:
                 });
 
                 const validAdditions = (await Promise.all(filePromises)).filter(Boolean);
+
+                // Fetch and pull latest changes to avoid rejection
+                await runGit(['fetch', 'origin', branchName]);
+                await runGit(['pull', 'origin', branchName]);
 
                 const headSha = await runGit(['rev-parse', 'HEAD']);
 
