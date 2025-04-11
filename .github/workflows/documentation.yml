@@ -23,7 +23,7 @@ permissions:
 
 jobs:
   update:
-    name: Generate and Publish
+    name: Pull Request
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -52,7 +52,7 @@ jobs:
               core.setFailed(error.message);
             }
 
-      - name: Update documentation
+      - name: Update pull request
         uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -70,7 +70,7 @@ jobs:
               await runGit(['add', '.']);
               const files = (await runGit(['diff', '--name-only', '--staged'])).split('\n').filter(Boolean);
               if (files.length === 0) {
-                core.info('No file changes detected');
+                core.info('No file changes detected.');
                 return;
               }
               const additions = await Promise.all((await runGit(['diff', '--name-only', '--staged', '--diff-filter=ACMR']))
@@ -78,10 +78,7 @@ jobs:
                 .filter(Boolean)
                 .map(async file => {
                   const contents = await fs.readFile(file, 'utf-8');
-                  return {
-                    path: file,
-                    contents: Buffer.from(contents).toString('base64')
-                  };
+                  return { path: file, contents: Buffer.from(contents).toString('base64') };
                 })
               );
               const deletions = (await runGit(['diff', '--name-only', '--staged', '--diff-filter=D']))
@@ -94,10 +91,7 @@ jobs:
                   branchName: context.payload.pull_request.head.ref
                 },
                 expectedHeadOid: context.payload.pull_request.head.sha,
-                fileChanges: {
-                  additions: additions,
-                  deletions: deletions
-                },
+                fileChanges: { additions: additions, deletions: deletions },
                 message: { headline: 'docs(github-action): update documentation' }
               };
               const mutation = `
