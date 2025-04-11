@@ -37,83 +37,84 @@ jobs:
       - name: Install js-yaml package
         run: npm install js-yaml
 
-      - name: Update theme on gh-pages
+      - name: Update theme
         uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const fs = require('fs/promises');
+            const path = require('path');
             const yaml = require('js-yaml');
             const branchName = 'gh-pages';
             const themePath = '.github/theme.md.gotmpl';
             const runGit = async (args) => (await exec.getExecOutput('git', args)).stdout.trim();
             try {
-              const mainThemeContent = fs.readFileSync(themePath, 'utf8');
+              const mainThemeContent = await fs.readFile(themePath, 'utf8');
               await runGit(['fetch', 'origin', branchName]);
               await runGit(['switch', branchName]);
               let contentChanged = true;
-              if (fs.existsSync('_config.yml')) {
-                const ghPagesConfigContent = fs.readFileSync('_config.yml', 'utf8');
+              try {
+                const ghPagesConfigContent = await fs.readFile('_config.yml', 'utf8');
                 contentChanged = mainThemeContent !== ghPagesConfigContent;
-              }
-              if (contentChanged) {
-                core.info('Updating theme content ...');
-                fs.writeFileSync('_config.yml', mainThemeContent);
-                await runGit(['add', '_config.yml']);
-                const configChanged = (await runGit(['diff', '--staged', '--name-only'])).includes('_config.yml');
-                if (configChanged) {
-                  await Promise.all([
-                    runGit(['config', 'user.name', 'github-actions[bot]']),
-                    runGit(['config', 'user.email', '41898282+github-actions[bot]@users.noreply.github.com'])
-                  ]);
-                  const additions = [{
-                    path: '_config.yml',
-                    contents: Buffer.from(mainThemeContent).toString('base64')
-                  }];
-                  const input = {
-                    branch: {
-                      repositoryNameWithOwner: context.payload.repository.full_name,
-                      branchName: branchName
-                    },
-                    expectedHeadOid: await runGit(['rev-parse', 'HEAD']),
-                    fileChanges: { additions: additions, deletions: [] },
-                    message: { headline: 'chore(github-action): update theme configuration' }
-                  };
-                  const mutation = `
-                    mutation CreateCommitOnBranch($input: CreateCommitOnBranchInput!) {
-                      createCommitOnBranch(input: $input) { commit { oid } }
-                    }
-                  `;
-                  const { createCommitOnBranch } = await github.graphql(mutation, { input });
-                  core.info('Signed commit created with OID: ' + createCommitOnBranch.commit.oid);
-                  core.info('Theme configuration updated with latest settings.');
-                } else {
-                  core.info('Theme configuration matches, no update needed.');
-                }
-              } else {
+              } catch {}
+              if (!contentChanged) {
                 core.info('Theme content matches, no update needed.');
+                return;
               }
+              core.info('Updating theme content ...');
+              await fs.writeFile('_config.yml', mainThemeContent);
+              await runGit(['add', '_config.yml']);
+              const configChanged = (await runGit(['diff', '--staged', '--name-only'])).includes('_config.yml');
+              if (!configChanged) {
+                core.info('Theme configuration matches, no update needed.');
+                return;
+              }
+              await Promise.all([
+                runGit(['config', 'user.name', 'github-actions[bot]']),
+                runGit(['config', 'user.email', '41898282+github-actions[bot]@users.noreply.github.com'])
+              ]);
+              const additions = [{
+                path: '_config.yml',
+                contents: Buffer.from(mainThemeContent).toString('base64')
+              }];
+              const input = {
+                branch: {
+                  repositoryNameWithOwner: context.payload.repository.full_name,
+                  branchName: branchName
+                },
+                expectedHeadOid: await runGit(['rev-parse', 'HEAD']),
+                fileChanges: { additions: additions, deletions: [] },
+                message: { headline: 'chore(github-action): update theme configuration' }
+              };
+              const mutation = `
+                mutation CreateCommitOnBranch($input: CreateCommitOnBranchInput!) {
+                  createCommitOnBranch(input: $input) { commit { oid } }
+                }
+              `;
+              const { createCommitOnBranch } = await github.graphql(mutation, { input });
+              core.info('Signed commit created with OID: ' + createCommitOnBranch.commit.oid);
+              core.info('Theme configuration updated with latest settings.');
             } catch (error) {
               core.setFailed(error.message);
             }
 
-      - name: Setup Pages
+      - name: Configure environment
         uses: actions/configure-pages@v5
 
-      - name: Build with Jekyll
+      - name: Build theme
         uses: actions/jekyll-build-pages@v1
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
 
   deploy:
-    name: Deploy Documentation
+    name: Deploy Website
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     needs: build
     steps:
-      - name: Deploy to GitHub Pages
+      - name: Deploy website
         id: deployment
         uses: actions/deploy-pages@v4
