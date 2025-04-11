@@ -5,6 +5,7 @@ on:
     branches:
       - main
     paths:
+      - .github/cr-config.yml
       - .github/repository.md.gotmpl
       - .github/theme.md.gotmpl
   workflow_dispatch:
