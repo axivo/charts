@@ -183,6 +183,10 @@ jobs:
               } else {
                  core.info(`Generated ${indexYamlSource} not found, skipping copy.`);
               }
+              // Create .nojekyll file to prevent GitHub Pages from processing with Jekyll
+              core.info('Creating .nojekyll file');
+              await fs.writeFile('./.nojekyll', '');
+              
               core.info('Jekyll preparation complete.');
 
             } catch (error) {
@@ -196,42 +200,6 @@ jobs:
           source: ./
           destination: ./_site
 
-      - name: Prepare site for GitHub Pages
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const fs = require('fs/promises');
-            
-            async function fileExists(filePath) {
-              try {
-                await fs.access(filePath);
-                return true;
-              } catch {
-                return false;
-              }
-            }
-            
-            try {
-              // Create .nojekyll file
-              core.info('Creating .nojekyll file');
-              await fs.writeFile('./_site/.nojekyll', '');
-              
-              // Try to read directly from the source config file
-              const configPath = '.github/pages/config.yml';
-              if (await fileExists(configPath)) {
-                core.info(`Reading config from ${configPath}`);
-                const config = await fs.readFile(configPath, 'utf8');
-                await fs.writeFile('./_site/_config.yml', config);
-                core.info('Successfully created config file in _site directory');
-              } else {
-                core.warning('Config file not found. GitHub Pages may not render correctly.');
-              }
-              
-              core.info('Site preparation for GitHub Pages complete');
-            } catch (error) {
-              core.setFailed(`Failed to prepare site for GitHub Pages: ${error.message}`);
-            }
-
       - name: Deploy website
         uses: peaceiris/actions-gh-pages@v3
         with:
@@ -243,4 +211,4 @@ jobs:
           user_email: "41898282+github-actions[bot]@users.noreply.github.com"
           commit_message: "chore(github-action): publish site and update chart index"
           force_orphan: false
-          disable_nojekyll: false
+          enable_jekyll: false
