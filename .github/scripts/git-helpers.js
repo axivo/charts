@@ -1,37 +1,36 @@
 /**
  * Git helper functions for GitHub Actions workflows
  * 
- * This script provides common Git operations with enhanced error handling
- * and retry mechanisms for GitHub Actions workflows.
- * 
  * @module git-helpers
  */
 
 /**
- * Safely push to a branch with retry and conflict resolution
+ * Pushes changes to a Git repository with retry logic to handle concurrent update conflicts
  * 
- * Attempts to push to the specified branch, and if it fails due to conflicts,
- * fetches and rebases the latest changes before trying again.
+ * This function attempts to push changes to the specified branch, and if it fails due to
+ * remote changes, it fetches and pulls the latest changes before retrying. This is useful
+ * in CI environments where multiple workflows might update the same branch concurrently.
  * 
- * @param {Object} options - Options for the push operation
- * @param {Function} options.runGit - Function to run Git commands
+ * @param {Object} options - Options for the retryGitPush function
+ * @param {Function} options.runGit - Function to execute Git commands
  * @param {Object} options.core - GitHub Actions Core module for logging
  * @param {string} options.branch - Branch name to push to
- * @param {number} [options.maxAttempts=3] - Maximum number of push attempts
- * @returns {Promise<boolean>} - True if push was successful
- * @throws {Error} - If all push attempts fail
+ * @param {number} [options.maxAttempts=3] - Maximum number of push attempts before failing
+ * @returns {boolean} - Returns true if push succeeded
+ * @throws {Error} - Throws an error if all push attempts fail
  * 
  * @example
- * const { safeGitPush } = require('./.github/scripts/git-helpers.js');
+ * const retryGitPush = require('./.github/scripts/git-helpers.js');
+ * const runGit = async (args) => (await exec.getExecOutput('git', args)).stdout.trim();
  * 
- * // Use in a workflow
- * await safeGitPush({
+ * // Push to the main branch with 3 retry attempts
+ * await retryGitPush({
  *   runGit,
  *   core,
- *   branch: 'gh-pages'
+ *   branch: 'main'
  * });
  */
-async function safeGitPush({ runGit, core, branch, maxAttempts = 3 }) {
+async function retryGitPush({ runGit, core, branch, maxAttempts = 3 }) {
   let pushAttempts = 0;
   let pushSuccess = false;
   
@@ -39,16 +38,14 @@ async function safeGitPush({ runGit, core, branch, maxAttempts = 3 }) {
     try {
       await runGit(['push', 'origin', branch]);
       pushSuccess = true;
-      core.info(`Successfully pushed to ${branch} on attempt ${pushAttempts + 1}`);
     } catch (pushError) {
       pushAttempts++;
       if (pushAttempts >= maxAttempts) {
-        throw new Error(`Failed to push to ${branch} after ${maxAttempts} attempts: ${pushError.message}`);
+        throw new Error(`Failed to push to ${branch} after ${maxAttempts} attempts`);
       }
       
-      core.info(`Push attempt ${pushAttempts} failed, retrying after pulling latest changes...`);
       await runGit(['fetch', 'origin', branch]);
-      await runGit(['pull', '--rebase', 'origin', branch]);
+      await runGit(['pull', 'origin', branch]);
     }
   }
   
@@ -56,52 +53,76 @@ async function safeGitPush({ runGit, core, branch, maxAttempts = 3 }) {
 }
 
 /**
- * Safely switch to a branch, creating it if it doesn't exist
+ * Creates a Git stash and manages its lifecycle for safely switching branches
  * 
- * @param {Object} options - Options for the branch switch operation
- * @param {Function} options.runGit - Function to run Git commands
+ * This function stashes changes before performing operations that require a clean
+ * working directory (like switching branches), and then optionally restores those
+ * changes afterward. It handles tracking whether a stash was actually created.
+ * 
+ * @param {Object} options - Options for the withGitStash function
+ * @param {Function} options.runGit - Function to execute Git commands
  * @param {Object} options.core - GitHub Actions Core module for logging
- * @param {string} options.branch - Branch name to switch to
- * @param {string} [options.baseBranch] - Base branch if creating a new branch
- * @param {boolean} [options.createIfNotExists=false] - Create branch if it doesn't exist
- * @returns {Promise<boolean>} - True if branch exists or was created
+ * @param {string} options.message - Descriptive message for the stash
+ * @param {Function} options.operation - Async function to run while changes are stashed
+ * @returns {Promise<any>} - Returns the result of the operation function
+ * 
+ * @example
+ * const { withGitStash } = require('./.github/scripts/git-helpers.js');
+ * const runGit = async (args) => (await exec.getExecOutput('git', args)).stdout.trim();
+ * 
+ * // Stash changes, switch branch, then restore changes
+ * await withGitStash({
+ *   runGit,
+ *   core,
+ *   message: 'Stash for branch switch',
+ *   operation: async () => {
+ *     await runGit(['checkout', 'other-branch']);
+ *     // Do work on other branch
+ *     return 'operation result';
+ *   }
+ * });
  */
-async function safeBranchSwitch({ runGit, core, branch, baseBranch, createIfNotExists = false }) {
+async function withGitStash({ runGit, core, message, operation }) {
+  let hasStash = false;
+  
   try {
-    // Check if branch exists locally
-    const localBranches = (await runGit(['branch', '--list'])).split('\n').map(b => b.trim().replace('* ', ''));
-    const branchExists = localBranches.includes(branch);
+    core.info(`Stashing changes with message: ${message}`);
+    await runGit(['stash', 'push', '--include-untracked', '--message', message]);
+    const stashList = await runGit(['stash', 'list']);
+    hasStash = stashList.includes(message);
     
-    if (branchExists) {
-      await runGit(['switch', branch]);
-      core.info(`Switched to branch: ${branch}`);
-      return true;
+    if (hasStash) {
+      core.info('Changes stashed successfully');
     } else {
-      const remoteBranchExists = (await runGit(['ls-remote', '--heads', 'origin', branch])).length > 0;
-      
-      if (remoteBranchExists) {
-        await runGit(['fetch', 'origin', branch]);
-        await runGit(['switch', branch]);
-        core.info(`Switched to branch: ${branch}`);
-        return true;
-      } else if (createIfNotExists && baseBranch) {
-        await runGit(['checkout', '-b', branch, baseBranch]);
-        core.info(`Created and switched to new branch: ${branch} from ${baseBranch}`);
-        return true;
-      } else if (!createIfNotExists) {
-        core.warning(`Branch ${branch} does not exist and creation not requested`);
-        return false;
-      } else {
-        core.warning(`Cannot create branch ${branch} without a base branch`);
-        return false;
+      core.info('No changes to stash');
+    }
+    
+    // Run the provided operation while changes are stashed
+    const result = await operation();
+    
+    // Restore stashed changes if they exist
+    if (hasStash) {
+      core.info('Restoring stashed changes');
+      await runGit(['stash', 'pop']);
+    }
+    
+    return result;
+  } catch (error) {
+    core.error(`Error during stash operation: ${error.message}`);
+    
+    // Try to restore stash if it exists and there was an error
+    if (hasStash) {
+      try {
+        core.info('Attempting to restore stashed changes after error');
+        await runGit(['stash', 'pop']);
+      } catch (stashError) {
+        core.warning(`Failed to restore stash: ${stashError.message}`);
       }
     }
-  } catch (error) {
-    core.error(`Failed to switch to branch ${branch}: ${error.message}`);
+    
     throw error;
   }
 }
 
-// Export functions
-module.exports = safeGitPush;
-module.exports.safeBranchSwitch = safeBranchSwitch;
+module.exports = retryGitPush;
+module.exports.withGitStash = withGitStash;
