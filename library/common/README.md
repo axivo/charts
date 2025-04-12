@@ -1,8 +1,8 @@
 # common
 
-![Type: library](https://img.shields.io/badge/Type-library-informational?style=flat-square)  ![Version: 1.0.7](https://img.shields.io/badge/Version-1.0.7-informational?style=flat-square)
+![Type: library](https://img.shields.io/badge/Type-library-informational?style=flat-square)  ![Version: 1.1.1](https://img.shields.io/badge/Version-1.1.1-informational?style=flat-square)
 
-Common library used for all ArgoCD applications, deployed into AXIVO [K3s Cluster](https://github.com/axivo/k3s-cluster). Review the cluster [documentation](https://axivo.com/k3s-cluster/), for additional details. The library deployment is also compatible with a generic Kubernetes cluster.
+Common library used for any ArgoCD applications, deployed into AXIVO [K3s Cluster](https://github.com/axivo/k3s-cluster). Review the cluster [documentation](https://axivo.com/k3s-cluster/), for additional details. The library deployment is also compatible with a generic Kubernetes cluster.
 
 ### Chart Values
 
