@@ -201,20 +201,35 @@ jobs:
         with:
           script: |
             const fs = require('fs/promises');
-
+            
+            async function fileExists(filePath) {
+              try {
+                await fs.access(filePath);
+                return true;
+              } catch {
+                return false;
+              }
+            }
+            
             try {
-              // Copy config file to the _site directory
-              core.info('Copying _config.yml to _site directory');
-              await fs.copyFile('_config.yml', './_site/_config.yml');
-
-              // Create .nojekyll file to prevent GitHub Pages from processing with Jekyll again
+              // Create .nojekyll file
               core.info('Creating .nojekyll file');
               await fs.writeFile('./_site/.nojekyll', '');
-
+              
+              // Try to read directly from the source config file
+              const configPath = '.github/pages/config.yml';
+              if (await fileExists(configPath)) {
+                core.info(`Reading config from ${configPath}`);
+                const config = await fs.readFile(configPath, 'utf8');
+                await fs.writeFile('./_site/_config.yml', config);
+                core.info('Successfully created config file in _site directory');
+              } else {
+                core.warning('Config file not found. GitHub Pages may not render correctly.');
+              }
+              
               core.info('Site preparation for GitHub Pages complete');
             } catch (error) {
               core.setFailed(`Failed to prepare site for GitHub Pages: ${error.message}`);
-              throw error;
             }
 
       - name: Deploy website
