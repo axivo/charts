@@ -46,14 +46,17 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const fs = require('fs/promises');
-            const path = require('path');
+            const path = require('path');     
             const yaml = require('js-yaml');
             const createSignedCommit = require('./.github/scripts/git-signed-commit.js');
+            const safeGitPush = require('./.github/scripts/git-helpers.js');
             const branchName = 'gh-pages';
             const crConfigPath = '.github/chart-releaser.yml';
             const themeConfigPath = '.github/pages/config.yml';
             const defaultBranchName = context.payload.repository.default_branch;
             const runGit = async (args) => (await exec.getExecOutput('git', args)).stdout.trim();
+
+
 
             try {
               const configContent = await fs.readFile(crConfigPath, 'utf8');
@@ -106,7 +109,9 @@ jobs:
                   commitMessage: 'chore(github-action): add theme configuration'
                 });
 
-                await runGit(['push', 'origin', branchName]);
+                // Push with retry mechanism
+                await safeGitPush({ runGit, core, branch: branchName });
+                
                 await runGit(['checkout', defaultBranchName]);
               }
             } catch (error) {
@@ -144,12 +149,15 @@ jobs:
             const Handlebars = require('handlebars');
             const createSignedCommit = require('./.github/scripts/git-signed-commit.js');
             const fileExists = require('./.github/scripts/fs-helpers.js');
+            const safeGitPush = require('./.github/scripts/git-helpers.js');
             const branchName = 'gh-pages';
             const defaultBranchName = context.payload.repository.default_branch;
             const crConfigPath = '.github/chart-releaser.yml';
             const themeConfigPath = '.github/pages/config.yml';
             const themeIndexPath = '.github/pages/index.md.gotmpl';
             const runGit = async (args) => (await exec.getExecOutput('git', args)).stdout.trim();
+
+
 
             Handlebars.registerHelper('rawGithubUrl', function(repoUrl, branch, path) {
               const rawUrl = String(repoUrl).replace("github.com", "raw.githubusercontent.com");
@@ -258,6 +266,10 @@ jobs:
                 const validAdditions = (await Promise.all(filePromises)).filter(Boolean);
                 const deletions = placeholderExists ? [{ path: placeholderPath }] : [];
 
+                // Additional fetch and pull before commit to make sure we're up to date
+                await runGit(['fetch', 'origin', branchName]);
+                await runGit(['pull', '--rebase', 'origin', branchName]);
+                
                 const headSha = await runGit(['rev-parse', 'HEAD']);
                 await createSignedCommit({
                   github,
@@ -270,7 +282,8 @@ jobs:
                   commitMessage: 'chore(github-action): update chart release documentation'
                 });
 
-                await runGit(['push', 'origin', branchName]);
+                // Push with retry mechanism
+                await safeGitPush({ runGit, core, branch: branchName });
               } else {
                 core.info('No changes to index.md detected.');
               }

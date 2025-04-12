@@ -56,6 +56,7 @@ jobs:
             const path = require('path');
             const yaml = require('js-yaml');
             const createSignedCommit = require('./.github/scripts/git-signed-commit.js');
+            const safeGitPush = require('./.github/scripts/git-helpers.js');
             const branchName = 'gh-pages';
             const themePath = '.github/pages/config.yml';
             const defaultBranchName = context.payload.repository.default_branch;
@@ -119,7 +120,10 @@ jobs:
                 commitMessage: 'chore(github-action): update theme configuration'
               });
 
+              
+
               core.info('Theme configuration updated with latest settings.');
+              await safeGitPush({ runGit, core, branch: branchName });
               await runGit(['checkout', defaultBranchName]);
               if (hasStash) {
                 core.info('Restoring stashed changes');
@@ -148,6 +152,7 @@ jobs:
             const Handlebars = require('handlebars');
             const createSignedCommit = require('./.github/scripts/git-signed-commit.js');
             const fileExists = require('./.github/scripts/fs-helpers.js');
+            const safeGitPush = require('./.github/scripts/git-helpers.js');
             const branchName = 'gh-pages';
             const defaultBranchName = context.payload.repository.default_branch;
             const crConfigPath = '.github/chart-releaser.yml';
@@ -266,7 +271,9 @@ jobs:
                   commitMessage: 'chore(github-action): update chart documentation'
                 });
 
-                await runGit(['push', 'origin', branchName]);
+                
+
+              await safeGitPush({ runGit, core, branch: branchName });
               } else {
                 core.info('No changes to index.md detected.');
               }
