@@ -201,7 +201,7 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./_site
           publish_branch: gh-pages
-          keep_files: true
+          keep_files: false
           user_name: "github-actions[bot]"
           user_email: "41898282+github-actions[bot]@users.noreply.github.com"
           commit_message: "chore(github-action): publish site and update chart index"
