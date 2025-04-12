@@ -212,6 +212,8 @@ jobs:
           ls -la ./_site
           echo "--- Content of ./_site/index.html ---"
           cat ./_site/index.html || echo "./_site/index.html not found"
+          echo "--- Checking for .nojekyll ---"
+          ls -la ./_site/.nojekyll || echo "./_site/.nojekyll not found"
           echo "-----------------------------------"
 
       - name: Deploy website
@@ -225,3 +227,17 @@ jobs:
           user_email: "41898282+github-actions[bot]@users.noreply.github.com"
           commit_message: "chore(github-action): publish site and update chart index"
           force_orphan: false
+
+      - name: Verify gh-pages branch content
+        run: |
+          echo "--- Verifying gh-pages branch content after deployment ---"
+          TEMP_DIR=$(mktemp -d)
+          git clone --depth=1 --branch=gh-pages https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git "$TEMP_DIR"
+          echo "--- Listing gh-pages root --- "
+          ls -la "$TEMP_DIR"
+          echo "--- Content of gh-pages index.html ---"
+          cat "$TEMP_DIR/index.html" || echo "index.html not found in gh-pages branch"
+          echo "--- Checking for .nojekyll in gh-pages ---"
+          ls -la "$TEMP_DIR/.nojekyll" || echo ".nojekyll not found in gh-pages branch"
+          echo "--------------------------------------------------------"
+          rm -rf "$TEMP_DIR"
