@@ -143,62 +143,28 @@ jobs:
               }
             }
 
-      - name: Prepare jekyll config and index
+      - name: Setup build environment
         uses: actions/github-script@v7
         with:
           script: |
             const fs = require('fs/promises');
             const path = require('path');
-
-            const configSource = '.github/pages/config.yml';
-            const configDest = '_config.yml';
-            const indexMdSource = './_dist/index.md'; // Changed back from index.html
-            const indexMdDest = './index.md'; // Changed back from index.html
-            const indexYamlSource = './_dist/index.yaml';
-            const indexYamlDest = './index.yaml';
-
-            async function fileExists(filePath) {
-              try {
-                await fs.access(filePath);
-                return true;
-              } catch {
-                return false;
-              }
-            }
-
-            try {
-              core.info(`Copying ${configSource} to ${configDest}`);
-              await fs.copyFile(configSource, configDest);
-
-              if (await fileExists(indexMdSource)) { // Changed back from indexHtmlSource
-                core.info(`Copying ${indexMdSource} to ${indexMdDest}`); // Changed paths
-                await fs.copyFile(indexMdSource, indexMdDest); // Changed paths
-              } else {
-                core.warning(`Generated ${indexMdSource} not found. Jekyll will use root README.md or default.`); // Changed path
-              }
-
-              if (await fileExists(indexYamlSource)) {
-                core.info(`Copying ${indexYamlSource} to ${indexYamlDest}`);
-                await fs.copyFile(indexYamlSource, indexYamlDest);
-              } else {
-                 core.info(`Generated ${indexYamlSource} not found, skipping copy.`);
-              }
-              // Create .nojekyll file to prevent GitHub Pages from processing with Jekyll
-              core.info('Creating .nojekyll file');
-              await fs.writeFile('./.nojekyll', '');
-              
-              core.info('Jekyll preparation complete.');
-
-            } catch (error) {
-              core.setFailed(`Failed to prepare Jekyll files: ${error.message}`);
-              throw error; // Re-throw to fail the workflow step
-            }
+            const { setupBuildEnvironment } = require('./.github/scripts/github-pages.js');
+            await setupBuildEnvironment({ github, context, core, fs, path });
 
       - name: Build website
         uses: actions/jekyll-build-pages@v1
         with:
           source: ./
           destination: ./_site
+
+      - name: Prepare site for GitHub Pages
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs/promises');
+            const { prepareSite } = require('./.github/scripts/github-pages.js');
+            await prepareSite({ github, context, core, fs });
 
       - name: Deploy website
         uses: peaceiris/actions-gh-pages@v4
