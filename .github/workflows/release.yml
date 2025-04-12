@@ -206,6 +206,7 @@ jobs:
           user_email: "41898282+github-actions[bot]@users.noreply.github.com"
           commit_message: "chore(github-action): publish site and update chart index"
           force_orphan: false
+          disable_nojekyll: true # Allow GitHub Pages to run Jekyll
 
       - name: Verify gh-pages branch content
         run: |
