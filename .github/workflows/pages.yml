@@ -44,8 +44,8 @@ jobs:
         with:
           node-version: 20
 
-      - name: Install required packages
-        run: npm install js-yaml handlebars
+      - name: Install Node.js package
+        run: npm install handlebars
 
       - name: Update theme
         uses: actions/github-script@v7
@@ -53,248 +53,101 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const fs = require('fs/promises');
-            const path = require('path');
-            const yaml = require('js-yaml');
             const createSignedCommit = require('./.github/scripts/git-signed-commit.js');
-            const safeGitPush = require('./.github/scripts/git-helpers.js');
-            const branchName = 'gh-pages';
+            const retryGitPush = require('./.github/scripts/git-helpers.js');
             const themePath = '.github/pages/config.yml';
-            const defaultBranchName = context.payload.repository.default_branch;
-            const runGit = async (args) => (await exec.getExecOutput('git', args)).stdout.trim();
-
-            let hasStash = false;
-            try {
-              const mainThemeContent = await fs.readFile(themePath, 'utf8');
-              core.info('Stashing untracked files before branch switch');
-              await runGit(['stash', 'push', '--include-untracked', '--message', 'Stash for gh-pages update']);
-              const stashList = await runGit(['stash', 'list']);
-              hasStash = stashList.includes('Stash for gh-pages update');
-
-              await runGit(['fetch', 'origin', branchName]);
-              await runGit(['switch', branchName]);
-              await runGit(['pull', 'origin', branchName]);
-
-              let contentChanged = true;
-              try {
-                const ghPagesConfigContent = await fs.readFile('_config.yml', 'utf8');
-                contentChanged = mainThemeContent !== ghPagesConfigContent;
-              } catch (error) {
-                // File doesn't exist or can't be read, assume content needs changing
-              }
-
-              if (!contentChanged) {
-                core.info('Theme content matches, no update needed.');
-                await runGit(['checkout', defaultBranchName]);
-                if (hasStash) {
-                  await runGit(['stash', 'pop']);
-                }
-                return;
-              }
-
-              core.info('Updating theme content ...');
-              await fs.writeFile('_config.yml', mainThemeContent);
-              await runGit(['add', '_config.yml']);
-
-              const configChanged = (await runGit(['diff', '--staged', '--name-only'])).includes('_config.yml');
-              if (!configChanged) {
-                core.info('Theme configuration matches, no update needed.');
-                await runGit(['checkout', defaultBranchName]);
-                if (hasStash) {
-                  await runGit(['stash', 'pop']);
-                }
-                return;
-              }
-
-              const additions = [{
-                path: '_config.yml',
-                contents: Buffer.from(mainThemeContent).toString('base64')
-              }];
-
-              await createSignedCommit({
-                github,
-                context,
-                core,
-                branchName: branchName,
-                expectedHeadOid: await runGit(['rev-parse', 'HEAD']),
-                additions: additions,
-                commitMessage: 'chore(github-action): update theme configuration'
-              });
-
-              
-
-              core.info('Theme configuration updated with latest settings.');
-              await safeGitPush({ runGit, core, branch: branchName });
-              await runGit(['checkout', defaultBranchName]);
-              if (hasStash) {
-                core.info('Restoring stashed changes');
-                await runGit(['stash', 'pop']);
-              }
-            } catch (error) {
-              core.setFailed(error.message);
-              try {
-                await runGit(['checkout', defaultBranchName]);
-                if (hasStash) {
-                  await runGit(['stash', 'pop']);
-                }
-              } catch (checkoutError) {
-                core.setFailed(checkoutError.message);
-              }
-            }
-
-      - name: Update index.md
-        uses: actions/github-script@v7
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            const fs = require('fs/promises');
-            const path = require('path');
-            const yaml = require('js-yaml');
-            const Handlebars = require('handlebars');
-            const createSignedCommit = require('./.github/scripts/git-signed-commit.js');
-            const fileExists = require('./.github/scripts/fs-helpers.js');
-            const safeGitPush = require('./.github/scripts/git-helpers.js');
             const branchName = 'gh-pages';
             const defaultBranchName = context.payload.repository.default_branch;
-            const crConfigPath = '.github/chart-releaser.yml';
-            const themeIndexPath = '.github/pages/index.md.gotmpl';
             const runGit = async (args) => (await exec.getExecOutput('git', args)).stdout.trim();
 
-            Handlebars.registerHelper('rawGithubUrl', function(repoUrl, branch, path) {
-              const rawUrl = String(repoUrl).replace("github.com", "raw.githubusercontent.com");
-              return `${rawUrl}/refs/heads/${branch}/${path}`;
-            });
-
-            let hasStash = false;
             try {
-              core.info('Stashing untracked files before branch switch');
-              await runGit(['stash', 'push', '--include-untracked', '--message', 'Stash for index.md update']);
-              const stashList = await runGit(['stash', 'list']);
-              hasStash = stashList.includes('Stash for index.md update');
-
-              await runGit(['fetch', 'origin', branchName]);
-              await runGit(['switch', branchName]);
-              await runGit(['pull', 'origin', branchName]);
-
-              await runGit(['checkout', defaultBranchName, crConfigPath]);
-              const crConfigContent = await fs.readFile(crConfigPath, 'utf8');
-              const crConfig = yaml.load(crConfigContent);
-              const indexPath = crConfig['index-path'];
-
-              const indexExists = await fileExists(indexPath);
-              if (!indexExists) {
-                core.warning(indexPath + ' not found, skipping index.md update.');
-                await runGit(['checkout', defaultBranchName]);
-                if (hasStash) {
-                  await runGit(['stash', 'pop']);
-                }
+              let mainThemeContent;
+              try {
+                mainThemeContent = await fs.readFile(themePath, 'utf8');
+              } catch (fileError) {
+                core.setFailed('Failed to read theme file ' + themePath + ': ' + fileError.message);
                 return;
               }
 
-              await runGit(['checkout', defaultBranchName, themeIndexPath]);
-              const template = await fs.readFile(themeIndexPath, 'utf8');
-              const indexContent = await fs.readFile(indexPath, 'utf8');
-              const index = yaml.load(indexContent);
-
-              if (!index || !index.entries) {
-                core.warning('Invalid or empty index.yaml file, skipping index.md update.');
-                await runGit(['checkout', defaultBranchName]);
-                if (hasStash) {
-                  await runGit(['stash', 'pop']);
-                }
+              const branchExists = (await runGit(['ls-remote', '--heads', 'origin', branchName])).length > 0;
+              if (!branchExists) {
+                core.warning('Branch ' + branchName + ' does not exist, skipping theme update.');
                 return;
               }
 
-              const repoUrl = context.payload.repository.html_url;
-              const charts = Object.entries(index.entries)
-                .sort(([a], [b]) => a.localeCompare(b))
-                .map(([name, versions]) => {
-                  if (!versions || !versions.length) return null;
-                  return {
-                    Name: name,
-                    Version: versions[0].version || '',
-                    Type: versions[0].type || 'application',
-                    Description: versions[0].description || ''
-                  };
-                })
-                .filter(Boolean);
-
-              const templateContext = {
-                Charts: charts,
-                RepoURL: repoUrl,
-                Branch: defaultBranchName
-              };
-
-              const compiledTemplate = Handlebars.compile(template);
-              const templateContent = compiledTemplate(templateContext);
-              const indexMdPath = indexPath.replace('.yaml', '.md');
-
-              await fs.writeFile(indexMdPath, templateContent);
-              await runGit(['add', indexMdPath]);
-
-              const files = (await runGit(['diff', '--staged', '--name-only']))
-                .split('\n')
-                .filter(file => file.length > 0);
-
-              if (files.length > 0) {
-                const filePromises = files.map(async (file) => {
+              await retryGitPush.withGitStash({
+                runGit,
+                core,
+                message: 'Stash for theme update',
+                operation: async () => {
                   try {
-                    const exists = await fileExists(file);
-                    if (!exists) {
-                      return null;
+                    await runGit(['fetch', 'origin', branchName]);
+                    await runGit(['switch', branchName]);
+
+                    let contentChanged = true;
+                    try {
+                      const ghPagesConfigContent = await fs.readFile('_config.yml', 'utf8');
+                      contentChanged = mainThemeContent !== ghPagesConfigContent;
+                    } catch (error) {
+                      core.info('Could not read existing _config.yml: ' + error.message);
                     }
 
-                    const contents = await fs.readFile(file, 'utf-8');
-                    return {
-                      path: file,
-                      contents: Buffer.from(contents).toString('base64')
-                    };
-                  } catch (err) {
-                    return null;
+                    if (!contentChanged) {
+                      core.info('Theme content matches, no update needed.');
+                      return;
+                    }
+
+                    core.info('Updating theme content...');
+                    try {
+                      await fs.writeFile('_config.yml', mainThemeContent);
+                    } catch (writeError) {
+                      core.setFailed('Failed to write _config.yml: ' + writeError.message);
+                      return;
+                    }
+
+                    await runGit(['add', '_config.yml']);
+                    const configChanged = (await runGit(['diff', '--staged', '--name-only'])).includes('_config.yml');
+
+                    if (!configChanged) {
+                      core.info('Theme configuration matches, no update needed.');
+                      return;
+                    }
+
+                    const headSha = await runGit(['rev-parse', 'HEAD']);
+
+                    try {
+                      await createSignedCommit({
+                        github,
+                        context,
+                        core,
+                        branchName,
+                        expectedHeadOid: headSha,
+                        additions: [{
+                          path: '_config.yml',
+                          contents: Buffer.from(mainThemeContent).toString('base64')
+                        }],
+                        commitMessage: 'chore(github-action): update theme configuration'
+                      });
+
+                      core.info('Theme configuration updated successfully.');
+                    } catch (commitError) {
+                      core.warning('GitHub API commit failed: ' + commitError.message);
+                      core.info('Attempting direct Git commit and push...');
+                      try {
+                        await runGit(['commit', '-m', 'chore(github-action): update theme configuration']);
+                        await retryGitPush({ runGit, core, branch: branchName });
+                        core.info('Theme configuration updated successfully using Git commands.');
+                      } catch (gitError) {
+                        core.setFailed('Failed to commit changes: ' + gitError.message);
+                      }
+                    }
+                  } catch (operationError) {
+                    core.setFailed('Operation failed: ' + operationError.message);
                   }
-                });
-
-                const validAdditions = (await Promise.all(filePromises)).filter(Boolean);
-
-                // Fetch and pull latest changes to avoid rejection
-                await runGit(['fetch', 'origin', branchName]);
-                await runGit(['pull', 'origin', branchName]);
-
-                const headSha = await runGit(['rev-parse', 'HEAD']);
-
-                await createSignedCommit({
-                  github,
-                  context,
-                  core,
-                  branchName: branchName,
-                  expectedHeadOid: headSha,
-                  additions: validAdditions,
-                  commitMessage: 'chore(github-action): update chart documentation'
-                });
-
-                
-
-              await safeGitPush({ runGit, core, branch: branchName });
-              } else {
-                core.info('No changes to index.md detected.');
-              }
-
-              await runGit(['checkout', defaultBranchName]);
-              if (hasStash) {
-                core.info('Restoring stashed changes');
-                await runGit(['stash', 'pop']);
-              }
-
-              core.info('Successfully processed index.md for gh-pages branch.');
-            } catch (error) {
-              core.setFailed(error.message);
-              try {
-                await runGit(['checkout', defaultBranchName]);
-                if (hasStash) {
-                  await runGit(['stash', 'pop']);
                 }
-              } catch (checkoutError) {
-                core.setFailed(checkoutError.message);
-              }
+              });
+            } catch (error) {
+              core.setFailed('Unexpected error: ' + error.message);
             }
 
       - name: Configure environment
