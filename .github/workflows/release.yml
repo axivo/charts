@@ -142,19 +142,35 @@ jobs:
               }
             }
 
-      - name: Prepare jekyll config and index
+      - name: Prepare site directory
         uses: actions/github-script@v7
         with:
           script: |
             const fs = require('fs/promises');
             const path = require('path');
 
-            const configSource = '.github/pages/config.yml';
-            const configDest = '_config.yml';
-            const indexHtmlSource = './_dist/index.html'; // Changed from index.md
-            const indexHtmlDest = './index.html'; // Changed from index.md
-            const indexYamlSource = './_dist/index.yaml';
-            const indexYamlDest = './index.yaml';
+            const siteDir = './_site';
+            const distIndex = './_dist/index.html';
+            const siteIndex = path.join(siteDir, 'index.html');
+            const assetsSourceDir = './assets';
+            const assetsDestDir = path.join(siteDir, 'assets');
+            const docsImagesSourceDir = './docs/images';
+            const docsImagesDestDir = path.join(siteDir, 'docs', 'images');
+            const noJekyllFile = path.join(siteDir, '.nojekyll');
+
+            async function copyDirRecursive(src, dest) {
+              await fs.mkdir(dest, { recursive: true });
+              const entries = await fs.readdir(src, { withFileTypes: true });
+              for (let entry of entries) {
+                const srcPath = path.join(src, entry.name);
+                const destPath = path.join(dest, entry.name);
+                if (entry.isDirectory()) {
+                  await copyDirRecursive(srcPath, destPath);
+                } else {
+                  await fs.copyFile(srcPath, destPath);
+                }
+              }
+            }
 
             async function fileExists(filePath) {
               try {
@@ -166,55 +182,40 @@ jobs:
             }
 
             try {
-              core.info(`Copying ${configSource} to ${configDest}`);
-              await fs.copyFile(configSource, configDest);
+              core.info(`Creating site directory: ${siteDir}`);
+              await fs.mkdir(siteDir, { recursive: true });
 
-              if (await fileExists(indexHtmlSource)) { // Changed from indexMdSource
-                core.info(`Copying ${indexHtmlSource} to ${indexHtmlDest}`); // Changed paths
-                await fs.copyFile(indexHtmlSource, indexHtmlDest); // Changed paths
+              if (await fileExists(distIndex)) {
+                core.info(`Copying generated index: ${distIndex} -> ${siteIndex}`);
+                await fs.copyFile(distIndex, siteIndex);
               } else {
-                core.warning(`Generated ${indexHtmlSource} not found. Jekyll will use root README.md or default.`); // Changed path
+                core.warning(`Generated ${distIndex} not found. Cannot create site index.`);
+                // Optionally fail here: process.exit(1);
               }
 
-              if (await fileExists(indexYamlSource)) {
-                core.info(`Copying ${indexYamlSource} to ${indexYamlDest}`);
-                await fs.copyFile(indexYamlSource, indexYamlDest);
+              if (await fileExists(assetsSourceDir)) {
+                 core.info(`Copying assets directory: ${assetsSourceDir} -> ${assetsDestDir}`);
+                 await copyDirRecursive(assetsSourceDir, assetsDestDir);
               } else {
-                 core.info(`Generated ${indexYamlSource} not found, skipping copy.`);
+                 core.warning(`Assets directory ${assetsSourceDir} not found.`);
               }
-              core.info('Jekyll preparation complete.');
+
+              if (await fileExists(docsImagesSourceDir)) {
+                 core.info(`Copying docs images directory: ${docsImagesSourceDir} -> ${docsImagesDestDir}`);
+                 await copyDirRecursive(docsImagesSourceDir, docsImagesDestDir);
+              } else {
+                 core.warning(`Docs images directory ${docsImagesSourceDir} not found.`);
+              }
+
+              core.info(`Creating .nojekyll file: ${noJekyllFile}`);
+              await fs.writeFile(noJekyllFile, ''); // Create empty file
+
+              core.info('Site directory preparation complete.');
 
             } catch (error) {
-              core.setFailed(`Failed to prepare Jekyll files: ${error.message}`);
-              throw error; // Re-throw to fail the workflow step
+              core.setFailed(`Failed to prepare site directory: ${error.message}`);
+              throw error;
             }
-
-      - name: Pre-Build Diagnostics
-        run: |
-          echo "--- Root Directory Listing ---"
-          ls -la
-          echo "--- Content of ./index.html ---"
-          cat ./index.html || echo "./index.html not found"
-          echo "--- Content of ./README.md ---"
-          cat ./README.md || echo "./README.md not found"
-          echo "--- Content of application/ubuntu/README.md ---"
-          cat application/ubuntu/README.md || echo "application/ubuntu/README.md not found"
-          echo "-------------------------------"
-
-      - name: Build website
-        uses: actions/jekyll-build-pages@v1
-        with:
-          source: ./
-
-      - name: Post-Build Diagnostics
-        run: |
-          echo "--- _site Directory Listing ---"
-          ls -la ./_site
-          echo "--- Content of ./_site/index.html ---"
-          cat ./_site/index.html || echo "./_site/index.html not found"
-          echo "--- Checking for .nojekyll ---"
-          ls -la ./_site/.nojekyll || echo "./_site/.nojekyll not found"
-          echo "-----------------------------------"
 
       - name: Deploy website
         uses: peaceiris/actions-gh-pages@v3
