@@ -58,29 +58,11 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            // Load the module
-            const pagesModule = require('./.github/scripts/pages.js');
-            const { CONFIG, setOutputs } = pagesModule;
-            
-            // Set all outputs for later steps
-            setOutputs(core);
-
-            // Create dist directory
             const fs = require('fs/promises');
-            try {
-              await fs.mkdir(CONFIG.paths.distDir, { recursive: true });
-              core.info(`Created directory: ${CONFIG.paths.distDir}`);
-            } catch (error) {
-              core.setFailed(`Error creating directory: ${error.message}`);
-            }
-
-            // Verify release template exists
-            try {
-              await fs.access(CONFIG.paths.releaseTemplate);
-              core.info(`Release template found at: ${CONFIG.paths.releaseTemplate}`);
-            } catch (error) {
-              core.setFailed(`Release template not found at ${CONFIG.paths.releaseTemplate}: ${error.message}`);
-            }
+            const pagesModule = require('./.github/scripts/pages.js');
+            const { setOutputs, setupChartReleaserConfig } = pagesModule;
+            setOutputs(core);
+            await setupChartReleaserConfig({ core, fs });
 
       - name: Release application charts
         uses: helm/chart-releaser-action@v1
@@ -113,13 +95,11 @@ jobs:
           skip_existing: true
 
       - name: Generate chart index page
-        id: generate_index
         uses: actions/github-script@v7
         with:
           script: |
             const fs = require('fs/promises');
-            const pagesScriptPath = '${{ steps.chart-config.outputs.PAGES_SCRIPT_PATH }}';
-            const { generateChartIndex } = require(pagesScriptPath);
+            const { generateChartIndex } = require('./.github/scripts/pages.js');
             await generateChartIndex({ context, core, fs });
 
       - name: Setup build environment
@@ -127,8 +107,7 @@ jobs:
         with:
           script: |
             const fs = require('fs/promises');
-            const pagesScriptPath = '${{ steps.chart-config.outputs.PAGES_SCRIPT_PATH }}';
-            const { setupBuildEnvironment } = require(pagesScriptPath);
+            const { setupBuildEnvironment } = require('./.github/scripts/pages.js');
             await setupBuildEnvironment({ core, fs });
 
       - name: Build website
@@ -136,14 +115,6 @@ jobs:
         with:
           source: ./
           destination: ./_site
-
-      - name: Prepare site for GitHub Pages
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const pagesScriptPath = '${{ steps.chart-config.outputs.PAGES_SCRIPT_PATH }}';
-            const { prepareSite } = require(pagesScriptPath);
-            await prepareSite({ core });
 
       - name: Setup Pages
         id: pages

@@ -8,7 +8,7 @@
  * - Preparing the build environment for Jekyll
  * - Finalizing GitHub Pages deployment
  * 
- * @module github-pages
+ * @module pages
  */
 
 /**
@@ -22,15 +22,12 @@
 const CONFIG = {
   // File and directory paths
   paths: {
-    chartReleaserConfig: '.github/chart-releaser.yml',
-    configDest: '_config.yml',
-    configSource: '.github/pages/config.yml',
+    configPath: './_config.yml',
+    configSrcPath: '.github/pages/config.yml',
     distDir: './_dist',
-    indexMdDest: './index.md',
-    indexMdSource: './_dist/index.md',
-    indexYamlDest: './index.yaml',
-    indexYamlSource: './_dist/index.yaml',
-    pagesScript: './.github/scripts/pages.js',
+    indexMdPath: './_dist/index.md',
+    indexMdSrcPath: './index.md',
+    indexYamlPath: './index.yaml',
     releaseTemplate: '.github/release_template.md',
     templatePath: '.github/pages/index.md.hbs'
   },
@@ -81,66 +78,49 @@ const CONFIG = {
  * @returns {Promise<void>}
  */
 async function setupBuildEnvironment({ core, fs }) {
+  // Helper function to check if a file exists
+  async function fileExists(filePath) {
+    try {
+      await fs.access(filePath);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  // Copy Jekyll config
   try {
-    // Helper function to check if a file exists
-    async function fileExists(filePath) {
-      try {
-        await fs.access(filePath);
-        return true;
-      } catch {
-        return false;
-      }
-    }
+    core.info(`Copying ${CONFIG.paths.configSrcPath} to ${CONFIG.paths.configPath}`);
+    await fs.copyFile(CONFIG.paths.configSrcPath, CONFIG.paths.configPath);
+  } catch (error) {
+    const errorMsg = `Failed to copy Jekyll config: ${error.message}`;
+    core.setFailed(errorMsg);
+    throw new Error(errorMsg);
+  }
 
-    // Copy Jekyll config
-    core.info(`Copying ${CONFIG.paths.configSource} to ${CONFIG.paths.configDest}`);
-    await fs.copyFile(CONFIG.paths.configSource, CONFIG.paths.configDest);
+  // Copy index.md if exists
+  try {
+    core.info(`Copying ${CONFIG.paths.indexMdPath} to ${CONFIG.paths.indexMdSrcPath}`);
+    await fs.copyFile(CONFIG.paths.indexMdPath, CONFIG.paths.indexMdSrcPath);
+  } catch (error) {
+    const errorMsg = `Failed to process index.md: ${error.message}`;
+    core.setFailed(errorMsg);
+    throw new Error(errorMsg);
+  }
 
-    // Copy index.md if exists
-    if (await fileExists(CONFIG.paths.indexMdSource)) {
-      core.info(`Copying ${CONFIG.paths.indexMdSource} to ${CONFIG.paths.indexMdDest}`);
-      await fs.copyFile(CONFIG.paths.indexMdSource, CONFIG.paths.indexMdDest);
-    } else {
-      core.warning(`Generated ${CONFIG.paths.indexMdSource} not found. Jekyll will use root README.md or default.`);
-    }
-
-    // Copy index.yaml if exists
-    if (await fileExists(CONFIG.paths.indexYamlSource)) {
-      core.info(`Copying ${CONFIG.paths.indexYamlSource} to ${CONFIG.paths.indexYamlDest}`);
-      await fs.copyFile(CONFIG.paths.indexYamlSource, CONFIG.paths.indexYamlDest);
-    } else {
-      core.info(`Generated ${CONFIG.paths.indexYamlSource} not found, skipping copy.`);
-    }
-
-    // Remove README.md from root if it exists (to avoid conflicts in pre-build)
+  // Remove README.md from root if it exists (to avoid conflicts in pre-build)
+  try {
     if (await fileExists('./README.md')) {
       core.info('Removing README.md from root to prevent conflicts with index.html');
       await fs.unlink('./README.md');
     }
-
-    core.info('Jekyll preparation complete.');
   } catch (error) {
-    core.setFailed(`Failed to prepare Jekyll files: ${error.message}`);
-    throw error;
+    const errorMsg = `Failed to remove README.md: ${error.message}`;
+    core.setFailed(errorMsg);
+    throw new Error(errorMsg);
   }
-}
 
-/**
- * Prepare the built site for GitHub Pages deployment
- * 
- * @param {Object} options - Options for site preparation
- * @param {Object} options.core - GitHub Actions Core API for logging and output
- * @returns {Promise<void>}
- */
-async function prepareSite({ core }) {
-  try {
-    // We already removed README.md in setupBuildEnvironment
-    // and we're using GitHub's official Jekyll build action
-    core.info('Site preparation for GitHub Pages completed');
-  } catch (error) {
-    core.setFailed(`Failed to prepare site for GitHub Pages: ${error.message}`);
-    throw error;
-  }
+  core.info('Jekyll preparation complete.');
 }
 
 /**
@@ -150,8 +130,8 @@ async function prepareSite({ core }) {
  * @param {Object} options.context - GitHub Actions context for repository info
  * @param {Object} options.core - GitHub Actions Core API for logging and output
  * @param {Object} options.fs - Node.js fs/promises module for file operations
- * @param {string} [options.indexYamlPath=CONFIG.paths.indexYamlSource] - Path to the index.yaml file
- * @param {string} [options.indexMdPath=CONFIG.paths.indexMdSource] - Path where to write the generated index.md
+ * @param {string} [options.indexYamlPath=CONFIG.paths.indexYamlPath] - Path to the index.yaml file
+ * @param {string} [options.indexMdPath=CONFIG.paths.indexMdPath] - Path where to write the generated index.md
  * @param {string} [options.templatePath=CONFIG.paths.templatePath] - Path to the Handlebars template
  * @returns {Promise<boolean>} - True if successful, false if skipped
  */
@@ -159,11 +139,10 @@ async function generateChartIndex({
   context,
   core,
   fs,
-  indexYamlPath = CONFIG.paths.indexYamlSource,
-  indexMdPath = CONFIG.paths.indexMdSource,
+  indexYamlPath = CONFIG.paths.indexYamlPath,
+  indexMdPath = CONFIG.paths.indexMdPath,
   templatePath = CONFIG.paths.templatePath
 }) {
-
   try {
     core.info(`Reading index YAML from ${indexYamlPath}`);
     const indexContent = await fs.readFile(indexYamlPath, 'utf8');
@@ -216,7 +195,7 @@ async function generateChartIndex({
   } catch (error) {
     // Check if error is due to missing index.yaml (ENOENT)
     if (error.code === 'ENOENT' && error.path === indexYamlPath) {
-      core.warning(`Index file not found at ${indexYamlPath}, likely no charts released. Skipping index.md generation.`);
+      core.warning(`Index file not found at ${indexYamlPath}, likely no charts released.`);
       return false;
     } else {
       core.setFailed(`Failed to generate index.md: ${error.message}`);
@@ -240,9 +219,31 @@ function setOutputs(core) {
   Object.entries(CONFIG.outputDirs).forEach(([key, value]) => {
     core.setOutput(key, value);
   });
+}
 
-  // Set script path output
-  core.setOutput('PAGES_SCRIPT_PATH', CONFIG.paths.pagesScript);
+/**
+ * Sets up the chart-releaser configuration by creating necessary directories
+ * and checking if the release template exists
+ *
+ * @param {Object} options - Options for chart configuration setup
+ * @param {Object} options.core - GitHub Actions Core API for logging and output
+ * @param {Object} options.fs - Node.js fs/promises module for file operations
+ * @returns {Promise<void>}
+ */
+async function setupChartReleaserConfig({ core, fs }) {
+  try {
+    // Create the distribution directory if it doesn't exist
+    await fs.mkdir(CONFIG.paths.distDir, { recursive: true });
+    core.info(`Created directory: ${CONFIG.paths.distDir}`);
+
+    // Check if the release template exists
+    await fs.access(CONFIG.paths.releaseTemplate);
+    core.info(`Release template found at: ${CONFIG.paths.releaseTemplate}`);
+  } catch (error) {
+    const errorMsg = `Failed to setup chart-releaser configuration: ${error.message}`;
+    core.setFailed(errorMsg);
+    throw new Error(errorMsg);
+  }
 }
 
 // Export all the functions and constants
@@ -251,5 +252,6 @@ module.exports = {
   setupBuildEnvironment,
   prepareSite,
   generateChartIndex,
-  setOutputs
+  setOutputs,
+  setupChartReleaserConfig
 };
