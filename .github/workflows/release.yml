@@ -80,7 +80,7 @@ jobs:
             const yaml = require('js-yaml');
             const Handlebars = require('handlebars');
             const indexYamlPath = './_dist/index.yaml';
-            const indexMdPath = './_dist/index.md';
+            const indexHtmlPath = './_dist/index.html'; // Changed from index.md
             const templatePath = '.github/pages/index.md.hbs';
 
             try {
@@ -126,17 +126,17 @@ jobs:
                 Branch: defaultBranchName
               });
 
-              core.info(`Writing generated index.md to ${indexMdPath}`);
-              await fs.writeFile(indexMdPath, newContent);
-              core.info('Successfully generated index.md');
+              core.info(`Writing generated index.html to ${indexHtmlPath}`); // Changed from index.md
+              await fs.writeFile(indexHtmlPath, newContent);
+              core.info('Successfully generated index.html'); // Changed from index.md
 
             } catch (error) {
               // Check if error is due to missing index.yaml (ENOENT) and exit gracefully
               if (error.code === 'ENOENT' && error.path === indexYamlPath) {
-                 core.warning(`Index file not found at ${indexYamlPath}, likely no charts released. Skipping index.md generation.`);
+                 core.warning(`Index file not found at ${indexYamlPath}, likely no charts released. Skipping index.html generation.`); // Changed from index.md
                  process.exit(0);
               } else {
-                 core.setFailed(`Failed to generate index.md: ${error.message}`);
+                 core.setFailed(`Failed to generate index.html: ${error.message}`); // Changed from index.md
                  // Re-throw to ensure workflow fails
                  throw error;
               }
@@ -151,8 +151,8 @@ jobs:
 
             const configSource = '.github/pages/config.yml';
             const configDest = '_config.yml';
-            const indexMdSource = './_dist/index.md';
-            const indexMdDest = './index.md';
+            const indexHtmlSource = './_dist/index.html'; // Changed from index.md
+            const indexHtmlDest = './index.html'; // Changed from index.md
             const indexYamlSource = './_dist/index.yaml';
             const indexYamlDest = './index.yaml';
 
@@ -169,11 +169,11 @@ jobs:
               core.info(`Copying ${configSource} to ${configDest}`);
               await fs.copyFile(configSource, configDest);
 
-              if (await fileExists(indexMdSource)) {
-                core.info(`Copying ${indexMdSource} to ${indexMdDest}`);
-                await fs.copyFile(indexMdSource, indexMdDest);
+              if (await fileExists(indexHtmlSource)) { // Changed from indexMdSource
+                core.info(`Copying ${indexHtmlSource} to ${indexHtmlDest}`); // Changed paths
+                await fs.copyFile(indexHtmlSource, indexHtmlDest); // Changed paths
               } else {
-                core.warning(`Generated ${indexMdSource} not found. Jekyll will use root README.md or default.`);
+                core.warning(`Generated ${indexHtmlSource} not found. Jekyll will use root README.md or default.`); // Changed path
               }
 
               if (await fileExists(indexYamlSource)) {
@@ -206,3 +206,10 @@ jobs:
           user_email: "41898282+github-actions[bot]@users.noreply.github.com"
           commit_message: "chore(github-action): publish site and update chart index"
           force_orphan: false
+
+      # Note: This step now displays index.html
+      - name: Display generated index.html
+        run: |
+          echo "--- Content of ./index.html ---" # Changed from index.md
+          cat ./index.html # Changed from index.md
+          echo "-------------------------------" # Changed from index.md

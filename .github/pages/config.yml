@@ -24,9 +24,3 @@ plugins:
 # Jekyll custom styling configuration
 style: >
   div.footer { display: none !important; }
-
-# Initial README content for gh-pages branch
-readme_content: |
-  # AXIVO Charts
-
-  This Helm repository contains charts designed to deploy applications in Kubernetes clusters, using ArgoCD.
