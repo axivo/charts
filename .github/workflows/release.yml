@@ -5,10 +5,10 @@ on:
     branches:
       - main
     paths:
-      - "application/**"
-      - "library/**"
-      - ".github/chart-releaser.yml"
-      - ".github/pages/index.md.gotmpl"
+      - application/**
+      - library/**
+      - .github/chart-releaser.yml
+      - .github/pages/index.md.hbs
   workflow_dispatch:
 
 concurrency:
@@ -20,7 +20,7 @@ permissions:
 
 jobs:
   release:
-    name: Package and Publish Charts
+    name: Package and Publish
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -28,27 +28,30 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Configure Git User
+      - name: Configure git user
         uses: actions/github-script@v7
         with:
           script: |
             const configureGit = require('./.github/scripts/git-config.js');
             await configureGit({github, context, core, exec});
 
-      - name: Setup Helm
+      - name: Setup helm
         uses: azure/setup-helm@v4
         with:
           version: v3.17.3
 
-      - name: Setup Node.js
+      - name: Setup node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
 
-      - name: Install Dependencies
+      - name: Install dependencies
         run: npm install js-yaml handlebars
 
-      - name: Run chart-releaser for applications
+      - name: Create dist directory
+        run: install -d ./_dist
+
+      - name: Release application charts
         uses: helm/chart-releaser-action@v1
         env:
           CR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -58,7 +61,7 @@ jobs:
           config: .github/chart-releaser.yml
           skip_existing: true
 
-      - name: Run chart-releaser for libraries
+      - name: Release library charts
         uses: helm/chart-releaser-action@v1
         env:
           CR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -68,7 +71,7 @@ jobs:
           config: .github/chart-releaser.yml
           skip_existing: true
 
-      - name: Generate index.md locally using Handlebars
+      - name: Generate chart index page
         id: generate_index
         uses: actions/github-script@v7
         with:
@@ -78,7 +81,7 @@ jobs:
             const Handlebars = require('handlebars');
             const indexYamlPath = './_dist/index.yaml';
             const indexMdPath = './_dist/index.md';
-            const templatePath = '.github/pages/index.md.gotmpl';
+            const templatePath = '.github/pages/index.md.hbs';
 
             try {
               core.info(`Reading index YAML from ${indexYamlPath}`);
@@ -87,7 +90,8 @@ jobs:
 
               if (!index || !index.entries) {
                 core.warning('Invalid or empty index.yaml file, skipping index.md generation.');
-                return;
+                // Exit gracefully if index is invalid, prevents further errors
+                process.exit(0);
               }
 
               core.info(`Reading template from ${templatePath}`);
@@ -127,17 +131,78 @@ jobs:
               core.info('Successfully generated index.md');
 
             } catch (error) {
-              core.setFailed(`Failed to generate index.md: ${error.message}`);
+              // Check if error is due to missing index.yaml (ENOENT) and exit gracefully
+              if (error.code === 'ENOENT' && error.path === indexYamlPath) {
+                 core.warning(`Index file not found at ${indexYamlPath}, likely no charts released. Skipping index.md generation.`);
+                 process.exit(0);
+              } else {
+                 core.setFailed(`Failed to generate index.md: ${error.message}`);
+                 // Re-throw to ensure workflow fails
+                 throw error;
+              }
             }
 
-      - name: Deploy index files to gh-pages
+      - name: Prepare jekyll config and index
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs/promises');
+            const path = require('path');
+
+            const configSource = '.github/pages/config.yml';
+            const configDest = '_config.yml';
+            const indexMdSource = './_dist/index.md';
+            const indexMdDest = './index.md';
+            const indexYamlSource = './_dist/index.yaml';
+            const indexYamlDest = './index.yaml';
+
+            async function fileExists(filePath) {
+              try {
+                await fs.access(filePath);
+                return true;
+              } catch {
+                return false;
+              }
+            }
+
+            try {
+              core.info(`Copying ${configSource} to ${configDest}`);
+              await fs.copyFile(configSource, configDest);
+
+              if (await fileExists(indexMdSource)) {
+                core.info(`Copying ${indexMdSource} to ${indexMdDest}`);
+                await fs.copyFile(indexMdSource, indexMdDest);
+              } else {
+                core.warning(`Generated ${indexMdSource} not found. Jekyll will use root README.md or default.`);
+              }
+
+              if (await fileExists(indexYamlSource)) {
+                core.info(`Copying ${indexYamlSource} to ${indexYamlDest}`);
+                await fs.copyFile(indexYamlSource, indexYamlDest);
+              } else {
+                 core.info(`Generated ${indexYamlSource} not found, skipping copy.`);
+              }
+              core.info('Jekyll preparation complete.');
+
+            } catch (error) {
+              core.setFailed(`Failed to prepare Jekyll files: ${error.message}`);
+              throw error; // Re-throw to fail the workflow step
+            }
+
+      - name: Build website
+        uses: actions/jekyll-build-pages@v1
+        with:
+          source: ./
+          destination: ./_site
+
+      - name: Deploy website
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./_dist
+          publish_dir: ./_site
           publish_branch: gh-pages
           keep_files: true
           user_name: "github-actions[bot]"
           user_email: "41898282+github-actions[bot]@users.noreply.github.com"
-          commit_message: "chore(github-action): update chart index yaml and md"
+          commit_message: "chore(github-action): publish site and update chart index"
           force_orphan: false
