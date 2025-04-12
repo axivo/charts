@@ -214,8 +214,6 @@ jobs:
           cat ./_site/index.html || echo "./_site/index.html not found"
           echo "-----------------------------------"
 
-          destination: ./_site
-
       - name: Deploy website
         uses: peaceiris/actions-gh-pages@v3
         with:
