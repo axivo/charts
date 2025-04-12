@@ -1,35 +1,86 @@
 /**
- * GitHub Pages Preparation Utilities
+ * GitHub Pages and Chart Release Utilities
  * 
- * This module provides functions to prepare and configure a GitHub Pages site:
- * - Copying Jekyll configuration files
- * - Copying generated content files
- * - Creating .nojekyll file
- * - Removing conflicting README.md files
- * - Other GitHub Pages preparation tasks
+ * This module provides centralized configuration and functions for Helm chart releases and GitHub Pages:
+ * - Centralized configuration constants
+ * - Setting GitHub Actions outputs for workflow steps
+ * - Generating chart index pages from Helm chart releases
+ * - Preparing the build environment for Jekyll
+ * - Finalizing GitHub Pages deployment
  * 
  * @module github-pages
  */
 
 /**
+ * Centralized configuration for the entire workflow including:
+ * - File and directory paths
+ * - Chart releaser settings
+ * - Directory configurations
+ * - Environment variables for chart-releaser
+ * - Directory variables for GitHub Actions outputs
+ */
+const CONFIG = {
+  // File and directory paths
+  paths: {
+    chartReleaserConfig: '.github/chart-releaser.yml',
+    configDest: '_config.yml',
+    configSource: '.github/pages/config.yml',
+    distDir: './_dist',
+    indexMdDest: './index.md',
+    indexMdSource: './_dist/index.md',
+    indexYamlDest: './index.yaml',
+    indexYamlSource: './_dist/index.yaml',
+    pagesScript: './.github/scripts/pages.js',
+    releaseTemplate: '.github/release_template.md',
+    templatePath: '.github/pages/index.md.hbs'
+  },
+
+  // Chart releaser settings
+  chartReleaser: {
+    chartsRepoUrl: 'https://axivo.github.io/charts/',
+    indexPath: './_dist/index.yaml',          // Path for index.yaml storage during workflow run
+    indexPathFinal: 'index.yaml',             // Path in the published GitHub Pages site
+    packagesWithIndex: 'false',
+    pagesBranch: '',
+    releaseNameTemplate: '{{ .Name }}-v{{ .Version }}',
+    skipExisting: 'true',
+    tempStoragePath: '.cr-release-packages'   // Temporary storage path for chart packages
+  },
+
+  // Directory configurations
+  directories: {
+    application: 'application',
+    library: 'library'
+  },
+
+  // Environment variables for chart-releaser
+  env: {
+    CR_CHARTS_REPO_URL: 'https://axivo.github.io/charts/',
+    CR_INDEX_PATH: 'index.yaml',
+    CR_INDEX_PATH_FINAL: 'index.yaml',
+    CR_PACKAGES_WITH_INDEX: 'false',
+    CR_PAGES_BRANCH: '',
+    CR_RELEASE_NAME_TEMPLATE: '{{ .Name }}-v{{ .Version }}',
+    CR_RELEASE_TEMPLATE: '.github/release_template.md',
+    CR_SKIP_EXISTING: 'true'
+  },
+
+  // Directory variables for output
+  outputDirs: {
+    DIRECTORY_APPLICATION: 'application',
+    DIRECTORY_LIBRARY: 'library'
+  }
+};
+
+/**
  * Setup the build environment for generating the static site
  * 
  * @param {Object} options - Options for build environment setup
- * @param {Object} options.github - GitHub API client
- * @param {Object} options.context - GitHub Actions context
- * @param {Object} options.core - GitHub Actions Core
- * @param {Object} options.fs - Node.js fs/promises module
- * @param {Object} options.path - Node.js path module (optional)
+ * @param {Object} options.core - GitHub Actions Core API for logging and output
+ * @param {Object} options.fs - Node.js fs/promises module for file operations
  * @returns {Promise<void>}
  */
-async function setupBuildEnvironment({ github, context, core, fs, path = require('path') }) {
-  const configSource = '.github/pages/config.yml';
-  const configDest = '_config.yml';
-  const indexMdSource = './_dist/index.md';
-  const indexMdDest = './index.md';
-  const indexYamlSource = './_dist/index.yaml';
-  const indexYamlDest = './index.yaml';
-
+async function setupBuildEnvironment({ core, fs }) {
   try {
     // Helper function to check if a file exists
     async function fileExists(filePath) {
@@ -42,35 +93,31 @@ async function setupBuildEnvironment({ github, context, core, fs, path = require
     }
 
     // Copy Jekyll config
-    core.info(`Copying ${configSource} to ${configDest}`);
-    await fs.copyFile(configSource, configDest);
+    core.info(`Copying ${CONFIG.paths.configSource} to ${CONFIG.paths.configDest}`);
+    await fs.copyFile(CONFIG.paths.configSource, CONFIG.paths.configDest);
 
     // Copy index.md if exists
-    if (await fileExists(indexMdSource)) {
-      core.info(`Copying ${indexMdSource} to ${indexMdDest}`);
-      await fs.copyFile(indexMdSource, indexMdDest);
+    if (await fileExists(CONFIG.paths.indexMdSource)) {
+      core.info(`Copying ${CONFIG.paths.indexMdSource} to ${CONFIG.paths.indexMdDest}`);
+      await fs.copyFile(CONFIG.paths.indexMdSource, CONFIG.paths.indexMdDest);
     } else {
-      core.warning(`Generated ${indexMdSource} not found. Jekyll will use root README.md or default.`);
+      core.warning(`Generated ${CONFIG.paths.indexMdSource} not found. Jekyll will use root README.md or default.`);
     }
 
     // Copy index.yaml if exists
-    if (await fileExists(indexYamlSource)) {
-      core.info(`Copying ${indexYamlSource} to ${indexYamlDest}`);
-      await fs.copyFile(indexYamlSource, indexYamlDest);
+    if (await fileExists(CONFIG.paths.indexYamlSource)) {
+      core.info(`Copying ${CONFIG.paths.indexYamlSource} to ${CONFIG.paths.indexYamlDest}`);
+      await fs.copyFile(CONFIG.paths.indexYamlSource, CONFIG.paths.indexYamlDest);
     } else {
-      core.info(`Generated ${indexYamlSource} not found, skipping copy.`);
+      core.info(`Generated ${CONFIG.paths.indexYamlSource} not found, skipping copy.`);
     }
 
-    // Create .nojekyll file
-    core.info('Creating .nojekyll file');
-    await fs.writeFile('./.nojekyll', '');
-    
     // Remove README.md from root if it exists (to avoid conflicts in pre-build)
     if (await fileExists('./README.md')) {
       core.info('Removing README.md from root to prevent conflicts with index.html');
       await fs.unlink('./README.md');
     }
-    
+
     core.info('Jekyll preparation complete.');
   } catch (error) {
     core.setFailed(`Failed to prepare Jekyll files: ${error.message}`);
@@ -82,30 +129,13 @@ async function setupBuildEnvironment({ github, context, core, fs, path = require
  * Prepare the built site for GitHub Pages deployment
  * 
  * @param {Object} options - Options for site preparation
- * @param {Object} options.github - GitHub API client
- * @param {Object} options.context - GitHub Actions context
- * @param {Object} options.core - GitHub Actions Core
- * @param {Object} options.fs - Node.js fs/promises module
- * @param {string} options.siteDir - Directory containing the built site (default: '_site')
+ * @param {Object} options.core - GitHub Actions Core API for logging and output
  * @returns {Promise<void>}
  */
-async function prepareSite({ github, context, core, fs, siteDir = '_site' }) {
+async function prepareSite({ core }) {
   try {
-    // Remove README.md from _site if it exists
-    const readmePath = `${siteDir}/README.md`;
-    
-    try {
-      await fs.access(readmePath);
-      core.info(`Removing ${readmePath} to prevent conflicts with index.html`);
-      await fs.unlink(readmePath);
-      core.info('README.md removed successfully');
-    } catch (error) {
-      // File doesn't exist, which is fine
-      core.info(`No README.md found in ${siteDir} directory`);
-    }
-    
-    // Add any other site preparation steps here if needed
-    
+    // We already removed README.md in setupBuildEnvironment
+    // and we're using GitHub's official Jekyll build action
     core.info('Site preparation for GitHub Pages completed');
   } catch (error) {
     core.setFailed(`Failed to prepare site for GitHub Pages: ${error.message}`);
@@ -117,36 +147,24 @@ async function prepareSite({ github, context, core, fs, siteDir = '_site' }) {
  * Generate the chart index page from the index.yaml file
  * 
  * @param {Object} options - Options for chart index generation
- * @param {Object} options.github - GitHub API client
- * @param {Object} options.context - GitHub Actions context
- * @param {Object} options.core - GitHub Actions Core
- * @param {Object} options.fs - Node.js fs/promises module
- * @param {string} options.indexYamlPath - Path to the index.yaml file (default: './_dist/index.yaml')
- * @param {string} options.indexMdPath - Path where to write the generated index.md (default: './_dist/index.md')
- * @param {string} options.templatePath - Path to the Handlebars template (default: '.github/pages/index.md.hbs')
+ * @param {Object} options.context - GitHub Actions context for repository info
+ * @param {Object} options.core - GitHub Actions Core API for logging and output
+ * @param {Object} options.fs - Node.js fs/promises module for file operations
+ * @param {string} [options.indexYamlPath=CONFIG.paths.indexYamlSource] - Path to the index.yaml file
+ * @param {string} [options.indexMdPath=CONFIG.paths.indexMdSource] - Path where to write the generated index.md
+ * @param {string} [options.templatePath=CONFIG.paths.templatePath] - Path to the Handlebars template
  * @returns {Promise<boolean>} - True if successful, false if skipped
  */
-async function generateChartIndex({ 
-  github, 
-  context, 
-  core, 
-  fs, 
-  indexYamlPath = './_dist/index.yaml', 
-  indexMdPath = './_dist/index.md',
-  templatePath = '.github/pages/index.md.hbs' 
+async function generateChartIndex({
+  context,
+  core,
+  fs,
+  indexYamlPath = CONFIG.paths.indexYamlSource,
+  indexMdPath = CONFIG.paths.indexMdSource,
+  templatePath = CONFIG.paths.templatePath
 }) {
-  
-  try {
-    // Helper function to check if a file exists
-    async function fileExists(filePath) {
-      try {
-        await fs.access(filePath);
-        return true;
-      } catch {
-        return false;
-      }
-    }
 
+  try {
     core.info(`Reading index YAML from ${indexYamlPath}`);
     const indexContent = await fs.readFile(indexYamlPath, 'utf8');
     const yaml = require('js-yaml');
@@ -162,8 +180,8 @@ async function generateChartIndex({
 
     // Register helper for template
     const Handlebars = require('handlebars');
-    Handlebars.registerHelper('rawGithubUrl', function(repoUrl, branch, path) {
-       return String(repoUrl).replace('github.com', 'raw.githubusercontent.com') + '/' + branch + '/' + path;
+    Handlebars.registerHelper('rawGithubUrl', function (repoUrl, branch, path) {
+      return String(repoUrl).replace('github.com', 'raw.githubusercontent.com') + '/' + branch + '/' + path;
     });
 
     const repoUrl = context.payload.repository.html_url;
@@ -198,17 +216,40 @@ async function generateChartIndex({
   } catch (error) {
     // Check if error is due to missing index.yaml (ENOENT)
     if (error.code === 'ENOENT' && error.path === indexYamlPath) {
-       core.warning(`Index file not found at ${indexYamlPath}, likely no charts released. Skipping index.md generation.`);
-       return false;
+      core.warning(`Index file not found at ${indexYamlPath}, likely no charts released. Skipping index.md generation.`);
+      return false;
     } else {
-       core.setFailed(`Failed to generate index.md: ${error.message}`);
-       throw error;
+      core.setFailed(`Failed to generate index.md: ${error.message}`);
+      throw error;
     }
   }
 }
 
+/**
+ * Sets GitHub Actions outputs from the CONFIG object for use in workflow steps
+ *
+ * @param {Object} core - GitHub Actions Core API for setting outputs
+ */
+function setOutputs(core) {
+  // Set all environment variables as outputs
+  Object.entries(CONFIG.env).forEach(([key, value]) => {
+    core.setOutput(key, value);
+  });
+
+  // Set directory outputs
+  Object.entries(CONFIG.outputDirs).forEach(([key, value]) => {
+    core.setOutput(key, value);
+  });
+
+  // Set script path output
+  core.setOutput('PAGES_SCRIPT_PATH', CONFIG.paths.pagesScript);
+}
+
+// Export all the functions and constants
 module.exports = {
+  CONFIG,
   setupBuildEnvironment,
   prepareSite,
-  generateChartIndex
+  generateChartIndex,
+  setOutputs
 };

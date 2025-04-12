@@ -7,6 +7,9 @@
     "editor.insertSpaces": true,
     "editor.tabSize": 2
   },
+  "[handlebars]": {
+    "editor.formatOnSave": false
+  },
   "[helm]": {
     "editor.autoIndent": "keep",
     "editor.formatOnSave": true,
@@ -29,11 +32,16 @@
     "files.trimTrailingWhitespace": true
   },
   "editor.formatOnSave": true,
+  "editor.formatOnSaveIgnore": [
+    "**/*.hbs",
+    "**/.github/pages/index.md.hbs"
+  ],
   "editor.rulers": [
     120
   ],
   "files.associations": {
     "*.gotmpl": "helm",
+    "*.hbs": "handlebars",
     "*.tpl": "helm",
     "*.yaml": "yaml",
     "*.yml": "yaml",
@@ -41,6 +49,14 @@
     "**/renovate.json5": "jsonc",
     "**/templates/*.yaml": "helm",
     "**/templates/*.yml": "helm"
+  },
+  "files.exclude": {
+    "**/.git": true,
+    "**/.DS_Store": true
+  },
+  "files.watcherExclude": {
+    "**/.git/objects/**": true,
+    "**/.git/subtree-cache/**": true
   },
   "json.schemas": [
     {

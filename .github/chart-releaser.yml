@@ -1,7 +1,0 @@
-# Configuration for chart-releaser
-# See: https://github.com/helm/chart-releaser-action
-
-charts-repo-url: https://axivo.github.io/charts/
-index-path: index.yaml
-release-name-template: "{{ .Name }}-v{{ .Version }}"
-release-template: .github/chart-releaser-template.md
