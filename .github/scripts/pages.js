@@ -70,60 +70,6 @@ const CONFIG = {
 };
 
 /**
- * Setup the build environment for generating the static site
- * 
- * @param {Object} options - Options for build environment setup
- * @param {Object} options.core - GitHub Actions Core API for logging and output
- * @param {Object} options.fs - Node.js fs/promises module for file operations
- * @returns {Promise<void>}
- */
-async function setupBuildEnvironment({ core, fs }) {
-  // Helper function to check if a file exists
-  async function fileExists(filePath) {
-    try {
-      await fs.access(filePath);
-      return true;
-    } catch {
-      return false;
-    }
-  }
-
-  // Copy Jekyll config
-  try {
-    core.info(`Copying ${CONFIG.paths.configSrcPath} to ${CONFIG.paths.configPath}`);
-    await fs.copyFile(CONFIG.paths.configSrcPath, CONFIG.paths.configPath);
-  } catch (error) {
-    const errorMsg = `Failed to copy Jekyll config: ${error.message}`;
-    core.setFailed(errorMsg);
-    throw new Error(errorMsg);
-  }
-
-  // Copy index.md if exists
-  try {
-    core.info(`Copying ${CONFIG.paths.indexMdPath} to ${CONFIG.paths.indexMdSrcPath}`);
-    await fs.copyFile(CONFIG.paths.indexMdPath, CONFIG.paths.indexMdSrcPath);
-  } catch (error) {
-    const errorMsg = `Failed to process index.md: ${error.message}`;
-    core.setFailed(errorMsg);
-    throw new Error(errorMsg);
-  }
-
-  // Remove README.md from root if it exists (to avoid conflicts in pre-build)
-  try {
-    if (await fileExists('./README.md')) {
-      core.info('Removing README.md from root to prevent conflicts with index.html');
-      await fs.unlink('./README.md');
-    }
-  } catch (error) {
-    const errorMsg = `Failed to remove README.md: ${error.message}`;
-    core.setFailed(errorMsg);
-    throw new Error(errorMsg);
-  }
-
-  core.info('Jekyll preparation complete.');
-}
-
-/**
  * Generate the chart index page from the index.yaml file
  * 
  * @param {Object} options - Options for chart index generation
@@ -222,6 +168,60 @@ function setOutputs(core) {
 }
 
 /**
+ * Setup the build environment for generating the static site
+ * 
+ * @param {Object} options - Options for build environment setup
+ * @param {Object} options.core - GitHub Actions Core API for logging and output
+ * @param {Object} options.fs - Node.js fs/promises module for file operations
+ * @returns {Promise<void>}
+ */
+async function setupBuildEnvironment({ core, fs }) {
+  // Helper function to check if a file exists
+  async function fileExists(filePath) {
+    try {
+      await fs.access(filePath);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  // Copy Jekyll config
+  try {
+    core.info(`Copying ${CONFIG.paths.configSrcPath} to ${CONFIG.paths.configPath}`);
+    await fs.copyFile(CONFIG.paths.configSrcPath, CONFIG.paths.configPath);
+  } catch (error) {
+    const errorMsg = `Failed to copy Jekyll config: ${error.message}`;
+    core.setFailed(errorMsg);
+    throw new Error(errorMsg);
+  }
+
+  // Copy index.md if exists
+  try {
+    core.info(`Copying ${CONFIG.paths.indexMdPath} to ${CONFIG.paths.indexMdSrcPath}`);
+    await fs.copyFile(CONFIG.paths.indexMdPath, CONFIG.paths.indexMdSrcPath);
+  } catch (error) {
+    const errorMsg = `Failed to process index.md: ${error.message}`;
+    core.setFailed(errorMsg);
+    throw new Error(errorMsg);
+  }
+
+  // Remove README.md from root if it exists (to avoid conflicts in pre-build)
+  try {
+    if (await fileExists('./README.md')) {
+      core.info('Removing README.md from root to prevent conflicts with index.html');
+      await fs.unlink('./README.md');
+    }
+  } catch (error) {
+    const errorMsg = `Failed to remove README.md: ${error.message}`;
+    core.setFailed(errorMsg);
+    throw new Error(errorMsg);
+  }
+
+  core.info('Jekyll preparation complete.');
+}
+
+/**
  * Sets up the chart-releaser configuration by creating necessary directories
  * and checking if the release template exists
  *
@@ -249,9 +249,8 @@ async function setupChartReleaserConfig({ core, fs }) {
 // Export all the functions and constants
 module.exports = {
   CONFIG,
-  setupBuildEnvironment,
-  prepareSite,
   generateChartIndex,
   setOutputs,
+  setupBuildEnvironment,
   setupChartReleaserConfig
 };
