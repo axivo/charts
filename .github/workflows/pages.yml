@@ -5,156 +5,46 @@ on:
     branches:
       - main
     paths:
-      - .github/chart-releaser.yml
-      - .github/pages/config.yml
-      - .github/pages/index.md.gotmpl
-      - application/*/Chart.yaml
-      - library/*/Chart.yaml
+      - ".github/pages/config.yml"
+      - "application/*/Chart.yaml"
+      - "library/*/Chart.yaml"
   workflow_dispatch:
 
 concurrency:
-  cancel-in-progress: true
-  group: pages
+  group: "pages"
+  cancel-in-progress: false
 
 permissions:
-  contents: write
-  id-token: write
+  contents: read
   pages: write
+  id-token: write
 
 jobs:
   build:
-    name: Build Documentation
+    name: Build Website
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
-      - name: Configure repository
+      - name: Configure Git User
         uses: actions/github-script@v7
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const configureGit = require('./.github/scripts/git-config.js');
             await configureGit({github, context, core, exec});
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
+      - name: Prepare Jekyll Config
+        run: cp .github/pages/config.yml _config.yml
 
-      - name: Install Node.js package
-        run: npm install handlebars
-
-      - name: Update theme
-        uses: actions/github-script@v7
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            const fs = require('fs/promises');
-            const createSignedCommit = require('./.github/scripts/git-signed-commit.js');
-            const retryGitPush = require('./.github/scripts/git-helpers.js');
-            const themePath = '.github/pages/config.yml';
-            const branchName = 'gh-pages';
-            const defaultBranchName = context.payload.repository.default_branch;
-            const runGit = async (args) => (await exec.getExecOutput('git', args)).stdout.trim();
-
-            try {
-              let mainThemeContent;
-              try {
-                mainThemeContent = await fs.readFile(themePath, 'utf8');
-              } catch (fileError) {
-                core.setFailed('Failed to read theme file ' + themePath + ': ' + fileError.message);
-                return;
-              }
-
-              const branchExists = (await runGit(['ls-remote', '--heads', 'origin', branchName])).length > 0;
-              if (!branchExists) {
-                core.warning('Branch ' + branchName + ' does not exist, skipping theme update.');
-                return;
-              }
-
-              await retryGitPush.withGitStash({
-                runGit,
-                core,
-                message: 'Stash for theme update',
-                operation: async () => {
-                  try {
-                    await runGit(['fetch', 'origin', branchName]);
-                    await runGit(['switch', branchName]);
-
-                    let contentChanged = true;
-                    try {
-                      const ghPagesConfigContent = await fs.readFile('_config.yml', 'utf8');
-                      contentChanged = mainThemeContent !== ghPagesConfigContent;
-                    } catch (error) {
-                      core.info('Could not read existing _config.yml: ' + error.message);
-                    }
-
-                    if (!contentChanged) {
-                      core.info('Theme content matches, no update needed.');
-                      return;
-                    }
-
-                    core.info('Updating theme content...');
-                    try {
-                      await fs.writeFile('_config.yml', mainThemeContent);
-                    } catch (writeError) {
-                      core.setFailed('Failed to write _config.yml: ' + writeError.message);
-                      return;
-                    }
-
-                    await runGit(['add', '_config.yml']);
-                    const configChanged = (await runGit(['diff', '--staged', '--name-only'])).includes('_config.yml');
-
-                    if (!configChanged) {
-                      core.info('Theme configuration matches, no update needed.');
-                      return;
-                    }
-
-                    const headSha = await runGit(['rev-parse', 'HEAD']);
-
-                    try {
-                      await createSignedCommit({
-                        github,
-                        context,
-                        core,
-                        branchName,
-                        expectedHeadOid: headSha,
-                        additions: [{
-                          path: '_config.yml',
-                          contents: Buffer.from(mainThemeContent).toString('base64')
-                        }],
-                        commitMessage: 'chore(github-action): update theme configuration'
-                      });
-
-                      core.info('Theme configuration updated successfully.');
-                    } catch (commitError) {
-                      core.warning('GitHub API commit failed: ' + commitError.message);
-                      core.info('Attempting direct Git commit and push...');
-                      try {
-                        await runGit(['commit', '-m', 'chore(github-action): update theme configuration']);
-                        await retryGitPush({ runGit, core, branch: branchName });
-                        core.info('Theme configuration updated successfully using Git commands.');
-                      } catch (gitError) {
-                        core.setFailed('Failed to commit changes: ' + gitError.message);
-                      }
-                    }
-                  } catch (operationError) {
-                    core.setFailed('Operation failed: ' + operationError.message);
-                  }
-                }
-              });
-            } catch (error) {
-              core.setFailed('Unexpected error: ' + error.message);
-            }
-
-      - name: Configure environment
+      - name: Setup Pages
         uses: actions/configure-pages@v5
 
-      - name: Build theme
+      - name: Build with Jekyll
         uses: actions/jekyll-build-pages@v1
+        with:
+          source: ./
+          destination: ./_site
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
@@ -167,6 +57,6 @@ jobs:
     runs-on: ubuntu-latest
     needs: build
     steps:
-      - name: Deploy website
+      - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4

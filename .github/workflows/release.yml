@@ -5,13 +5,22 @@ on:
     branches:
       - main
     paths:
-      - application/**
-      - library/**
+      - "application/**"
+      - "library/**"
+      - ".github/chart-releaser.yml"
+      - ".github/pages/index.md.gotmpl"
   workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
 
 jobs:
   release:
-    name: Package and Publish
+    name: Package and Publish Charts
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -19,10 +28,9 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Configure repository
+      - name: Configure Git User
         uses: actions/github-script@v7
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const configureGit = require('./.github/scripts/git-config.js');
             await configureGit({github, context, core, exec});
@@ -37,74 +45,14 @@ jobs:
         with:
           node-version: 20
 
-      - name: Install required packages
+      - name: Install Dependencies
         run: npm install js-yaml handlebars
-
-      - name: Prepare gh-pages branch
-        uses: actions/github-script@v7
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            const fs = require('fs/promises');
-            const yaml = require('js-yaml');
-            const createSignedCommit = require('./.github/scripts/git-signed-commit.js');
-            const retryGitPush = require('./.github/scripts/git-helpers.js');
-            const crConfigPath = '.github/chart-releaser.yml';
-            const configPath = '.github/pages/config.yml';
-            const branchName = 'gh-pages';
-            const defaultBranchName = context.payload.repository.default_branch;
-            const runGit = async (args) => (await exec.getExecOutput('git', args)).stdout.trim();
-
-            try {
-              const branchExists = (await runGit(['ls-remote', '--heads', 'origin', branchName])).length > 0;
-              if (branchExists) {
-                core.info('Branch ' + branchName + ' already exists');
-                return;
-              }
-
-              await retryGitPush.withGitStash({
-                runGit,
-                core,
-                message: 'Stash for gh-pages creation',
-                operation: async () => {
-                  core.info('Creating ' + branchName + ' branch...');
-                  let configContent;
-                  try {
-                    configContent = await fs.readFile(configPath, 'utf8');
-                  } catch (fileError) {
-                    core.setFailed('Failed to read config file ' + configPath + ': ' + fileError.message);
-                    return;
-                  }
-                  const config = yaml.load(configContent);
-                  const readmeContent = config.readme_content || '# Helm Charts Repository';
-                  await runGit(['checkout', '--orphan', branchName]);
-                  await runGit(['rm', '-rf', '.']);
-                  try {
-                    await fs.writeFile('README.md', readmeContent);
-                    await fs.writeFile('_config.yml', configContent);
-                  } catch (writeError) {
-                    core.setFailed('Failed to write files: ' + writeError.message);
-                    return;
-                  }
-                  await runGit(['add', 'README.md', '_config.yml']);
-                  await runGit(['commit', '-m', 'Initialize gh-pages branch']);
-                  try {
-                    await retryGitPush({ runGit, core, branch: branchName });
-                    core.info('Successfully created ' + branchName + ' branch');
-                  } catch (pushError) {
-                    core.setFailed('Failed to push ' + branchName + ' branch: ' + pushError.message);
-                  }
-                }
-              });
-            } catch (error) {
-              core.setFailed('Unexpected error: ' + error.message);
-            }
 
       - name: Run chart-releaser for applications
         uses: helm/chart-releaser-action@v1
-        id: release-application
         env:
           CR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CR_INDEX_PATH: ./_dist/index.yaml
         with:
           charts_dir: application
           config: .github/chart-releaser.yml
@@ -112,172 +60,84 @@ jobs:
 
       - name: Run chart-releaser for libraries
         uses: helm/chart-releaser-action@v1
-        id: release-library
         env:
           CR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CR_INDEX_PATH: ./_dist/index.yaml
         with:
           charts_dir: library
           config: .github/chart-releaser.yml
           skip_existing: true
 
-      - name: Update index.md on gh-pages branch
+      - name: Generate index.md locally using Handlebars
+        id: generate_index
         uses: actions/github-script@v7
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const fs = require('fs/promises');
             const yaml = require('js-yaml');
             const Handlebars = require('handlebars');
-            const createSignedCommit = require('./.github/scripts/git-signed-commit.js');
-            const { getGitStagedChanges } = require('./.github/scripts/git-signed-commit.js');
-            const retryGitPush = require('./.github/scripts/git-helpers.js');
-            const branchName = 'gh-pages';
-            const defaultBranchName = context.payload.repository.default_branch;
-            const crConfigPath = '.github/chart-releaser.yml';
-            const configPath = '.github/pages/config.yml';
-            const indexTemplatePath = '.github/pages/index.md.gotmpl';
-            const runGit = async (args) => (await exec.getExecOutput('git', args)).stdout.trim();
-
-            async function fileExists(filePath) {
-              try {
-                await fs.access(filePath);
-                return true;
-              } catch {
-                return false;
-              }
-            }
+            const indexYamlPath = './_dist/index.yaml';
+            const indexMdPath = './_dist/index.md';
+            const templatePath = '.github/pages/index.md.gotmpl';
 
             try {
-              const branchExists = (await runGit(['ls-remote', '--heads', 'origin', branchName])).length > 0;
-              if (!branchExists) {
-                core.warning('Branch ' + branchName + ' does not exist, skipping index update.');
+              core.info(`Reading index YAML from ${indexYamlPath}`);
+              const indexContent = await fs.readFile(indexYamlPath, 'utf8');
+              const index = yaml.load(indexContent);
+
+              if (!index || !index.entries) {
+                core.warning('Invalid or empty index.yaml file, skipping index.md generation.');
                 return;
               }
 
-              await retryGitPush.withGitStash({
-                runGit,
-                core,
-                message: 'Stash for index.md update',
-                operation: async () => {
-                  await runGit(['fetch', 'origin', branchName]);
-                  await runGit(['switch', branchName]);
+              core.info(`Reading template from ${templatePath}`);
+              const template = await fs.readFile(templatePath, 'utf8');
 
-                  let crConfig;
-                  try {
-                    const crConfigContent = await fs.readFile(crConfigPath, 'utf8');
-                    crConfig = yaml.load(crConfigContent);
-                  } catch (configError) {
-                    core.setFailed('Failed to read ' + crConfigPath + ': ' + configError.message);
-                    return;
-                  }
-
-                  const indexPath = crConfig['index-path'] || 'index.yaml';
-                  if (!await fileExists(indexPath)) {
-                    core.warning(indexPath + ' not found, skipping index.md update.');
-                    return;
-                  }
-
-                  let template;
-                  try {
-                    template = await fs.readFile(indexTemplatePath, 'utf8');
-                  } catch (templateError) {
-                    core.setFailed('Failed to read template file ' + indexTemplatePath + ': ' + templateError.message);
-                    return;
-                  }
-
-                  let index;
-                  try {
-                    const indexContent = await fs.readFile(indexPath, 'utf8');
-                    index = yaml.load(indexContent);
-                  } catch (indexError) {
-                    core.setFailed('Failed to read index file ' + indexPath + ': ' + indexError.message);
-                    return;
-                  }
-
-                  if (!index || !index.entries) {
-                    core.warning('Invalid or empty index.yaml file, skipping index.md update.');
-                    return;
-                  }
-
-                  Handlebars.registerHelper('rawGithubUrl', function(repoUrl, branch, path) {
-                    return String(repoUrl).replace('github.com', 'raw.githubusercontent.com') +
-                           '/refs/heads/' + branch + '/' + path;
-                  });
-
-                  const repoUrl = context.payload.repository.html_url;
-                  const charts = Object.entries(index.entries)
-                    .sort(([a], [b]) => a.localeCompare(b))
-                    .map(([name, versions]) => {
-                      if (!versions || !versions.length) return null;
-                      return {
-                        Name: name,
-                        Version: versions[0].version || '',
-                        Type: versions[0].type || 'application',
-                        Description: versions[0].description || ''
-                      };
-                    })
-                    .filter(Boolean);
-
-                  const compiledTemplate = Handlebars.compile(template);
-                  const newContent = compiledTemplate({
-                    Charts: charts,
-                    RepoURL: repoUrl,
-                    Branch: defaultBranchName
-                  });
-
-                  const indexMdPath = indexPath.replace('.yaml', '.md');
-                  const placeholderPath = '.placeholder';
-                  try {
-                    await fs.writeFile(indexMdPath, newContent);
-                  } catch (writeError) {
-                    core.setFailed('Failed to write ' + indexMdPath + ': ' + writeError.message);
-                    return;
-                  }
-
-                  await runGit(['add', indexMdPath]);
-                  const placeholderExists = await fileExists(placeholderPath);
-                  if (placeholderExists) {
-                    try {
-                      await fs.unlink(placeholderPath);
-                      await runGit(['add', placeholderPath]);
-                    } catch (unlinkError) {
-                      core.warning('Failed to remove placeholder file: ' + unlinkError.message);
-                    }
-                  }
-
-                  const hasChanges = (await runGit(['diff', '--staged', '--name-only'])).trim().length > 0;
-                  if (hasChanges) {
-                    const { additions, deletions } = await getGitStagedChanges(runGit, fs);
-                    const headSha = await runGit(['rev-parse', 'HEAD']);
-                    try {
-                      await createSignedCommit({
-                        github,
-                        context,
-                        core,
-                        branchName,
-                        expectedHeadOid: headSha,
-                        additions,
-                        deletions,
-                        commitMessage: 'chore(github-action): update chart documentation'
-                      });
-
-                      core.info('Successfully updated chart documentation');
-                    } catch (commitError) {
-                      core.warning('GitHub API commit failed: ' + commitError.message);
-                      core.info('Attempting direct Git commit and push...');
-                      try {
-                        await runGit(['commit', '-m', 'chore(github-action): update chart documentation']);
-                        await retryGitPush({ runGit, core, branch: branchName });
-                        core.info('Successfully updated chart documentation using Git commands');
-                      } catch (gitError) {
-                        core.setFailed('Failed to commit changes: ' + gitError.message);
-                      }
-                    }
-                  } else {
-                    core.info('No changes to commit');
-                  }
-                }
+              // Register helper for template
+              Handlebars.registerHelper('rawGithubUrl', function(repoUrl, branch, path) {
+                 return String(repoUrl).replace('github.com', 'raw.githubusercontent.com') + '/' + branch + '/' + path;
               });
+
+              const repoUrl = context.payload.repository.html_url;
+              const defaultBranchName = context.payload.repository.default_branch;
+
+              const charts = Object.entries(index.entries)
+                .sort(([a], [b]) => a.localeCompare(b))
+                .map(([name, versions]) => {
+                  if (!versions || !versions.length) return null;
+                  const latest = versions[0]; // Assuming versions[0] is the latest
+                  return {
+                    Name: name,
+                    Version: latest.version || '',
+                    Type: latest.type || 'application', // Default type if missing
+                    Description: latest.description || ''
+                  };
+                })
+                .filter(Boolean);
+
+              const compiledTemplate = Handlebars.compile(template);
+              const newContent = compiledTemplate({
+                Charts: charts,
+                RepoURL: repoUrl,
+                Branch: defaultBranchName
+              });
+
+              core.info(`Writing generated index.md to ${indexMdPath}`);
+              await fs.writeFile(indexMdPath, newContent);
+              core.info('Successfully generated index.md');
+
             } catch (error) {
-              core.setFailed('Unexpected error: ' + error.message);
+              core.setFailed(`Failed to generate index.md: ${error.message}`);
             }
+
+      - name: Deploy index files to gh-pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./_dist
+          publish_branch: gh-pages
+          keep_files: true
+          user_name: "github-actions[bot]"
+          user_email: "41898282+github-actions[bot]@users.noreply.github.com"
+          commit_message: "chore(github-action): update chart index yaml and md"
+          force_orphan: false
