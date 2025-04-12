@@ -5,10 +5,11 @@ on:
     branches:
       - main
     paths:
+      - .github/chart-releaser.yml
+      - .github/pages/config.yml
+      - .github/pages/index.md.hbs
       - application/**
       - library/**
-      - .github/chart-releaser.yml
-      - .github/pages/index.md.hbs
   workflow_dispatch:
 
 concurrency:
@@ -195,6 +196,27 @@ jobs:
           source: ./
           destination: ./_site
 
+      - name: Prepare site for GitHub Pages
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs/promises');
+
+            try {
+              // Copy config file to the _site directory
+              core.info('Copying _config.yml to _site directory');
+              await fs.copyFile('_config.yml', './_site/_config.yml');
+
+              // Create .nojekyll file to prevent GitHub Pages from processing with Jekyll again
+              core.info('Creating .nojekyll file');
+              await fs.writeFile('./_site/.nojekyll', '');
+
+              core.info('Site preparation for GitHub Pages complete');
+            } catch (error) {
+              core.setFailed(`Failed to prepare site for GitHub Pages: ${error.message}`);
+              throw error;
+            }
+
       - name: Deploy website
         uses: peaceiris/actions-gh-pages@v3
         with:
@@ -206,17 +228,4 @@ jobs:
           user_email: "41898282+github-actions[bot]@users.noreply.github.com"
           commit_message: "chore(github-action): publish site and update chart index"
           force_orphan: false
-          disable_nojekyll: true # Allow GitHub Pages to run Jekyll
-
-      - name: Verify gh-pages branch content
-        run: |
-          echo "--- Verifying gh-pages branch content after deployment ---"
-          TEMP_DIR=$(mktemp -d)
-          git clone --depth=1 --branch=gh-pages https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git "$TEMP_DIR"
-          echo "--- Listing gh-pages root --- "
-          ls -la "$TEMP_DIR"
-          echo "--- Content of gh-pages index.html ---"
-          cat "$TEMP_DIR/index.html" || echo "index.html not found in gh-pages branch"
-          # No longer checking for .nojekyll as Jekyll build is used
-          echo "--------------------------------------------------------"
-          rm -rf "$TEMP_DIR"
+          disable_nojekyll: false
