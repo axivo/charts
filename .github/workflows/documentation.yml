@@ -76,7 +76,7 @@ jobs:
               await runGit(['switch', process.env.GITHUB_HEAD_REF]);
               await exec.exec('helm-docs');
 
-              const files = (await runGit(['diff', '--name-only', '--staged']))
+              const files = (await runGit(['diff', '--name-only']))
                 .split('\n')
                 .filter(Boolean);
               if (files.length === 0) {
