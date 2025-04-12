@@ -24,17 +24,4 @@ See the chart values, listed below.
 
 {{ template "chart.valuesTable" . }}
 
-## Shell Login
-
-Example of container shell login:
-
-```shell
-{% raw %}$ kubectl get pods -n default -o go-template \
-  --template='{{range .items}}{{.metadata.name}}{{"\n"}}{{end}}'
-ubuntu-6589cf5fb4-p9z2b
-
-$ kubectl exec -itn default ubuntu-6589cf5fb4-p9z2b -- /bin/bash
-root@ubuntu-6589cf5fb4-p9z2b:/#{% endraw %}
-```
-
 End-user will have `root` access to a minimal Ubuntu `{{ template "chart.appVersion" . }}` LTS container, connected to the Kubernetes cluster network. Common tools may require manual installation via `apt-get`.
