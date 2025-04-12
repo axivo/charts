@@ -67,8 +67,7 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const fs = require('fs/promises');
-            const createSignedCommit = require('./.github/scripts/git-signed-commit.js');
-            const { getGitStagedChanges } = require('./.github/scripts/git-signed-commit.js');
+            const { createSignedCommit, getGitStagedChanges } = require('./.github/scripts/git-signed-commit.js');
             const runGit = async (args) => (await exec.getExecOutput('git', args)).stdout.trim();
 
             try {

@@ -18,11 +18,16 @@ concurrency:
 
 permissions:
   contents: write
+  pages: write
+  id-token: write
 
 jobs:
   release:
     name: Package and Publish
     runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -78,70 +83,8 @@ jobs:
         with:
           script: |
             const fs = require('fs/promises');
-            const yaml = require('js-yaml');
-            const Handlebars = require('handlebars');
-            const indexYamlPath = './_dist/index.yaml';
-            const indexMdPath = './_dist/index.md'; // Reverted from index.html
-            const templatePath = '.github/pages/index.md.hbs';
-
-            try {
-              core.info(`Reading index YAML from ${indexYamlPath}`);
-              const indexContent = await fs.readFile(indexYamlPath, 'utf8');
-              const index = yaml.load(indexContent);
-
-              if (!index || !index.entries) {
-                core.warning('Invalid or empty index.yaml file, skipping index.md generation.');
-                // Exit gracefully if index is invalid, prevents further errors
-                process.exit(0);
-              }
-
-              core.info(`Reading template from ${templatePath}`);
-              const template = await fs.readFile(templatePath, 'utf8');
-
-              // Register helper for template
-              Handlebars.registerHelper('rawGithubUrl', function(repoUrl, branch, path) {
-                 return String(repoUrl).replace('github.com', 'raw.githubusercontent.com') + '/' + branch + '/' + path;
-              });
-
-              const repoUrl = context.payload.repository.html_url;
-              const defaultBranchName = context.payload.repository.default_branch;
-
-              const charts = Object.entries(index.entries)
-                .sort(([a], [b]) => a.localeCompare(b))
-                .map(([name, versions]) => {
-                  if (!versions || !versions.length) return null;
-                  const latest = versions[0]; // Assuming versions[0] is the latest
-                  return {
-                    Name: name,
-                    Version: latest.version || '',
-                    Type: latest.type || 'application', // Default type if missing
-                    Description: latest.description || ''
-                  };
-                })
-                .filter(Boolean);
-
-              const compiledTemplate = Handlebars.compile(template);
-              const newContent = compiledTemplate({
-                Charts: charts,
-                RepoURL: repoUrl,
-                Branch: defaultBranchName
-              });
-
-              core.info(`Writing generated index.md to ${indexMdPath}`); // Reverted from index.html
-              await fs.writeFile(indexMdPath, newContent);
-              core.info('Successfully generated index.md'); // Reverted from index.html
-
-            } catch (error) {
-              // Check if error is due to missing index.yaml (ENOENT) and exit gracefully
-              if (error.code === 'ENOENT' && error.path === indexYamlPath) {
-                 core.warning(`Index file not found at ${indexYamlPath}, likely no charts released. Skipping index.md generation.`); // Reverted from index.html
-                 process.exit(0);
-              } else {
-                 core.setFailed(`Failed to generate index.md: ${error.message}`); // Reverted from index.html
-                 // Re-throw to ensure workflow fails
-                 throw error;
-              }
-            }
+            const { generateChartIndex } = require('./.github/scripts/pages.js');
+            await generateChartIndex({ github, context, core, fs });
 
       - name: Setup build environment
         uses: actions/github-script@v7
@@ -149,7 +92,7 @@ jobs:
           script: |
             const fs = require('fs/promises');
             const path = require('path');
-            const { setupBuildEnvironment } = require('./.github/scripts/github-pages.js');
+            const { setupBuildEnvironment } = require('./.github/scripts/pages.js');
             await setupBuildEnvironment({ github, context, core, fs, path });
 
       - name: Build website
@@ -163,18 +106,18 @@ jobs:
         with:
           script: |
             const fs = require('fs/promises');
-            const { prepareSite } = require('./.github/scripts/github-pages.js');
+            const { prepareSite } = require('./.github/scripts/pages.js');
             await prepareSite({ github, context, core, fs });
 
-      - name: Deploy website
-        uses: peaceiris/actions-gh-pages@v4
+      - name: Setup Pages
+        id: pages
+        uses: actions/configure-pages@v4
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./_site
-          publish_branch: gh-pages
-          keep_files: false
-          user_name: "github-actions[bot]"
-          user_email: "41898282+github-actions[bot]@users.noreply.github.com"
-          commit_message: "chore(github-action): publish site and update chart index"
-          force_orphan: false
-          enable_jekyll: false
+          path: ./_site
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
