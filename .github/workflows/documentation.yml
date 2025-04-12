@@ -77,7 +77,7 @@ jobs:
               await exec.exec('helm-docs');
               await runGit(['add', '.']);
 
-              const files = (await runGit(['diff', '--name-only', '--staged']))
+              const files = (await runGit(['diff', '--name-only']))
                 .split('\n')
                 .filter(Boolean);
               if (files.length === 0) {
