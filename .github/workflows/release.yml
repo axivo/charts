@@ -189,10 +189,31 @@ jobs:
               throw error; // Re-throw to fail the workflow step
             }
 
+      - name: Pre-Build Diagnostics
+        run: |
+          echo "--- Root Directory Listing ---"
+          ls -la
+          echo "--- Content of ./index.html ---"
+          cat ./index.html || echo "./index.html not found"
+          echo "--- Content of ./README.md ---"
+          cat ./README.md || echo "./README.md not found"
+          echo "--- Content of application/ubuntu/README.md ---"
+          cat application/ubuntu/README.md || echo "application/ubuntu/README.md not found"
+          echo "-------------------------------"
+
       - name: Build website
         uses: actions/jekyll-build-pages@v1
         with:
           source: ./
+
+      - name: Post-Build Diagnostics
+        run: |
+          echo "--- _site Directory Listing ---"
+          ls -la ./_site
+          echo "--- Content of ./_site/index.html ---"
+          cat ./_site/index.html || echo "./_site/index.html not found"
+          echo "-----------------------------------"
+
           destination: ./_site
 
       - name: Deploy website
@@ -206,10 +227,3 @@ jobs:
           user_email: "41898282+github-actions[bot]@users.noreply.github.com"
           commit_message: "chore(github-action): publish site and update chart index"
           force_orphan: false
-
-      # Note: This step now displays index.html
-      - name: Display generated index.html
-        run: |
-          echo "--- Content of ./index.html ---" # Changed from index.md
-          cat ./index.html # Changed from index.md
-          echo "-------------------------------" # Changed from index.md
