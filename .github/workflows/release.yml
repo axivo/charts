@@ -5,7 +5,6 @@ on:
     branches:
       - main
     paths:
-      - .github/chart-releaser.yml
       - .github/pages/config.yml
       - .github/pages/index.md.hbs
       - application/**
@@ -34,7 +33,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Configure git user
+      - name: Configure repository
         uses: actions/github-script@v7
         with:
           script: |
@@ -51,30 +50,66 @@ jobs:
         with:
           node-version: 20
 
-      - name: Install dependencies
+      - name: Install node.js dependencies
         run: npm install js-yaml handlebars
 
-      - name: Create dist directory
-        run: install -d ./_dist
+      - name: Get chart-releaser configuration
+        id: chart-config
+        uses: actions/github-script@v7
+        with:
+          script: |
+            // Load the module
+            const pagesModule = require('./.github/scripts/pages.js');
+            const { CONFIG, setOutputs } = pagesModule;
+            
+            // Set all outputs for later steps
+            setOutputs(core);
+
+            // Create dist directory
+            const fs = require('fs/promises');
+            try {
+              await fs.mkdir(CONFIG.paths.distDir, { recursive: true });
+              core.info(`Created directory: ${CONFIG.paths.distDir}`);
+            } catch (error) {
+              core.setFailed(`Error creating directory: ${error.message}`);
+            }
+
+            // Verify release template exists
+            try {
+              await fs.access(CONFIG.paths.releaseTemplate);
+              core.info(`Release template found at: ${CONFIG.paths.releaseTemplate}`);
+            } catch (error) {
+              core.setFailed(`Release template not found at ${CONFIG.paths.releaseTemplate}: ${error.message}`);
+            }
 
       - name: Release application charts
         uses: helm/chart-releaser-action@v1
         env:
           CR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          CR_INDEX_PATH: ./_dist/index.yaml
+          CR_INDEX_PATH: ${{ steps.chart-config.outputs.CR_INDEX_PATH }}
+          CR_SKIP_EXISTING: ${{ steps.chart-config.outputs.CR_SKIP_EXISTING }}
+          CR_PAGES_BRANCH: ${{ steps.chart-config.outputs.CR_PAGES_BRANCH }}
+          CR_CHARTS_REPO_URL: ${{ steps.chart-config.outputs.CR_CHARTS_REPO_URL }}
+          CR_RELEASE_NAME_TEMPLATE: ${{ steps.chart-config.outputs.CR_RELEASE_NAME_TEMPLATE }}
+          CR_RELEASE_TEMPLATE: ${{ steps.chart-config.outputs.CR_RELEASE_TEMPLATE }}
+          CR_PACKAGES_WITH_INDEX: ${{ steps.chart-config.outputs.CR_PACKAGES_WITH_INDEX }}
         with:
-          charts_dir: application
-          config: .github/chart-releaser.yml
+          charts_dir: ${{ steps.chart-config.outputs.DIRECTORY_APPLICATION }}
           skip_existing: true
 
       - name: Release library charts
         uses: helm/chart-releaser-action@v1
         env:
           CR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          CR_INDEX_PATH: ./_dist/index.yaml
+          CR_INDEX_PATH: ${{ steps.chart-config.outputs.CR_INDEX_PATH }}
+          CR_SKIP_EXISTING: ${{ steps.chart-config.outputs.CR_SKIP_EXISTING }}
+          CR_PAGES_BRANCH: ${{ steps.chart-config.outputs.CR_PAGES_BRANCH }}
+          CR_CHARTS_REPO_URL: ${{ steps.chart-config.outputs.CR_CHARTS_REPO_URL }}
+          CR_RELEASE_NAME_TEMPLATE: ${{ steps.chart-config.outputs.CR_RELEASE_NAME_TEMPLATE }}
+          CR_RELEASE_TEMPLATE: ${{ steps.chart-config.outputs.CR_RELEASE_TEMPLATE }}
+          CR_PACKAGES_WITH_INDEX: ${{ steps.chart-config.outputs.CR_PACKAGES_WITH_INDEX }}
         with:
-          charts_dir: library
-          config: .github/chart-releaser.yml
+          charts_dir: ${{ steps.chart-config.outputs.DIRECTORY_LIBRARY }}
           skip_existing: true
 
       - name: Generate chart index page
@@ -83,17 +118,18 @@ jobs:
         with:
           script: |
             const fs = require('fs/promises');
-            const { generateChartIndex } = require('./.github/scripts/pages.js');
-            await generateChartIndex({ github, context, core, fs });
+            const pagesScriptPath = '${{ steps.chart-config.outputs.PAGES_SCRIPT_PATH }}';
+            const { generateChartIndex } = require(pagesScriptPath);
+            await generateChartIndex({ context, core, fs });
 
       - name: Setup build environment
         uses: actions/github-script@v7
         with:
           script: |
             const fs = require('fs/promises');
-            const path = require('path');
-            const { setupBuildEnvironment } = require('./.github/scripts/pages.js');
-            await setupBuildEnvironment({ github, context, core, fs, path });
+            const pagesScriptPath = '${{ steps.chart-config.outputs.PAGES_SCRIPT_PATH }}';
+            const { setupBuildEnvironment } = require(pagesScriptPath);
+            await setupBuildEnvironment({ core, fs });
 
       - name: Build website
         uses: actions/jekyll-build-pages@v1
@@ -105,9 +141,9 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            const fs = require('fs/promises');
-            const { prepareSite } = require('./.github/scripts/pages.js');
-            await prepareSite({ github, context, core, fs });
+            const pagesScriptPath = '${{ steps.chart-config.outputs.PAGES_SCRIPT_PATH }}';
+            const { prepareSite } = require(pagesScriptPath);
+            await prepareSite({ core });
 
       - name: Setup Pages
         id: pages
