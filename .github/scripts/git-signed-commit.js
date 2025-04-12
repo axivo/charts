@@ -135,5 +135,7 @@ async function getGitStagedChanges(runGit, fs) {
 }
 
 // Export functions
-module.exports = createSignedCommit;
-module.exports.getGitStagedChanges = getGitStagedChanges;
+module.exports = {
+  createSignedCommit,
+  getGitStagedChanges
+};
