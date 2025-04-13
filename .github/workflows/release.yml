@@ -53,26 +53,21 @@ jobs:
       - name: Install node.js dependencies
         run: npm install js-yaml handlebars
 
-      - name: Get chart-releaser configuration
-        id: chart-config
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const fs = require('fs/promises');
-            const pagesModule = require('./.github/scripts/pages.js');
-            const { setOutputs, setupChartReleaserConfig } = pagesModule;
-            setOutputs(core);
-            await setupChartReleaserConfig({ core, fs });
-
-      - name: Run chart-releaser
-        uses: helm/chart-releaser-action@v1.7.0
+      - name: Run chart-releaser for application charts
+        uses: helm/chart-releaser-action@v1
         env:
-          CR_CHARTS_REPO_URL: ${{ steps.chart-config.outputs.CR_CHARTS_REPO_URL }}
-          CR_PACKAGES_WITH_INDEX: ${{ steps.chart-config.outputs.CR_PACKAGES_WITH_INDEX }}
-          CR_RELEASE_NAME_TEMPLATE: ${{ steps.chart-config.outputs.CR_RELEASE_NAME_TEMPLATE }}
-          CR_RELEASE_TEMPLATE: ${{ steps.chart-config.outputs.CR_RELEASE_TEMPLATE }}
-          CR_SKIP_EXISTING: ${{ steps.chart-config.outputs.CR_SKIP_EXISTING }}
           CR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          charts_dir: "application"
+          skip_existing: true
+
+      - name: Run chart-releaser for library charts
+        uses: helm/chart-releaser-action@v1
+        env:
+          CR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          charts_dir: "library"
+          skip_existing: true
 
       - name: Generate chart index page
         uses: actions/github-script@v7
