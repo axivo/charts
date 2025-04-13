@@ -56,16 +56,16 @@ async function fileExists(fs, filePath) {
 }
 
 /**
-* Generate the chart index page from the index.yaml file
-* 
-* @param {Object} options - Options for chart index generation
-* @param {Object} options.context - GitHub Actions context for repository info
-* @param {Object} options.core - GitHub Actions Core API for logging and output
-* @param {Object} options.fs - Node.js fs/promises module for file operations
+ * Generate the chart index page from the index.yaml file
+ * 
+ * @param {Object} options - Options for chart index generation
+ * @param {Object} options.context - GitHub Actions context for repository info
+ * @param {Object} options.core - GitHub Actions Core API for logging and output
+ * @param {Object} options.fs - Node.js fs/promises module for file operations
  * @param {string} [options.indexPath=CONFIG.filesystem.indexPath] - Path to the index.yaml file
-* @param {string} [options.indexMdPath=CONFIG.filesystem.indexMdPath] - Path where to write the generated index.md
-* @param {string} [options.templatePath=CONFIG.filesystem.templatePath] - Path to the Handlebars template
-* @returns {Promise<boolean>} - True if successful, false if skipped
+ * @param {string} [options.indexMdPath=CONFIG.filesystem.indexMdPath] - Path where to write the generated index.md
+ * @param {string} [options.templatePath=CONFIG.filesystem.templatePath] - Path to the Handlebars template
+ * @returns {Promise<boolean>} - True if successful, false if skipped
  */
 async function generateChartIndex({
   context,
