@@ -7,6 +7,7 @@
  * - Generating chart index pages from Helm chart releases
  * - Preparing the build environment for Jekyll
  * - Finalizing GitHub Pages deployment
+ * - Packaging and releasing Helm charts
  * 
  * @module pages
  */
@@ -15,9 +16,7 @@
  * Centralized configuration for the entire workflow including:
  * - File and directory paths
  * - Chart releaser settings
- * - Directory configurations
- * - Environment variables for chart-releaser
- * - Directory variables for GitHub Actions outputs
+ * - Environment variables
  */
 const CONFIG = {
   // File and directory paths
@@ -35,39 +34,120 @@ const CONFIG = {
   // Chart releaser settings
   chartReleaser: {
     chartsRepoUrl: 'https://axivo.github.io/charts/',
-    indexPath: './_dist/index.yaml',          // Path for index.yaml storage during workflow run
-    indexPathFinal: 'index.yaml',             // Path in the published GitHub Pages site
-    packagesWithIndex: 'false',
+    indexPath: './_dist/index.yaml',
+    indexPathFinal: 'index.yaml',
+    packagesWithIndex: 'true',
     pagesBranch: '',
     releaseNameTemplate: '{{ .Name }}-v{{ .Version }}',
     skipExisting: 'true',
-    tempStoragePath: '.cr-release-packages'   // Temporary storage path for chart packages
+    tempStoragePath: '.cr-release-packages'
   },
 
-  // Directory configurations
-  directories: {
-    application: 'application',
-    library: 'library'
-  },
-
-  // Environment variables for chart-releaser
+  // Environment variables with proper JavaScript naming
   env: {
-    CR_CHARTS_REPO_URL: 'https://axivo.github.io/charts/',
-    CR_INDEX_PATH: 'index.yaml',
-    CR_INDEX_PATH_FINAL: 'index.yaml',
-    CR_PACKAGES_WITH_INDEX: 'false',
-    CR_PAGES_BRANCH: '',
-    CR_RELEASE_NAME_TEMPLATE: '{{ .Name }}-v{{ .Version }}',
-    CR_RELEASE_TEMPLATE: '.github/release_template.md',
-    CR_SKIP_EXISTING: 'true'
-  },
-
-  // Directory variables for output
-  outputDirs: {
-    DIRECTORY_APPLICATION: 'application',
-    DIRECTORY_LIBRARY: 'library'
+    applicationDir: 'application',
+    chartsRepoUrl: 'https://axivo.github.io/charts/',
+    indexPath: './_dist/index.yaml',
+    indexPathFinal: 'index.yaml',
+    libraryDir: 'library',
+    packagesWithIndex: 'true',
+    pagesBranch: '',
+    releaseNameTemplate: '{{ .Name }}-v{{ .Version }}',
+    releaseTemplate: '.github/release_template.md',
+    skipExisting: 'true'
   }
 };
+
+/**
+ * Creates GitHub releases for packaged charts and uploads the chart packages as release assets
+ * 
+ * @param {Object} options - Options for creating GitHub releases
+ * @param {Object} options.github - GitHub API client
+ * @param {Object} options.context - GitHub Actions context for repository info
+ * @param {Object} options.core - GitHub Actions Core API for logging and output
+ * @param {Object} options.fs - Node.js fs module for file operations
+ * @param {string} [options.packagesDir=CONFIG.chartReleaser.tempStoragePath] - Directory with chart packages
+ * @returns {Promise<void>}
+ */
+async function createChartReleases({
+  github,
+  context,
+  core,
+  fs,
+  packagesDir = CONFIG.chartReleaser.tempStoragePath
+}) {
+  try {
+    const path = require('path');
+
+    // Get all chart packages
+    const packages = fs.readdirSync(packagesDir)
+      .filter(file => file.endsWith('.tgz'));
+
+    core.info(`Found ${packages.length} chart packages to release`);
+
+    for (const pkg of packages) {
+      const chartPath = path.join(packagesDir, pkg);
+      // Extract chart name and version from package filename (e.g., chart-name-1.2.3.tgz)
+      const chartNameWithVersion = pkg.replace('.tgz', '');
+      const lastDashIndex = chartNameWithVersion.lastIndexOf('-');
+      const chartName = chartNameWithVersion.substring(0, lastDashIndex);
+      const chartVersion = chartNameWithVersion.substring(lastDashIndex + 1);
+
+      const tagName = `${chartName}-v${chartVersion}`;
+      core.info(`Processing release for ${tagName}`);
+
+      try {
+        // Check if release already exists
+        try {
+          await github.rest.repos.getReleaseByTag({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            tag: tagName
+          });
+          core.info(`Release ${tagName} already exists, skipping`);
+          continue;
+        } catch (error) {
+          // Release doesn't exist, proceed with creation
+          if (error.status !== 404) {
+            throw error;
+          }
+        }
+
+        // Create release
+        const release = await github.rest.repos.createRelease({
+          owner: context.repo.owner,
+          repo: context.repo.repo,
+          tag_name: tagName,
+          name: `${chartName} ${chartVersion}`,
+          body: `Release of ${chartName} chart version ${chartVersion}`,
+          draft: false,
+          prerelease: false
+        });
+
+        // Upload chart package as asset
+        const fileContent = fs.readFileSync(chartPath);
+        await github.rest.repos.uploadReleaseAsset({
+          owner: context.repo.owner,
+          repo: context.repo.repo,
+          release_id: release.data.id,
+          name: pkg,
+          data: fileContent
+        });
+
+        core.info(`Successfully created release for ${tagName}`);
+      } catch (error) {
+        core.warning(`Error creating release for ${tagName}: ${error.message}`);
+        if (!CONFIG.chartReleaser.skipExisting) {
+          throw error;
+        }
+      }
+    }
+  } catch (error) {
+    const errorMsg = `Failed to create chart releases: ${error.message}`;
+    core.setFailed(errorMsg);
+    throw new Error(errorMsg);
+  }
+}
 
 /**
  * Generate the chart index page from the index.yaml file
@@ -151,20 +231,165 @@ async function generateChartIndex({
 }
 
 /**
+ * Generates the Helm repository index file
+ * 
+ * @param {Object} options - Options for generating the index
+ * @param {Object} options.exec - GitHub Actions exec helpers
+ * @param {Object} options.core - GitHub Actions Core API for logging
+ * @param {Object} options.fs - Node.js fs module for file operations
+ * @param {string} options.packagesDir - Directory with packaged charts
+ * @param {string} options.indexPath - Output path for the index file
+ * @param {string} options.repoUrl - URL of the Helm repository
+ * @returns {Promise<void>}
+ */
+async function generateHelmIndex({
+  exec,
+  core,
+  fs,
+  packagesDir,
+  indexPath,
+  repoUrl
+}) {
+  try {
+    // Make sure the destination directory exists
+    const indexDir = indexPath.substring(0, indexPath.lastIndexOf('/'));
+    await fs.mkdir(indexDir, { recursive: true });
+
+    // Generate the index file
+    await exec.exec('helm', ['repo', 'index', packagesDir, '--url', repoUrl]);
+
+    // Copy the index file to the desired location
+    await fs.copyFile(`${packagesDir}/index.yaml`, indexPath);
+
+    core.info(`Successfully generated Helm repository index at ${indexPath}`);
+  } catch (error) {
+    const errorMsg = `Failed to generate Helm repository index: ${error.message}`;
+    core.setFailed(errorMsg);
+    throw new Error(errorMsg);
+  }
+}
+
+/**
+ * Packages all charts in a specified directory
+ * 
+ * @param {Object} options - Options for packaging charts
+ * @param {Object} options.exec - GitHub Actions exec helpers
+ * @param {Object} options.core - GitHub Actions Core API for logging
+ * @param {Object} options.fs - Node.js fs module for file operations
+ * @param {string} options.dirPath - Directory containing charts
+ * @param {string} options.outputDir - Directory to store packaged charts
+ * @returns {Promise<void>}
+ */
+async function packageChartsInDirectory({
+  exec,
+  core,
+  fs,
+  dirPath,
+  outputDir
+}) {
+  try {
+    // Find all charts (directories containing Chart.yaml)
+    const { stdout: chartDirs } = await exec.getExecOutput(
+      `find ${dirPath} -name Chart.yaml -type f | xargs -I{} dirname {}`,
+      [],
+      { silent: false }
+    );
+
+    if (!chartDirs.trim()) {
+      core.info(`No charts found in ${dirPath}`);
+      return;
+    }
+
+    // Package each chart
+    const charts = chartDirs.trim().split('\n');
+    for (const chartDir of charts) {
+      core.info(`Packaging chart: ${chartDir}`);
+      await exec.exec('helm', ['package', chartDir, '--destination', outputDir]);
+    }
+
+    core.info(`Successfully packaged ${charts.length} charts from ${dirPath}`);
+  } catch (error) {
+    const errorMsg = `Failed to package charts in ${dirPath}: ${error.message}`;
+    core.setFailed(errorMsg);
+    throw new Error(errorMsg);
+  }
+}
+
+/**
+ * Handles the complete Helm chart release process:
+ * 1. Packages application and library charts
+ * 2. Creates GitHub releases
+ * 3. Generates the repository index
+ * 
+ * @param {Object} options - Options for the chart release process
+ * @param {Object} options.github - GitHub API client
+ * @param {Object} options.context - GitHub Actions context for repository info
+ * @param {Object} options.core - GitHub Actions Core API for logging and output
+ * @param {Object} options.fs - Node.js fs module for file operations
+ * @param {Object} options.exec - GitHub Actions exec helpers for running commands
+ * @returns {Promise<void>}
+ */
+async function processChartRelease({
+  github,
+  context,
+  core,
+  fs,
+  exec
+}) {
+  try {
+    const packagesDir = CONFIG.chartReleaser.tempStoragePath;
+    const indexPath = CONFIG.chartReleaser.indexPath;
+
+    // Ensure packages directory exists
+    await fs.mkdir(packagesDir, { recursive: true });
+    core.info(`Created directory: ${packagesDir}`);
+
+    // Package application charts
+    core.info('Packaging application charts...');
+    const appDirPath = CONFIG.env.applicationDir;
+    await packageChartsInDirectory({ exec, core, fs, dirPath: appDirPath, outputDir: packagesDir });
+
+    // Package library charts
+    core.info('Packaging library charts...');
+    const libDirPath = CONFIG.env.libraryDir;
+    await packageChartsInDirectory({ exec, core, fs, dirPath: libDirPath, outputDir: packagesDir });
+
+    // Create GitHub releases for the charts
+    core.info('Creating GitHub releases for charts...');
+    await createChartReleases({ github, context, core, fs, packagesDir });
+
+    // Generate the Helm repository index
+    core.info('Generating Helm repository index...');
+    const repoUrl = CONFIG.chartReleaser.chartsRepoUrl;
+    await generateHelmIndex({ exec, core, fs, packagesDir, indexPath, repoUrl });
+
+    core.info('Chart release process completed successfully');
+  } catch (error) {
+    const errorMsg = `Chart release process failed: ${error.message}`;
+    core.setFailed(errorMsg);
+    throw new Error(errorMsg);
+  }
+}
+
+/**
  * Sets GitHub Actions outputs from the CONFIG object for use in workflow steps
  *
  * @param {Object} core - GitHub Actions Core API for setting outputs
  */
 function setOutputs(core) {
-  // Set all environment variables as outputs
-  Object.entries(CONFIG.env).forEach(([key, value]) => {
-    core.setOutput(key, value);
-  });
+  // Map environment variables to their expected output names
+  core.setOutput('CR_CHARTS_REPO_URL', CONFIG.env.chartsRepoUrl);
+  core.setOutput('CR_INDEX_PATH', CONFIG.env.indexPath);
+  core.setOutput('CR_INDEX_PATH_FINAL', CONFIG.env.indexPathFinal);
+  core.setOutput('CR_PACKAGES_WITH_INDEX', CONFIG.env.packagesWithIndex);
+  core.setOutput('CR_PAGES_BRANCH', CONFIG.env.pagesBranch);
+  core.setOutput('CR_RELEASE_NAME_TEMPLATE', CONFIG.env.releaseNameTemplate);
+  core.setOutput('CR_RELEASE_TEMPLATE', CONFIG.env.releaseTemplate);
+  core.setOutput('CR_SKIP_EXISTING', CONFIG.env.skipExisting);
 
   // Set directory outputs
-  Object.entries(CONFIG.outputDirs).forEach(([key, value]) => {
-    core.setOutput(key, value);
-  });
+  core.setOutput('DIRECTORY_APPLICATION', CONFIG.env.applicationDir);
+  core.setOutput('DIRECTORY_LIBRARY', CONFIG.env.libraryDir);
 }
 
 /**
@@ -249,7 +474,11 @@ async function setupChartReleaserConfig({ core, fs }) {
 // Export all the functions and constants
 module.exports = {
   CONFIG,
+  createChartReleases,
   generateChartIndex,
+  generateHelmIndex,
+  packageChartsInDirectory,
+  processChartRelease,
   setOutputs,
   setupBuildEnvironment,
   setupChartReleaserConfig
