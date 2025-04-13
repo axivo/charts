@@ -13,13 +13,14 @@
  * Centralized configuration for the documentation workflow
  */
 const CONFIG = {
-    helmDocs: {
-        version: '1.14.2',
-        baseUrl: 'https://github.com/norwoodj/helm-docs/releases/download'
-    },
-    git: {
-        commitMessage: 'docs(github-action): update documentation'
-    }
+  helmDocs: {
+    baseUrl: 'https://github.com/norwoodj/helm-docs/releases/download',
+    version: '1.14.2'
+  },
+  git: {
+    commitMessage: 'docs(github-action): update documentation',
+    signedCommitModule: './git-signed-commit.js'
+  }
 };
 
 /**
@@ -32,31 +33,31 @@ const CONFIG = {
  * @returns {Promise<void>}
  */
 async function installHelmDocs({
-    core,
-    exec,
-    version = CONFIG.helmDocs.version
+  core,
+  exec,
+  version = CONFIG.helmDocs.version
 }) {
-    try {
-        const os = require('os');
-        const tmpDir = os.tmpdir();
-        const packagePath = `${tmpDir}/helm-docs_${version}_Linux_x86_64.deb`;
-        const packageUrl = `${CONFIG.helmDocs.baseUrl}/v${version}/helm-docs_${version}_Linux_x86_64.deb`;
+  try {
+    const os = require('os');
+    const tmpDir = os.tmpdir();
+    const packagePath = `${tmpDir}/helm-docs_${version}_Linux_x86_64.deb`;
+    const packageUrl = `${CONFIG.helmDocs.baseUrl}/v${version}/helm-docs_${version}_Linux_x86_64.deb`;
 
-        core.info(`Installing helm-docs version ${version}...`);
+    core.info(`Installing helm-docs version ${version}...`);
 
-        // Helper function to run sudo commands
-        const runSudo = async (args) => (await exec.exec('sudo', args));
+    // Helper function to run sudo commands
+    const runSudo = async (args) => (await exec.exec('sudo', args));
 
-        // Download and install the package
-        await runSudo(['wget', '-qP', tmpDir, packageUrl]);
-        await runSudo(['apt-get', '-y', 'install', packagePath]);
+    // Download and install the package
+    await runSudo(['wget', '-qP', tmpDir, packageUrl]);
+    await runSudo(['apt-get', '-y', 'install', packagePath]);
 
-        core.info('helm-docs successfully installed');
-    } catch (error) {
-        const errorMsg = `Failed to install helm-docs: ${error.message}`;
-        core.setFailed(errorMsg);
-        throw new Error(errorMsg);
-    }
+    core.info('helm-docs successfully installed');
+  } catch (error) {
+    const errorMsg = `Failed to install helm-docs: ${error.message}`;
+    core.setFailed(errorMsg);
+    throw new Error(errorMsg);
+  }
 }
 
 /**
@@ -71,68 +72,70 @@ async function installHelmDocs({
  * @returns {Promise<void>}
  */
 async function updateDocumentation({
-    github,
-    context,
-    core,
-    exec,
-    fs
+  github,
+  context,
+  core,
+  exec,
+  fs
 }) {
-    try {
-        // Import git utilities
-        const { createSignedCommit, getGitStagedChanges } = require('./.github/scripts/git-signed-commit.js');
+  try {
+    // Import git utilities - using the path from config
+    const signedCommitModule = CONFIG.git.signedCommitModule;
+    core.info(`Importing git signed commit module from: ${signedCommitModule}`);
+    const { createSignedCommit, getGitStagedChanges } = require(signedCommitModule);
 
-        // Helper function to run git commands
-        const runGit = async (args) => (await exec.getExecOutput('git', args)).stdout.trim();
+    // Helper function to run git commands
+    const runGit = async (args) => (await exec.getExecOutput('git', args)).stdout.trim();
 
-        // Fetch and switch to the PR branch
-        const headRef = process.env.GITHUB_HEAD_REF;
-        core.info(`Switching to PR branch: ${headRef}`);
-        await runGit(['fetch', 'origin', headRef]);
-        await runGit(['switch', headRef]);
+    // Fetch and switch to the PR branch
+    const headRef = process.env.GITHUB_HEAD_REF;
+    core.info(`Switching to PR branch: ${headRef}`);
+    await runGit(['fetch', 'origin', headRef]);
+    await runGit(['switch', headRef]);
 
-        // Generate documentation with helm-docs
-        core.info('Generating documentation with helm-docs...');
-        await exec.exec('helm-docs');
+    // Generate documentation with helm-docs
+    core.info('Generating documentation with helm-docs...');
+    await exec.exec('helm-docs');
 
-        // Stage changes
-        await runGit(['add', '.']);
+    // Stage changes
+    await runGit(['add', '.']);
 
-        // Check if there are any changes
-        const files = (await runGit(['diff', '--staged', '--name-only']))
-            .split('\n')
-            .filter(Boolean);
+    // Check if there are any changes
+    const files = (await runGit(['diff', '--staged', '--name-only']))
+      .split('\n')
+      .filter(Boolean);
 
-        if (files.length === 0) {
-            core.info('No file changes detected. Documentation is up to date.');
-            return;
-        }
-
-        core.info(`${files.length} files have been updated`);
-
-        // Get the changes and create a commit
-        const { additions, deletions } = await getGitStagedChanges(runGit, fs);
-        await createSignedCommit({
-            github,
-            context,
-            core,
-            branchName: context.payload.pull_request.head.ref,
-            expectedHeadOid: context.payload.pull_request.head.sha,
-            additions,
-            deletions,
-            commitMessage: CONFIG.git.commitMessage
-        });
-
-        core.info('Documentation updated and committed successfully');
-    } catch (error) {
-        const errorMsg = `Failed to update documentation: ${error.message}`;
-        core.setFailed(errorMsg);
-        throw new Error(errorMsg);
+    if (files.length === 0) {
+      core.info('No file changes detected. Documentation is up to date.');
+      return;
     }
+
+    core.info(`${files.length} files have been updated`);
+
+    // Get the changes and create a commit
+    const { additions, deletions } = await getGitStagedChanges(runGit, fs);
+    await createSignedCommit({
+      github,
+      context,
+      core,
+      branchName: context.payload.pull_request.head.ref,
+      expectedHeadOid: context.payload.pull_request.head.sha,
+      additions,
+      deletions,
+      commitMessage: CONFIG.git.commitMessage
+    });
+
+    core.info('Documentation updated and committed successfully');
+  } catch (error) {
+    const errorMsg = `Failed to update documentation: ${error.message}`;
+    core.setFailed(errorMsg);
+    throw new Error(errorMsg);
+  }
 }
 
 // Export all the functions and constants
 module.exports = {
-    CONFIG,
-    installHelmDocs,
-    updateDocumentation
+  CONFIG,
+  installHelmDocs,
+  updateDocumentation
 };
