@@ -68,7 +68,7 @@ async function createChartReleases({
   try {
     const path = require('path');
 
-    // Get all chart packages
+    // Get chart packages
     const packages = fs.readdirSync(packagesDir)
       .filter(file => file.endsWith('.tgz'));
 
@@ -76,7 +76,7 @@ async function createChartReleases({
 
     for (const pkg of packages) {
       const chartPath = path.join(packagesDir, pkg);
-      // Extract chart name and version from package filename (e.g., chart-name-1.2.3.tgz)
+      // Extract chart name and version from filename
       const chartNameWithVersion = pkg.replace('.tgz', '');
       const lastDashIndex = chartNameWithVersion.lastIndexOf('-');
       const chartName = chartNameWithVersion.substring(0, lastDashIndex);
@@ -86,7 +86,7 @@ async function createChartReleases({
       core.info(`Processing release for ${tagName}`);
 
       try {
-        // Check if release already exists
+        // Check if release exists
         try {
           await github.rest.repos.getReleaseByTag({
             owner: context.repo.owner,
@@ -251,14 +251,14 @@ async function generateHelmIndex({
   repoUrl
 }) {
   try {
-    // Make sure the destination directory exists
+    // Make sure destination directory exists
     const indexDir = indexPath.substring(0, indexPath.lastIndexOf('/'));
     await fs.mkdir(indexDir, { recursive: true });
 
     // Generate the index file
     await exec.exec('helm', ['repo', 'index', packagesDir, '--url', repoUrl]);
 
-    // Copy the index file to the desired location
+    // Copy index file to destination
     await fs.copyFile(`${packagesDir}/index.yaml`, indexPath);
 
     core.info(`Successfully generated Helm repository index at ${indexPath}`);
@@ -288,32 +288,37 @@ async function packageChartsInDirectory({
   outputDir
 }) {
   try {
-    // Path module for working with file paths
     const path = require('path');
+    const fsPromises = require('fs/promises');
 
-    // Function to recursively find Chart.yaml files
+    // Find Chart.yaml files recursively
     async function findChartYamlFiles(directory) {
       const chartDirs = [];
 
-      // Function to search directory recursively
+      // Search directory recursively
       async function searchDir(dir) {
-        const entries = await fs.promises.readdir(dir, { withFileTypes: true });
+        try {
+          const entries = await fsPromises.readdir(dir, { withFileTypes: true });
 
-        for (const entry of entries) {
-          const fullPath = path.join(dir, entry.name);
+          for (const entry of entries) {
+            const fullPath = path.join(dir, entry.name);
 
-          // Determine what to do based on entry type
-          switch (true) {
-            case entry.isDirectory():
-              await searchDir(fullPath);
-              break;
-            case entry.name === 'Chart.yaml':
-              // Found a Chart.yaml file, add its directory to the list
-              chartDirs.push(dir);
-              break;
-            default:
-              break;
+            // Determine what to do based on entry type
+            switch (true) {
+              case entry.isDirectory():
+                await searchDir(fullPath);
+                break;
+              case entry.name === 'Chart.yaml':
+                // Found a Chart.yaml file
+                chartDirs.push(dir);
+                break;
+              default:
+                break;
+            }
           }
+        } catch (error) {
+          core.warning(`Error reading directory ${dir}: ${error.message}`);
+          // Skip this directory on error
         }
       }
 
@@ -321,7 +326,7 @@ async function packageChartsInDirectory({
       return chartDirs;
     }
 
-    // Get all directories containing Chart.yaml files
+    // Get directories containing Chart.yaml files
     const chartDirsArray = await findChartYamlFiles(dirPath);
     const chartDirs = chartDirsArray.join('\n');
 
@@ -402,12 +407,12 @@ async function processChartRelease({
 }
 
 /**
- * Sets GitHub Actions outputs from the CONFIG object for use in workflow steps
+ * Sets GitHub Actions outputs from the CONFIG object
  *
  * @param {Object} core - GitHub Actions Core API for setting outputs
  */
 function setOutputs(core) {
-  // Map environment variables to their expected output names
+  // Map output names
   core.setOutput('CR_CHARTS_REPO_URL', CONFIG.chart.repoUrl);
   core.setOutput('CR_INDEX_PATH', CONFIG.paths.indexPath);
   core.setOutput('CR_INDEX_PATH_FINAL', CONFIG.paths.indexPathFinal);
@@ -461,7 +466,7 @@ async function setupBuildEnvironment({ core, fs }) {
     throw new Error(errorMsg);
   }
 
-  // Remove README.md from root if it exists (to avoid conflicts in pre-build)
+  // Remove README.md to avoid conflicts
   try {
     if (await fileExists('./README.md')) {
       core.info('Removing README.md from root to prevent conflicts with index.html');
@@ -487,11 +492,11 @@ async function setupBuildEnvironment({ core, fs }) {
  */
 async function setupChartReleaserConfig({ core, fs }) {
   try {
-    // Create the distribution directory if it doesn't exist
+    // Create the distribution directory
     await fs.mkdir(CONFIG.directories.dist, { recursive: true });
     core.info(`Created directory: ${CONFIG.directories.dist}`);
 
-    // Check if the release template exists
+    // Check if release template exists
     await fs.access(CONFIG.paths.releaseTemplate);
     core.info(`Release template found at: ${CONFIG.paths.releaseTemplate}`);
   } catch (error) {
@@ -501,7 +506,7 @@ async function setupChartReleaserConfig({ core, fs }) {
   }
 }
 
-// Export all the functions and constants
+// Export functions and constants
 module.exports = {
   CONFIG,
   createChartReleases,
