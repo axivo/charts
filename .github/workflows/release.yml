@@ -38,7 +38,7 @@ jobs:
         with:
           script: |
             const configureGit = require('./.github/scripts/git-config.js');
-            await configureGit({github, context, core, exec});
+            await configureGit({ github, context, core, exec });
 
       - name: Setup helm
         uses: azure/setup-helm@v4
