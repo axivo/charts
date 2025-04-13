@@ -1,6 +1,6 @@
 # AXIVO Charts
 
-  <img align="right" width="350" height="350" src="https://raw.githubusercontent.com/axivo/charts/main/docs/images/logo-services.svg" alt="AXIVO Charts" />
+  <img align="right" width="250" height="250" src="https://raw.githubusercontent.com/axivo/charts/main/docs/images/logo-services.svg" alt="AXIVO Charts" />
 
 [![Helm](https://img.shields.io/badge/helm-v3-blue)](https://helm.sh)
 [![Kubernetes](https://img.shields.io/badge/kubernetes-%23326ce5.svg?style=flat&logo=kubernetes&logoColor=white)](https://kubernetes.io)
