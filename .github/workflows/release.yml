@@ -94,7 +94,7 @@ jobs:
           source: ./
           destination: ./_site
 
-      - name: Setup Pages
+      - name: Setup pages
         id: pages
         uses: actions/configure-pages@v5
 
