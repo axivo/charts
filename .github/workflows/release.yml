@@ -54,22 +54,20 @@ jobs:
         run: npm install js-yaml handlebars
 
       - name: Run chart-releaser for application charts
-        uses: helm/chart-releaser-action@v1
+        uses: helm/chart-releaser-action@v1.7.0
         env:
           CR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          charts_dir: "application"
-          pages_branch: ""
+          charts_dir: application
           skip_existing: true
           skip_upload: true
 
       - name: Run chart-releaser for library charts
-        uses: helm/chart-releaser-action@v1
+        uses: helm/chart-releaser-action@v1.7.0
         env:
           CR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          charts_dir: "library"
-          pages_branch: ""
+          charts_dir: library
           skip_existing: true
           skip_upload: true
 
