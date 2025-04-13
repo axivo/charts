@@ -288,20 +288,50 @@ async function packageChartsInDirectory({
   outputDir
 }) {
   try {
-    // Find all charts (directories containing Chart.yaml)
-    const { stdout: chartDirs } = await exec.getExecOutput(
-      `find ${dirPath} -name Chart.yaml -type f | xargs -I{} dirname {}`,
-      [],
-      { silent: false }
-    );
+    const fs = require('fs');
+    const path = require('path');
 
-    if (!chartDirs.trim()) {
+    // Function to recursively find Chart.yaml files
+    async function findChartYamlFiles(directory) {
+      const chartDirs = [];
+
+      // Function to search directory recursively
+      async function searchDir(dir) {
+        const entries = await fs.promises.readdir(dir, { withFileTypes: true });
+
+        for (const entry of entries) {
+          const fullPath = path.join(dir, entry.name);
+
+          // Determine what to do based on entry type
+          switch (true) {
+            case entry.isDirectory():
+              await searchDir(fullPath);
+              break;
+            case entry.name === 'Chart.yaml':
+              // Found a Chart.yaml file, add its directory to the list
+              chartDirs.push(dir);
+              break;
+            default:
+              break;
+          }
+        }
+      }
+
+      await searchDir(directory);
+      return chartDirs;
+    }
+
+    // Get all directories containing Chart.yaml files
+    const chartDirsArray = await findChartYamlFiles(dirPath);
+    const chartDirs = chartDirsArray.join('\n');
+
+    if (!chartDirsArray.length) {
       core.info(`No charts found in ${dirPath}`);
       return;
     }
 
     // Package each chart
-    const charts = chartDirs.trim().split('\n');
+    const charts = chartDirsArray;
     for (const chartDir of charts) {
       core.info(`Packaging chart: ${chartDir}`);
       await exec.exec('helm', ['package', chartDir, '--destination', outputDir]);
