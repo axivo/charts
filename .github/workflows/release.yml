@@ -64,13 +64,35 @@ jobs:
             setOutputs(core);
             await setupChartReleaserConfig({ core, fs });
 
-      - name: Process chart release
-        uses: actions/github-script@v7
+      - name: Release application charts
+        uses: helm/chart-releaser-action@v1
+        env:
+          CR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CR_INDEX_PATH: ${{ steps.chart-config.outputs.CR_INDEX_PATH }}
+          CR_SKIP_EXISTING: ${{ steps.chart-config.outputs.CR_SKIP_EXISTING }}
+          CR_PAGES_BRANCH: ${{ steps.chart-config.outputs.CR_PAGES_BRANCH }}
+          CR_CHARTS_REPO_URL: ${{ steps.chart-config.outputs.CR_CHARTS_REPO_URL }}
+          CR_RELEASE_NAME_TEMPLATE: ${{ steps.chart-config.outputs.CR_RELEASE_NAME_TEMPLATE }}
+          CR_RELEASE_TEMPLATE: ${{ steps.chart-config.outputs.CR_RELEASE_TEMPLATE }}
+          CR_PACKAGES_WITH_INDEX: ${{ steps.chart-config.outputs.CR_PACKAGES_WITH_INDEX }}
         with:
-          script: |
-            const fs = require('fs/promises');
-            const { processChartRelease } = require('./.github/scripts/pages.js');
-            await processChartRelease({ github, context, core, fs, exec });
+          charts_dir: ${{ steps.chart-config.outputs.DIRECTORY_APPLICATION }}
+          skip_existing: true
+
+      - name: Release library charts
+        uses: helm/chart-releaser-action@v1
+        env:
+          CR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CR_INDEX_PATH: ${{ steps.chart-config.outputs.CR_INDEX_PATH }}
+          CR_SKIP_EXISTING: ${{ steps.chart-config.outputs.CR_SKIP_EXISTING }}
+          CR_PAGES_BRANCH: ${{ steps.chart-config.outputs.CR_PAGES_BRANCH }}
+          CR_CHARTS_REPO_URL: ${{ steps.chart-config.outputs.CR_CHARTS_REPO_URL }}
+          CR_RELEASE_NAME_TEMPLATE: ${{ steps.chart-config.outputs.CR_RELEASE_NAME_TEMPLATE }}
+          CR_RELEASE_TEMPLATE: ${{ steps.chart-config.outputs.CR_RELEASE_TEMPLATE }}
+          CR_PACKAGES_WITH_INDEX: ${{ steps.chart-config.outputs.CR_PACKAGES_WITH_INDEX }}
+        with:
+          charts_dir: ${{ steps.chart-config.outputs.DIRECTORY_LIBRARY }}
+          skip_existing: true
 
       - name: Generate chart index page
         uses: actions/github-script@v7
@@ -94,7 +116,7 @@ jobs:
           source: ./
           destination: ./_site
 
-      - name: Setup pages
+      - name: Setup Pages
         id: pages
         uses: actions/configure-pages@v5
 
