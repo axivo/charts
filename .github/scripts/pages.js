@@ -109,6 +109,15 @@ async function generateChartIndex({
     }
 
     const index = yaml.load(indexContent);
+    
+    // Add diagnostic logging
+    core.info(`Index structure keys: ${Object.keys(index || {}).join(', ')}`);
+    if (index && index.entries) {
+      core.info(`Entries keys count: ${Object.keys(index.entries).length}`);
+      core.info(`Entries keys: ${Object.keys(index.entries).join(', ')}`);
+    } else {
+      core.warning(`No entries found in index or entries is not an object: ${typeof index?.entries}`);
+    }
 
     if (!index || !index.entries) {
       core.warning('Invalid or empty index.yaml file, creating an empty index.md.');
@@ -148,7 +157,16 @@ async function generateChartIndex({
         };
       })
       .filter(Boolean);
+      
+    // Log charts array info
+    core.info(`Charts array length: ${charts.length}`);
+    if (charts.length > 0) {
+      core.info(`First chart sample: ${JSON.stringify(charts[0])}`);
+    }
 
+    // Log template context
+    core.info(`Template context: RepoURL=${repoUrl}, Branch=${defaultBranchName}, Charts.length=${charts.length}`);
+    
     const compiledTemplate = Handlebars.compile(template);
     const newContent = compiledTemplate({
       Charts: charts,
@@ -156,7 +174,9 @@ async function generateChartIndex({
       Branch: defaultBranchName
     });
 
-    core.info(`Generated content length: ${newContent.length} bytes`);
+    // Log output content sample
+    core.info(`Generated content contains table? ${newContent.includes('|-------|') ? 'Yes' : 'No'}`);
+    core.info(`Content sample around table: ${newContent.substring(newContent.indexOf('Available Charts'), newContent.indexOf('Available Charts') + 300)}...`);
 
     // Ensure directory exists before writing file
     await fs.mkdir(path.dirname(indexMdPath), { recursive: true });
