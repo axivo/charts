@@ -20,10 +20,10 @@
       "depNameTemplate": "norwoodj/helm-docs",
       "extractVersionTemplate": "^v(?<version>.+)$",
       "fileMatch": [
-        ".github/workflows/documentation.yml"
+        ".github/scripts/documentation.js"
       ],
       "matchStrings": [
-        "HELM_DOCS_VERSION:\\s+(?<currentValue>.+)"
+        "baseUrl:[\\s\\S]+?version:\\s+'(?<currentValue>.+)'"
       ]
     },
     {
