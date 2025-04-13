@@ -37,6 +37,26 @@
       "matchStrings": [
         "uses:\\s+?azure[\\s\\S]+?version:\\s+v(?<currentValue>.+)"
       ]
+    },
+    {
+      "customType": "regex",
+      "datasourceTemplate": "node",
+      "depNameTemplate": "node",
+      "fileMatch": [
+        ".github/workflows/release.yml"
+      ],
+      "matchStrings": [
+        "with:[\\s\\S]+?node-version:\\s+(?<currentValue>\\d+)"
+      ],
+      "packageRules": [
+        {
+          "enabled": true,
+          "matchUpdateTypes": [
+            "major"
+          ]
+        }
+      ],
+      "versioningTemplate": "node"
     }
   ],
   "extends": [
