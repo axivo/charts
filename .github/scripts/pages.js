@@ -38,6 +38,8 @@ const CONFIG = {
     templatePath: '.github/pages/index.md.hbs'
   }
 };
+const path = require('path');
+const yaml = require('js-yaml');
 
 /**
  * Creates GitHub releases for packaged charts and uploads the chart packages as release assets
@@ -58,8 +60,6 @@ async function createChartReleases({
   packagesDir = CONFIG.filesystem.temp
 }) {
   try {
-    const path = require('path');
-
     const files = await fs.readdir(packagesDir);
     const packages = files.filter(file => file.endsWith('.tgz'));
 
@@ -130,6 +130,62 @@ async function createChartReleases({
 }
 
 /**
+ * Helper function to check if a file exists
+ * @param {Object} fs - Node.js fs/promises module
+ * @param {string} filePath - Path to check
+ * @returns {Promise<boolean>} - True if file exists, false otherwise
+ */
+async function fileExists(fs, filePath) {
+  try {
+    await fs.access(filePath);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Recursively finds directories containing Chart.yaml files
+ * @param {Object} fs - Node.js fs/promises module
+ * @param {Object} core - GitHub Actions Core API for logging
+ * @param {string} directory - Directory to search in
+ * @returns {Promise<string[]>} - Array of directories containing Chart.yaml files
+ */
+async function findChartYamlFiles(fs, core, directory) {
+  const chartDirs = [];
+
+  // Search directory recursively
+  async function searchDir(dir) {
+    try {
+      const entries = await fs.readdir(dir, { withFileTypes: true });
+
+      for (const entry of entries) {
+        const fullPath = path.join(dir, entry.name);
+
+        // Determine what to do based on entry type
+        switch (true) {
+          case entry.isDirectory():
+            await searchDir(fullPath);
+            break;
+          case entry.name === 'Chart.yaml':
+            // Found a Chart.yaml file
+            chartDirs.push(dir);
+            break;
+          default:
+            break;
+        }
+      }
+    } catch (error) {
+      core.warning(`Error reading directory ${dir}: ${error.message}`);
+      // Skip this directory on error
+    }
+  }
+
+  await searchDir(directory);
+  return chartDirs;
+}
+
+/**
  * Formats a release name according to the template
  * @param {string} name
  * @param {string} version
@@ -162,17 +218,48 @@ async function generateChartIndex({
 }) {
   try {
     core.info(`Reading index YAML from ${indexYamlPath}`);
-    const indexContent = await fs.readFile(indexYamlPath, 'utf8');
-    const yaml = require('js-yaml');
+    let indexContent;
+    try {
+      indexContent = await fs.readFile(indexYamlPath, 'utf8');
+      core.info(`Successfully read index.yaml, size: ${indexContent.length} bytes`);
+    } catch (readError) {
+      core.warning(`Failed to read index.yaml: ${readError.message}`);
+      core.warning('Creating an empty chart index since no index.yaml exists');
+
+      // Create a minimal valid index.yaml content to avoid errors
+      const emptyIndex = {
+        apiVersion: 'v1',
+        entries: {},
+        generated: new Date().toISOString()
+      };
+      indexContent = yaml.dump(emptyIndex);
+
+      // Ensure _dist directory exists
+      const distDir = path.dirname(indexYamlPath);
+      await fs.mkdir(distDir, { recursive: true });
+
+      // Write empty index.yaml for future runs
+      await fs.writeFile(indexYamlPath, indexContent, 'utf8');
+      core.info(`Created empty index.yaml at ${indexYamlPath}`);
+    }
+
     const index = yaml.load(indexContent);
 
     if (!index || !index.entries) {
-      core.warning('Invalid or empty index.yaml file, skipping index.md generation.');
-      return false;
+      core.warning('Invalid or empty index.yaml file, creating an empty index.md.');
+      // Create an empty index.md instead of skipping
+      await fs.mkdir(path.dirname(indexMdPath), { recursive: true });
+      await fs.writeFile(indexMdPath, '', 'utf8');
+
+      // Also ensure the root index.md exists
+      await fs.writeFile('./index.md', '', 'utf8');
+      core.info(`Created empty index.md files`);
+      return true;
     }
 
     core.info(`Reading template from ${templatePath}`);
     const template = await fs.readFile(templatePath, 'utf8');
+    core.info(`Template loaded, size: ${template.length} bytes`);
 
     // Register helper for template
     const Handlebars = require('handlebars');
@@ -204,20 +291,22 @@ async function generateChartIndex({
       Branch: defaultBranchName
     });
 
-    core.info(`Writing generated index.md to ${indexMdPath}`);
-    await fs.writeFile(indexMdPath, newContent);
+    core.info(`Generated content length: ${newContent.length} bytes`);
+
+    // Ensure directory exists before writing file
+    await fs.mkdir(path.dirname(indexMdPath), { recursive: true });
+
+    // Also write directly to the root index.md for Jekyll
+    core.info(`Writing index.md to root directory and ${indexMdPath}`);
+    await fs.writeFile('./index.md', newContent, 'utf8');
+    await fs.writeFile(indexMdPath, newContent, 'utf8');
+
     core.info('Successfully generated index.md');
     return true;
 
   } catch (error) {
-    // Check if error is due to missing index.yaml (ENOENT)
-    if (error.code === 'ENOENT' && error.path === indexYamlPath) {
-      core.warning(`Index file not found at ${indexYamlPath}, likely no charts released.`);
-      return false;
-    } else {
-      core.setFailed(`Failed to generate index.md: ${error.message}`);
-      throw error;
-    }
+    core.setFailed(`Failed to generate index.md: ${error.message}`);
+    throw error;
   }
 }
 
@@ -242,7 +331,6 @@ async function generateHelmIndex({
   repoUrl
 }) {
   try {
-    const path = require('path');
     const indexDir = path.dirname(indexPath);
     await fs.mkdir(indexDir, { recursive: true });
 
@@ -277,46 +365,8 @@ async function packageChartsInDirectory({
   outputDir
 }) {
   try {
-    const path = require('path');
-
-    // Find Chart.yaml files recursively
-    async function findChartYamlFiles(directory) {
-      const chartDirs = [];
-
-      // Search directory recursively
-      async function searchDir(dir) {
-        try {
-          const entries = await fs.readdir(dir, { withFileTypes: true });
-
-          for (const entry of entries) {
-            const fullPath = path.join(dir, entry.name);
-
-            // Determine what to do based on entry type
-            switch (true) {
-              case entry.isDirectory():
-                await searchDir(fullPath);
-                break;
-              case entry.name === 'Chart.yaml':
-                // Found a Chart.yaml file
-                chartDirs.push(dir);
-                break;
-              default:
-                break;
-            }
-          }
-        } catch (error) {
-          core.warning(`Error reading directory ${dir}: ${error.message}`);
-          // Skip this directory on error
-        }
-      }
-
-      await searchDir(directory);
-      return chartDirs;
-    }
-
     // Get directories containing Chart.yaml files
-    const chartDirsArray = await findChartYamlFiles(dirPath);
-    const chartDirs = chartDirsArray.join('\n');
+    const chartDirsArray = await findChartYamlFiles(fs, core, dirPath);
 
     if (!chartDirsArray.length) {
       core.info(`No charts found in ${dirPath}`);
@@ -409,7 +459,6 @@ function setOutputs(core) {
   core.setOutput('CR_RELEASE_NAME_TEMPLATE', CONFIG.chart.releaseNameTemplate);
   core.setOutput('CR_RELEASE_TEMPLATE', CONFIG.filesystem.releaseTemplate);
   core.setOutput('CR_SKIP_EXISTING', CONFIG.chart.skipExisting);
-
   core.setOutput('DIRECTORY_APPLICATION', CONFIG.filesystem.application);
   core.setOutput('DIRECTORY_LIBRARY', CONFIG.filesystem.library);
 }
@@ -423,16 +472,6 @@ function setOutputs(core) {
  * @returns {Promise<void>}
  */
 async function setupBuildEnvironment({ core, fs }) {
-  // Helper function to check if a file exists
-  async function fileExists(filePath) {
-    try {
-      await fs.access(filePath);
-      return true;
-    } catch {
-      return false;
-    }
-  }
-
   // Copy Jekyll config
   try {
     core.info(`Copying ${CONFIG.filesystem.configSrcYml} to ${CONFIG.filesystem.configYml}`);
@@ -443,17 +482,21 @@ async function setupBuildEnvironment({ core, fs }) {
     throw new Error(errorMsg);
   }
 
-  // Copy or create index.md
+  // Copy or create index.md - ensure root index.md exists for Jekyll
   try {
     const indexMdPath = CONFIG.filesystem.indexMd;
-    const indexMdExists = await fileExists(indexMdPath);
+    const indexMdSrcPath = CONFIG.filesystem.indexMdSrc;
+    const indexMdExists = await fileExists(fs, indexMdPath);
+    const rootIndexExists = await fileExists(fs, indexMdSrcPath);
 
     if (indexMdExists) {
-      core.info(`Copying ${indexMdPath} to ${CONFIG.filesystem.indexMdSrc}`);
-      await fs.copyFile(indexMdPath, CONFIG.filesystem.indexMdSrc);
+      core.info(`Copying ${indexMdPath} to ${indexMdSrcPath}`);
+      await fs.copyFile(indexMdPath, indexMdSrcPath);
+    } else if (rootIndexExists) {
+      core.info(`Using existing index.md at ${indexMdSrcPath}`);
     } else {
-      core.info(`Index file ${indexMdPath} not found, creating empty file`);
-      await fs.writeFile(CONFIG.filesystem.indexMdSrc, '', 'utf8');
+      core.info(`No index.md found at ${indexMdPath} or ${indexMdSrcPath}, creating empty file`);
+      await fs.writeFile(indexMdSrcPath, '', 'utf8');
     }
   } catch (error) {
     const errorMsg = `Failed to process index.md: ${error.message}`;
@@ -463,7 +506,7 @@ async function setupBuildEnvironment({ core, fs }) {
 
   // Remove README.md to avoid conflicts
   try {
-    if (await fileExists('./README.md')) {
+    if (await fileExists(fs, './README.md')) {
       core.info('Removing README.md from root to prevent conflicts with index.html');
       await fs.unlink('./README.md');
     }
@@ -505,6 +548,8 @@ async function setupChartReleaserConfig({ core, fs }) {
 module.exports = {
   CONFIG,
   createChartReleases,
+  fileExists,
+  findChartYamlFiles,
   formatReleaseName,
   generateChartIndex,
   generateHelmIndex,
