@@ -37,64 +37,18 @@ jobs:
             const configureGit = require('./.github/scripts/git-config.js');
             await configureGit({github, context, core, exec});
 
-      - name: Install helm-docs package
-        env:
-          HELM_DOCS_URL: https://github.com/norwoodj/helm-docs/releases/download
-          HELM_DOCS_VERSION: 1.14.2
+      - name: Install helm-docs
         uses: actions/github-script@v7
         with:
           script: |
-            const os = require('os');
-            const tmpDir = os.tmpdir();
-            const packagePath = [tmpDir,
-              'helm-docs_' + process.env.HELM_DOCS_VERSION + '_Linux_x86_64.deb'
-            ].join('/');
-            const packageUrl = [process.env.HELM_DOCS_URL, 'v' + process.env.HELM_DOCS_VERSION,
-              'helm-docs_' + process.env.HELM_DOCS_VERSION + '_Linux_x86_64.deb'
-            ].join('/');
-            const runSudo = async (args) => (await exec.exec('sudo', args));
+            const { installHelmDocs } = require('./.github/scripts/documentation.js');
+            await installHelmDocs({ core, exec });
 
-            try {
-              await runSudo(['wget', '-qP', tmpDir, packageUrl]);
-              await runSudo(['apt-get', '-y', 'install', packagePath]);
-            } catch (error) {
-              core.setFailed(error.message);
-            }
-
-      - name: Update pull request
+      - name: Update documentation
         uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const fs = require('fs/promises');
-            const { createSignedCommit, getGitStagedChanges } = require('./.github/scripts/git-signed-commit.js');
-            const runGit = async (args) => (await exec.getExecOutput('git', args)).stdout.trim();
-
-            try {
-              await runGit(['fetch', 'origin', process.env.GITHUB_HEAD_REF]);
-              await runGit(['switch', process.env.GITHUB_HEAD_REF]);
-              await exec.exec('helm-docs');
-              await runGit(['add', '.']);
-
-              const files = (await runGit(['diff', '--staged', '--name-only']))
-                .split('\n')
-                .filter(Boolean);
-              if (files.length === 0) {
-                core.info('No file changes detected.');
-                return;
-              }
-
-              const { additions, deletions } = await getGitStagedChanges(runGit, fs);
-              await createSignedCommit({
-                github,
-                context,
-                core,
-                branchName: context.payload.pull_request.head.ref,
-                expectedHeadOid: context.payload.pull_request.head.sha,
-                additions,
-                deletions,
-                commitMessage: 'docs(github-action): update documentation'
-              });
-            } catch (error) {
-              core.setFailed(error.message);
-            }
+            const { updateDocumentation } = require('./.github/scripts/documentation.js');
+            await updateDocumentation({ github, context, core, exec, fs });
