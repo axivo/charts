@@ -339,6 +339,11 @@ async function packageChartsInDirectory({
     const charts = chartDirsArray;
     for (const chartDir of charts) {
       core.info(`Packaging chart: ${chartDir}`);
+
+      // Update dependencies before packaging
+      core.info(`Updating dependencies for: ${chartDir}`);
+      await exec.exec('helm', ['dependency', 'update', chartDir]);
+
       await exec.exec('helm', ['package', chartDir, '--destination', outputDir]);
     }
 
