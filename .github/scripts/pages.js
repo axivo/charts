@@ -86,7 +86,7 @@ async function manageReleaseBranch({
         }
 
         core.info(`Creating ${branchName} branch ...`);
-        await exec.exec('git', ['checkout', '--orphan', branchName]);
+        await exec.exec('git', ['branch', branchName]);
         core.info(`Branch ${branchName} created successfully.`);
         break;
     }
