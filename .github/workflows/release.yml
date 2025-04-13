@@ -69,6 +69,7 @@ jobs:
         with:
           charts_dir: application
           pages_branch: ${{ steps.branch-manager.outputs.branch }}
+          packages_with_index: false
           skip_existing: true
 
       - name: Run chart-releaser for library charts
@@ -78,6 +79,7 @@ jobs:
         with:
           charts_dir: library
           pages_branch: ${{ steps.branch-manager.outputs.branch }}
+          packages_with_index: false
           skip_existing: true
 
       - name: Generate chart index page
