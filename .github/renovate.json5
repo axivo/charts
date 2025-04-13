@@ -48,14 +48,6 @@
       "matchStrings": [
         "with:[\\s\\S]+?node-version:\\s+(?<currentValue>.+)"
       ],
-      "packageRules": [
-        {
-          "enabled": true,
-          "matchUpdateTypes": [
-            "major"
-          ]
-        }
-      ],
       "versioningTemplate": "node"
     }
   ],
@@ -68,6 +60,20 @@
   ],
   "labels": [
     "dependency"
+  ],
+  "packageRules": [
+    {
+      "enabled": true,
+      "matchDatasources": [
+        "node"
+      ],
+      "matchDepNames": [
+        "node"
+      ],
+      "matchUpdateTypes": [
+        "major"
+      ]
+    }
   ],
   "prConcurrentLimit": 0,
   "prHourlyLimit": 0,
