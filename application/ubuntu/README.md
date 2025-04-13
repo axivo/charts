@@ -56,4 +56,17 @@ See the chart values, listed below.
 | volumeMounts | list | [] | Additional volume mounts for the container |
 | volumes | list | [] | Additional volumes for the pod |
 
+## Shell Login
+
+Example of container shell login:
+
+```shell
+$ kubectl get pods -n default -o go-template \
+  --template='{{range .items}}{{.metadata.name}}{{"\n"}}{{end}}'
+ubuntu-6589cf5fb4-p9z2b
+
+$ kubectl exec -itn default ubuntu-6589cf5fb4-p9z2b -- /bin/bash
+root@ubuntu-6589cf5fb4-p9z2b:/#
+```
+
 End-user will have `root` access to a minimal Ubuntu `24.04` LTS container, connected to the Kubernetes cluster network. Common tools may require manual installation via `apt-get`.
