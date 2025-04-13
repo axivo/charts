@@ -53,23 +53,32 @@ jobs:
       - name: Install node.js dependencies
         run: npm install js-yaml handlebars
 
+      - name: Generate chart-releaser branch
+        id: branch-manager
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { CONFIG, manageReleaseBranch } = require('./.github/scripts/pages.js');
+            await manageReleaseBranch({ core, exec, action: 'create' });
+            core.setOutput('branch', CONFIG.release.branch);
+
       - name: Run chart-releaser for application charts
-        uses: helm/chart-releaser-action@v1.7.0
+        uses: helm/chart-releaser-action@v1
         env:
           CR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           charts_dir: application
+          pages_branch: ${{ steps.branch-manager.outputs.branch }}
           skip_existing: true
-          skip_upload: true
 
       - name: Run chart-releaser for library charts
-        uses: helm/chart-releaser-action@v1.7.0
+        uses: helm/chart-releaser-action@v1
         env:
           CR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           charts_dir: library
+          pages_branch: ${{ steps.branch-manager.outputs.branch }}
           skip_existing: true
-          skip_upload: true
 
       - name: Generate chart index page
         uses: actions/github-script@v7
@@ -77,7 +86,7 @@ jobs:
           script: |
             const fs = require('fs/promises');
             const { generateChartIndex } = require('./.github/scripts/pages.js');
-            await generateChartIndex({ context, core, fs });
+            await generateChartIndex({ context, core, exec, fs });
 
       - name: Setup build environment
         uses: actions/github-script@v7

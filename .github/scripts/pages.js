@@ -20,6 +20,9 @@ const CONFIG = {
     indexMdSrcPath: './index.md',
     indexPath: './index.yaml',
     templatePath: '.github/pages/index.md.hbs'
+  },
+  release: {
+    branch: 'gh-pages'
   }
 };
 const path = require('path');
@@ -40,7 +43,61 @@ async function fileExists(fs, filePath) {
   }
 }
 
+/**
+ * Manages the release branch
+ * 
+ * @param {Object} options - Options for branch management
+ * @param {Object} options.exec - GitHub Actions exec API for running Git commands
+ * @param {Object} options.core - GitHub Actions Core API for logging
+ * @param {string} [options.action=create] - The action to perform: 'create' or 'delete'
+ * @returns {Promise<boolean>} - True if successful
+ */
+async function manageReleaseBranch({
+  exec,
+  core,
+  action = 'create'
+}) {
+  const branchName = CONFIG.release.branch;
 
+  try {
+    // Check if the branch already exists
+    const { stdout } = await exec.getExecOutput(
+      'git', ['ls-remote', '--heads', 'origin', branchName], { silent: true }
+    );
+    const branchExists = stdout.trim() !== '';
+
+    switch (action) {
+      case 'delete':
+        if (!branchExists) {
+          core.info(`Branch ${branchName} does not exist, no need to delete.`);
+          return true;
+        }
+
+        core.info(`Deleting ${branchName} branch...`);
+        await exec.exec('git', ['push', 'origin', '--delete', branchName]);
+        core.info(`Branch ${branchName} deleted successfully.`);
+        break;
+
+      case 'create':
+      default:
+        if (branchExists) {
+          core.info(`Branch ${branchName} already exists, no need to create it.`);
+          return true;
+        }
+
+        core.info(`Creating ${branchName} branch ...`);
+        await exec.exec('git', ['push', 'origin', 'HEAD:' + branchName]);
+        core.info(`Branch ${branchName} created successfully.`);
+        break;
+    }
+
+    return true;
+  } catch (error) {
+    const errorMsg = `Branch management failed: ${error.message}`;
+    core.setFailed(errorMsg);
+    throw new Error(errorMsg);
+  }
+}
 
 /**
  * Generates index.md from chart index.yaml created by chart-releaser
@@ -48,6 +105,7 @@ async function fileExists(fs, filePath) {
  * @param {Object} options.context - GitHub Actions context with repository information
  * @param {Object} options.core - GitHub Actions Core API for logging
  * @param {Object} options.fs - Node.js fs/promises module for file operations
+ * @param {Object} options.exec - GitHub Actions exec API for running Git commands
  * @param {string} [options.indexPath] - Path to read the index.yaml file from
  * @param {string} [options.indexMdPath] - Path to write the index.md file
  * @param {string} [options.templatePath] - Path to Handlebars template for index.md
@@ -57,6 +115,7 @@ async function generateChartIndex({
   context,
   core,
   fs,
+  exec,
   indexPath = CONFIG.filesystem.indexPath,
   indexMdPath = CONFIG.filesystem.indexMdPath,
   templatePath = CONFIG.filesystem.templatePath
@@ -121,6 +180,9 @@ async function generateChartIndex({
 
     // Write output file
     await fs.writeFile(indexMdPath, content, 'utf8');
+
+    // Delete release branch
+    //await manageReleaseBranch({ exec, core, action: 'delete' });
 
     core.info(`Generated index.md with ${charts.length} charts`);
     return true;
@@ -194,5 +256,6 @@ module.exports = {
   CONFIG,
   fileExists,
   generateChartIndex,
+  manageReleaseBranch,
   setupBuildEnvironment
 };
