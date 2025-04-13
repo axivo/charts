@@ -12,9 +12,6 @@
  * @module pages
  */
 
-/**
- * Centralized configuration for the entire workflow
- */
 const CONFIG = {
   // Chart release settings
   chart: {
@@ -25,16 +22,11 @@ const CONFIG = {
     skipExisting: 'true'
   },
 
-  // Directories
-  directories: {
+  filesystem: {
     application: 'application',
     dist: './_dist',
     library: 'library',
-    temp: '.cr-release-packages'
-  },
-
-  // File paths
-  paths: {
+    temp: '.cr-release-packages',
     configSrcYml: '.github/pages/config.yml',
     configYml: './_config.yml',
     indexMd: './_dist/index.md',
@@ -55,7 +47,7 @@ const CONFIG = {
  * @param {Object} options.context - GitHub Actions context for repository info
  * @param {Object} options.core - GitHub Actions Core API for logging and output
  * @param {Object} options.fs - Node.js fs module for file operations
- * @param {string} [options.packagesDir=CONFIG.directories.temp] - Directory with chart packages
+ * @param {string} [options.packagesDir=CONFIG.filesystem.temp] - Directory with chart packages
  * @returns {Promise<void>}
  */
 async function createChartReleases({
@@ -63,14 +55,13 @@ async function createChartReleases({
   context,
   core,
   fs,
-  packagesDir = CONFIG.directories.temp
+  packagesDir = CONFIG.filesystem.temp
 }) {
   try {
     const path = require('path');
 
-    // Get chart packages
-    const packages = fs.readdirSync(packagesDir)
-      .filter(file => file.endsWith('.tgz'));
+    const files = await fs.readdir(packagesDir);
+    const packages = files.filter(file => file.endsWith('.tgz'));
 
     core.info(`Found ${packages.length} chart packages to release`);
 
@@ -114,7 +105,7 @@ async function createChartReleases({
         });
 
         // Upload chart package as asset
-        const fileContent = fs.readFileSync(chartPath);
+        const fileContent = await fs.readFile(chartPath);
         await github.rest.repos.uploadReleaseAsset({
           owner: context.repo.owner,
           repo: context.repo.repo,
@@ -140,9 +131,9 @@ async function createChartReleases({
 
 /**
  * Formats a release name according to the template
- * @param {string} name - Chart name
- * @param {string} version - Chart version
- * @returns {string} Formatted release name
+ * @param {string} name
+ * @param {string} version
+ * @returns {string}
  */
 function formatReleaseName(name, version) {
   // Simple implementation that mimics the template {{ .Name }}-v{{ .Version }}
@@ -156,18 +147,18 @@ function formatReleaseName(name, version) {
  * @param {Object} options.context - GitHub Actions context for repository info
  * @param {Object} options.core - GitHub Actions Core API for logging and output
  * @param {Object} options.fs - Node.js fs/promises module for file operations
- * @param {string} [options.indexYamlPath=CONFIG.paths.indexYaml] - Path to the index.yaml file
- * @param {string} [options.indexMdPath=CONFIG.paths.indexMd] - Path where to write the generated index.md
- * @param {string} [options.templatePath=CONFIG.paths.templatePath] - Path to the Handlebars template
+ * @param {string} [options.indexYamlPath=CONFIG.filesystem.indexYaml] - Path to the index.yaml file
+ * @param {string} [options.indexMdPath=CONFIG.filesystem.indexMd] - Path where to write the generated index.md
+ * @param {string} [options.templatePath=CONFIG.filesystem.templatePath] - Path to the Handlebars template
  * @returns {Promise<boolean>} - True if successful, false if skipped
  */
 async function generateChartIndex({
   context,
   core,
   fs,
-  indexYamlPath = CONFIG.paths.indexYaml,
-  indexMdPath = CONFIG.paths.indexMd,
-  templatePath = CONFIG.paths.templatePath
+  indexYamlPath = CONFIG.filesystem.indexYaml,
+  indexMdPath = CONFIG.filesystem.indexMd,
+  templatePath = CONFIG.filesystem.templatePath
 }) {
   try {
     core.info(`Reading index YAML from ${indexYamlPath}`);
@@ -251,15 +242,13 @@ async function generateHelmIndex({
   repoUrl
 }) {
   try {
-    // Make sure destination directory exists
-    const indexDir = indexPath.substring(0, indexPath.lastIndexOf('/'));
+    const path = require('path');
+    const indexDir = path.dirname(indexPath);
     await fs.mkdir(indexDir, { recursive: true });
 
-    // Generate the index file
     await exec.exec('helm', ['repo', 'index', packagesDir, '--url', repoUrl]);
 
-    // Copy index file to destination
-    await fs.copyFile(`${packagesDir}/index.yaml`, indexPath);
+    await fs.copyFile(path.join(packagesDir, 'index.yaml'), indexPath);
 
     core.info(`Successfully generated Helm repository index at ${indexPath}`);
   } catch (error) {
@@ -289,7 +278,6 @@ async function packageChartsInDirectory({
 }) {
   try {
     const path = require('path');
-    const fsPromises = require('fs/promises');
 
     // Find Chart.yaml files recursively
     async function findChartYamlFiles(directory) {
@@ -298,7 +286,7 @@ async function packageChartsInDirectory({
       // Search directory recursively
       async function searchDir(dir) {
         try {
-          const entries = await fsPromises.readdir(dir, { withFileTypes: true });
+          const entries = await fs.readdir(dir, { withFileTypes: true });
 
           for (const entry of entries) {
             const fullPath = path.join(dir, entry.name);
@@ -335,7 +323,6 @@ async function packageChartsInDirectory({
       return;
     }
 
-    // Package each chart
     const charts = chartDirsArray;
     for (const chartDir of charts) {
       core.info(`Packaging chart: ${chartDir}`);
@@ -377,28 +364,24 @@ async function processChartRelease({
   exec
 }) {
   try {
-    const packagesDir = CONFIG.directories.temp;
-    const indexPath = CONFIG.paths.indexPath;
+    const packagesDir = CONFIG.filesystem.temp;
+    const indexPath = CONFIG.filesystem.indexPath;
 
     // Ensure packages directory exists
     await fs.mkdir(packagesDir, { recursive: true });
     core.info(`Created directory: ${packagesDir}`);
 
-    // Package application charts
     core.info('Packaging application charts...');
-    const appDirPath = CONFIG.directories.application;
+    const appDirPath = CONFIG.filesystem.application;
     await packageChartsInDirectory({ exec, core, fs, dirPath: appDirPath, outputDir: packagesDir });
 
-    // Package library charts
     core.info('Packaging library charts...');
-    const libDirPath = CONFIG.directories.library;
+    const libDirPath = CONFIG.filesystem.library;
     await packageChartsInDirectory({ exec, core, fs, dirPath: libDirPath, outputDir: packagesDir });
 
-    // Create GitHub releases for the charts
     core.info('Creating GitHub releases for charts...');
     await createChartReleases({ github, context, core, fs, packagesDir });
 
-    // Generate the Helm repository index
     core.info('Generating Helm repository index...');
     const repoUrl = CONFIG.chart.repoUrl;
     await generateHelmIndex({ exec, core, fs, packagesDir, indexPath, repoUrl });
@@ -414,22 +397,21 @@ async function processChartRelease({
 /**
  * Sets GitHub Actions outputs from the CONFIG object
  *
- * @param {Object} core - GitHub Actions Core API for setting outputs
+ * @param {Object} core
  */
 function setOutputs(core) {
   // Map output names
   core.setOutput('CR_CHARTS_REPO_URL', CONFIG.chart.repoUrl);
-  core.setOutput('CR_INDEX_PATH', CONFIG.paths.indexPath);
-  core.setOutput('CR_INDEX_PATH_FINAL', CONFIG.paths.indexPathFinal);
+  core.setOutput('CR_INDEX_PATH', CONFIG.filesystem.indexPath);
+  core.setOutput('CR_INDEX_PATH_FINAL', CONFIG.filesystem.indexPathFinal);
   core.setOutput('CR_PACKAGES_WITH_INDEX', CONFIG.chart.packagesWithIndex);
   core.setOutput('CR_PAGES_BRANCH', CONFIG.chart.pagesBranch);
   core.setOutput('CR_RELEASE_NAME_TEMPLATE', CONFIG.chart.releaseNameTemplate);
-  core.setOutput('CR_RELEASE_TEMPLATE', CONFIG.paths.releaseTemplate);
+  core.setOutput('CR_RELEASE_TEMPLATE', CONFIG.filesystem.releaseTemplate);
   core.setOutput('CR_SKIP_EXISTING', CONFIG.chart.skipExisting);
 
-  // Set directory outputs
-  core.setOutput('DIRECTORY_APPLICATION', CONFIG.directories.application);
-  core.setOutput('DIRECTORY_LIBRARY', CONFIG.directories.library);
+  core.setOutput('DIRECTORY_APPLICATION', CONFIG.filesystem.application);
+  core.setOutput('DIRECTORY_LIBRARY', CONFIG.filesystem.library);
 }
 
 /**
@@ -453,8 +435,8 @@ async function setupBuildEnvironment({ core, fs }) {
 
   // Copy Jekyll config
   try {
-    core.info(`Copying ${CONFIG.paths.configSrcYml} to ${CONFIG.paths.configYml}`);
-    await fs.copyFile(CONFIG.paths.configSrcYml, CONFIG.paths.configYml);
+    core.info(`Copying ${CONFIG.filesystem.configSrcYml} to ${CONFIG.filesystem.configYml}`);
+    await fs.copyFile(CONFIG.filesystem.configSrcYml, CONFIG.filesystem.configYml);
   } catch (error) {
     const errorMsg = `Failed to copy Jekyll config: ${error.message}`;
     core.setFailed(errorMsg);
@@ -463,8 +445,8 @@ async function setupBuildEnvironment({ core, fs }) {
 
   // Copy index.md if exists
   try {
-    core.info(`Copying ${CONFIG.paths.indexMd} to ${CONFIG.paths.indexMdSrc}`);
-    await fs.copyFile(CONFIG.paths.indexMd, CONFIG.paths.indexMdSrc);
+    core.info(`Copying ${CONFIG.filesystem.indexMd} to ${CONFIG.filesystem.indexMdSrc}`);
+    await fs.copyFile(CONFIG.filesystem.indexMd, CONFIG.filesystem.indexMdSrc);
   } catch (error) {
     const errorMsg = `Failed to process index.md: ${error.message}`;
     core.setFailed(errorMsg);
@@ -498,12 +480,12 @@ async function setupBuildEnvironment({ core, fs }) {
 async function setupChartReleaserConfig({ core, fs }) {
   try {
     // Create the distribution directory
-    await fs.mkdir(CONFIG.directories.dist, { recursive: true });
-    core.info(`Created directory: ${CONFIG.directories.dist}`);
+    await fs.mkdir(CONFIG.filesystem.dist, { recursive: true });
+    core.info(`Created directory: ${CONFIG.filesystem.dist}`);
 
     // Check if release template exists
-    await fs.access(CONFIG.paths.releaseTemplate);
-    core.info(`Release template found at: ${CONFIG.paths.releaseTemplate}`);
+    await fs.access(CONFIG.filesystem.releaseTemplate);
+    core.info(`Release template found at: ${CONFIG.filesystem.releaseTemplate}`);
   } catch (error) {
     const errorMsg = `Failed to setup chart-releaser configuration: ${error.message}`;
     core.setFailed(errorMsg);
