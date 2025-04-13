@@ -1,11 +1,11 @@
 # AXIVO Charts
 
 <div style="float: right; margin: 0 0 0 50px;">
-  <img width="350" height="350" src="{{ rawGithubUrl RepoURL Branch 'docs/images/logo-services.svg' }}" alt="AXIVO Charts" />
+  <img width="350" height="350" src="https://raw.githubusercontent.com/axivo/charts/main/docs/images/logo-services.svg" alt="AXIVO Charts" />
 </div>
 [![Helm](https://img.shields.io/badge/helm-v3-blue)](https://helm.sh)
 [![Kubernetes](https://img.shields.io/badge/kubernetes-%23326ce5.svg?style=flat&logo=kubernetes&logoColor=white)](https://kubernetes.io)
-[![License](https://img.shields.io/github/license/axivo/charts)]({{ RepoURL }}/blob/main/LICENSE)
+[![License](https://img.shields.io/github/license/axivo/charts)](https://github.com/axivo/charts/blob/main/LICENSE)
 
 ### Introduction
 
