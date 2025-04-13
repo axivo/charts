@@ -15,7 +15,7 @@
 const CONFIG = {
   helmDocs: {
     baseUrl: 'https://github.com/norwoodj/helm-docs/releases/download',
-    version: '1.14.2'
+    version: '1.14.1'
   },
   git: {
     commitMessage: 'docs(github-action): update documentation',
