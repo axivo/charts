@@ -19,9 +19,7 @@ Our charts are built with the following principles in mind:
 
 ### Documentation
 
-For detailed documentation about each chart, visit our [GitHub repository]({{ RepoURL }}).
-
-Each chart includes:
+Visit the [Wiki](https://axivo.com/k3s-cluster/tutorials/handbook/argocd/), for initial configuration instructions. Each chart includes:
 
 - Comprehensive README with usage examples
 - Values documentation with explanations for each parameter
@@ -29,7 +27,3 @@ Each chart includes:
 - Installation and upgrade guides
 
 You can also find configuration examples for different scenarios and environments in the chart directories.
-
-### Wiki
-
-Visit the [Wiki](https://axivo.com/k3s-cluster/tutorials/handbook/argocd/), for initial configuration instructions.
