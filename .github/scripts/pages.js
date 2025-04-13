@@ -71,17 +71,31 @@ async function generateChartIndex({
     try {
       indexContent = await fs.readFile(indexPath, 'utf8');
     } catch (error) {
-      core.warning(`Failed to read index.yaml: ${error.message}`);
-      const emptyIndex = {
-        apiVersion: 'v1',
-        entries: {},
-        generated: new Date().toISOString()
-      };
-      indexContent = yaml.dump(emptyIndex);
-      await fs.writeFile(indexPath, indexContent, 'utf8');
+      // Try reading from the root directory if not in the dist directory
+      try {
+        indexContent = await fs.readFile(CONFIG.filesystem.indexPathFinal, 'utf8');
+        core.info(`Found ${indexPathFinal} in root directory`);
+      } catch (rootError) {
+        core.warning(`Failed to read ${indexPathFinal} from any location: ${error.message}, ${rootError.message}`);
+        const emptyIndex = {
+          apiVersion: 'v1',
+          entries: {},
+          generated: new Date().toISOString()
+        };
+        indexContent = yaml.dump(emptyIndex);
+        await fs.writeFile(indexPath, indexContent, 'utf8');
+      }
     }
 
     const index = yaml.load(indexContent);
+    if (!index || !index.entries) {
+      core.warning(`Invalid or empty ${indexPathFinal} file, creating an empty file.`);
+      await fs.mkdir(path.dirname(indexMdPath), { recursive: true });
+      await fs.writeFile(indexMdPath, '', 'utf8');
+      await fs.writeFile(CONFIG.filesystem.indexMdSrc, '', 'utf8');
+      core.info(`Created empty ${indexPathFinal} files at ${indexMdPath} and ${CONFIG.filesystem.indexMdSrc}`);
+      return true;
+    }
 
     core.info(`Reading template from ${templatePath}`);
     const template = await fs.readFile(templatePath, 'utf8');
@@ -112,7 +126,7 @@ async function generateChartIndex({
       Branch: context.payload.repository.default_branch
     });
 
-    await fs.writeFile('./index.md', content, 'utf8');
+    await fs.writeFile(CONFIG.filesystem.indexMdSrc, content, 'utf8');
     await fs.writeFile(indexMdPath, content, 'utf8');
 
     return true;
