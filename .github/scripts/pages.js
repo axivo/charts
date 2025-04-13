@@ -74,9 +74,9 @@ async function generateChartIndex({
       // Try reading from the root directory if not in the dist directory
       try {
         indexContent = await fs.readFile(CONFIG.filesystem.indexPathFinal, 'utf8');
-        core.info(`Found ${indexPathFinal} in root directory`);
+        core.info(`Found index.yaml in root directory`);
       } catch (rootError) {
-        core.warning(`Failed to read ${indexPathFinal} from any location: ${error.message}, ${rootError.message}`);
+        core.warning(`Failed to read index.yaml from any location: ${error.message}, ${rootError.message}`);
         const emptyIndex = {
           apiVersion: 'v1',
           entries: {},
@@ -89,11 +89,11 @@ async function generateChartIndex({
 
     const index = yaml.load(indexContent);
     if (!index || !index.entries) {
-      core.warning(`Invalid or empty ${indexPathFinal} file, creating an empty file.`);
+      core.warning(`Invalid or empty index.yaml file, creating an empty file.`);
       await fs.mkdir(path.dirname(indexMdPath), { recursive: true });
       await fs.writeFile(indexMdPath, '', 'utf8');
       await fs.writeFile(CONFIG.filesystem.indexMdSrc, '', 'utf8');
-      core.info(`Created empty ${indexPathFinal} files at ${indexMdPath} and ${CONFIG.filesystem.indexMdSrc}`);
+      core.info(`Created empty index.md files at ${indexMdPath} and ${CONFIG.filesystem.indexMdSrc}`);
       return true;
     }
 
