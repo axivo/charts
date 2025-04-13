@@ -30,7 +30,7 @@ Example of container shell login:
 
 ```shell
 $ kubectl get pods -n default -o go-template \
-  --template='{{`{{range .items}}{{.metadata.name}}{{"\n"}}{{end}}`}}'
+  --template='{% raw %}{{`{{range .items}}{{.metadata.name}}{{"\n"}}{{end}}`}}{% endraw %}'
 ubuntu-6589cf5fb4-p9z2b
 
 $ kubectl exec -itn default ubuntu-6589cf5fb4-p9z2b -- /bin/bash
