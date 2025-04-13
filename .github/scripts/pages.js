@@ -443,10 +443,18 @@ async function setupBuildEnvironment({ core, fs }) {
     throw new Error(errorMsg);
   }
 
-  // Copy index.md if exists
+  // Copy or create index.md
   try {
-    core.info(`Copying ${CONFIG.filesystem.indexMd} to ${CONFIG.filesystem.indexMdSrc}`);
-    await fs.copyFile(CONFIG.filesystem.indexMd, CONFIG.filesystem.indexMdSrc);
+    const indexMdPath = CONFIG.filesystem.indexMd;
+    const indexMdExists = await fileExists(indexMdPath);
+
+    if (indexMdExists) {
+      core.info(`Copying ${indexMdPath} to ${CONFIG.filesystem.indexMdSrc}`);
+      await fs.copyFile(indexMdPath, CONFIG.filesystem.indexMdSrc);
+    } else {
+      core.info(`Index file ${indexMdPath} not found, creating empty file`);
+      await fs.writeFile(CONFIG.filesystem.indexMdSrc, '', 'utf8');
+    }
   } catch (error) {
     const errorMsg = `Failed to process index.md: ${error.message}`;
     core.setFailed(errorMsg);
