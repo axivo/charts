@@ -59,7 +59,9 @@ jobs:
           CR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           charts_dir: "application"
+          pages_branch: ""
           skip_existing: true
+          skip_upload: true
 
       - name: Run chart-releaser for library charts
         uses: helm/chart-releaser-action@v1
@@ -67,7 +69,9 @@ jobs:
           CR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           charts_dir: "library"
+          pages_branch: ""
           skip_existing: true
+          skip_upload: true
 
       - name: Generate chart index page
         uses: actions/github-script@v7
