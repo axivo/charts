@@ -27,13 +27,12 @@ const CONFIG = {
     dist: './_dist',
     library: 'library',
     temp: '.cr-release-packages',
-    configSrcYml: '.github/pages/config.yml',
-    configYml: './_config.yml',
-    indexMd: './_dist/index.md',
+    configYmlPath: './_config.yml',
+    configYmlSrc: '.github/pages/config.yml',
+    indexMdPath: './_dist/index.md',
     indexMdSrc: './index.md',
     indexPath: './_dist/index.yaml',
     indexPathFinal: 'index.yaml',
-    indexYaml: './index.yaml',
     releaseTemplate: '.github/release_template.md',
     templatePath: '.github/pages/index.md.hbs'
   }
@@ -203,8 +202,8 @@ function formatReleaseName(name, version) {
  * @param {Object} options.context - GitHub Actions context for repository info
  * @param {Object} options.core - GitHub Actions Core API for logging and output
  * @param {Object} options.fs - Node.js fs/promises module for file operations
- * @param {string} [options.indexYamlPath=CONFIG.filesystem.indexYaml] - Path to the index.yaml file
- * @param {string} [options.indexMdPath=CONFIG.filesystem.indexMd] - Path where to write the generated index.md
+ * @param {string} [options.indexPath=CONFIG.filesystem.indexPath] - Path to the index.yaml file
+ * @param {string} [options.indexMdPath=CONFIG.filesystem.indexMdPath] - Path where to write the generated index.md
  * @param {string} [options.templatePath=CONFIG.filesystem.templatePath] - Path to the Handlebars template
  * @returns {Promise<boolean>} - True if successful, false if skipped
  */
@@ -212,15 +211,15 @@ async function generateChartIndex({
   context,
   core,
   fs,
-  indexYamlPath = CONFIG.filesystem.indexYaml,
-  indexMdPath = CONFIG.filesystem.indexMd,
+  indexPath = CONFIG.filesystem.indexPath,
+  indexMdPath = CONFIG.filesystem.indexMdPath,
   templatePath = CONFIG.filesystem.templatePath
 }) {
   try {
-    core.info(`Reading index YAML from ${indexYamlPath}`);
+    core.info(`Reading index YAML from ${indexPath}`);
     let indexContent;
     try {
-      indexContent = await fs.readFile(indexYamlPath, 'utf8');
+      indexContent = await fs.readFile(indexPath, 'utf8');
       core.info(`Successfully read index.yaml, size: ${indexContent.length} bytes`);
     } catch (readError) {
       core.warning(`Failed to read index.yaml: ${readError.message}`);
@@ -235,12 +234,12 @@ async function generateChartIndex({
       indexContent = yaml.dump(emptyIndex);
 
       // Ensure _dist directory exists
-      const distDir = path.dirname(indexYamlPath);
+      const distDir = path.dirname(indexPath);
       await fs.mkdir(distDir, { recursive: true });
 
       // Write empty index.yaml for future runs
-      await fs.writeFile(indexYamlPath, indexContent, 'utf8');
-      core.info(`Created empty index.yaml at ${indexYamlPath}`);
+      await fs.writeFile(indexPath, indexContent, 'utf8');
+      core.info(`Created empty index.yaml at ${indexPath}`);
     }
 
     const index = yaml.load(indexContent);
@@ -474,8 +473,8 @@ function setOutputs(core) {
 async function setupBuildEnvironment({ core, fs }) {
   // Copy Jekyll config
   try {
-    core.info(`Copying ${CONFIG.filesystem.configSrcYml} to ${CONFIG.filesystem.configYml}`);
-    await fs.copyFile(CONFIG.filesystem.configSrcYml, CONFIG.filesystem.configYml);
+    core.info(`Copying ${CONFIG.filesystem.configYmlSrc} to ${CONFIG.filesystem.configYmlPath}`);
+    await fs.copyFile(CONFIG.filesystem.configYmlSrc, CONFIG.filesystem.configYmlPath);
   } catch (error) {
     const errorMsg = `Failed to copy Jekyll config: ${error.message}`;
     core.setFailed(errorMsg);
@@ -484,7 +483,7 @@ async function setupBuildEnvironment({ core, fs }) {
 
   // Copy or create index.md - ensure root index.md exists for Jekyll
   try {
-    const indexMdPath = CONFIG.filesystem.indexMd;
+    const indexMdPath = CONFIG.filesystem.indexMdPath;
     const indexMdSrcPath = CONFIG.filesystem.indexMdSrc;
     const indexMdExists = await fileExists(fs, indexMdPath);
     const rootIndexExists = await fileExists(fs, indexMdSrcPath);
