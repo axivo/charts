@@ -46,7 +46,7 @@
         ".github/workflows/release.yml"
       ],
       "matchStrings": [
-        "with:[\\s\\S]+?node-version:\\s+(?<currentValue>\\d+)"
+        "with:[\\s\\S]+?node-version:\\s+(?<currentValue>.+)"
       ],
       "packageRules": [
         {
