@@ -3,30 +3,10 @@
  * 
  * This module provides centralized functions for interacting with the GitHub API:
  * - Fetching repository issues
- * - Processing issue references from commit messages
  * - Retrieving release information
  * 
  * @module github-api
  */
-
-/**
- * Extract issue numbers from commit messages
- * 
- * @param {string} message - Commit message to analyze
- * @returns {Array<number>} - Array of issue numbers
- */
-function extractIssueReferences(message) {
-  const issueNumbers = [];
-  const regex = /#(\d+)|issues\/(\d+)/g;
-  let match;
-  while ((match = regex.exec(message)) !== null) {
-    const issueNumber = parseInt(match[1] || match[2], 10);
-    if (!isNaN(issueNumber) && !issueNumbers.includes(issueNumber)) {
-      issueNumbers.push(issueNumber);
-    }
-  }
-  return issueNumbers;
-}
 
 /**
  * Gets the date of the last release for a chart
@@ -38,7 +18,7 @@ function extractIssueReferences(message) {
  * @param {string} options.chartName - Name of the chart
  * @returns {Promise<string|null>} - ISO date string of the last release or null if none found
  */
-async function getLastReleaseDate({
+async function _getLastReleaseDate({
   github,
   context,
   core,
@@ -64,7 +44,7 @@ async function getLastReleaseDate({
 }
 
 /**
- * Fetches issues referenced in commits for a specific chart since the last release
+ * Fetches issues related to a specific chart since the last release
  * 
  * @param {Object} options - Options for fetching issues
  * @param {Object} options.github - GitHub API client
@@ -72,7 +52,7 @@ async function getLastReleaseDate({
  * @param {Object} options.core - GitHub Actions Core API for logging
  * @param {string} options.chartType - Type of chart (application/library)
  * @param {string} options.chartName - Name of the chart
- * @param {number} [options.maxCommits=50] - Maximum number of commits to analyze
+ * @param {number} [options.maxIssues=50] - Maximum number of issues to retrieve
  * @returns {Promise<Array>} - Array of issues with details
  */
 async function getReleaseIssues({
@@ -81,71 +61,41 @@ async function getReleaseIssues({
   core,
   chartType,
   chartName,
-  maxCommits = 50
+  maxIssues = 50
 }) {
+  const chartPath = `${chartType}/${chartName}`;
   try {
-    const chartPath = `${chartType}/${chartName}`;
-    core.info(`Fetching commits for chart: ${chartPath}`);
-    const lastReleaseDate = await getLastReleaseDate({
+    core.info(`Fetching closed issues for ${chartPath} chart ...`);
+    const lastReleaseDate = await _getLastReleaseDate({
       github,
       context,
       core,
       chartName
     });
-    const commitParams = {
-      owner: context.repo.owner,
-      repo: context.repo.repo,
-      path: chartPath,
-      per_page: maxCommits
-    };
-    if (lastReleaseDate) {
-      core.info(`Fetching commits since last release on ${lastReleaseDate}`);
-      commitParams.since = lastReleaseDate;
-    } else {
-      core.info('No previous release found, fetching all recent commits');
-    }
-    const commitsResponse = await github.rest.repos.listCommits(commitParams);
-    core.info(`Found ${commitsResponse.data.length} commits for ${chartPath}${lastReleaseDate ? ' since ' + lastReleaseDate : ''}`);
-    const allIssueNumbers = [];
-    commitsResponse.data.forEach(commit => {
-      const commitMessage = commit.commit.message;
-      const issueRefs = extractIssueReferences(commitMessage);
-      issueRefs.forEach(issueNum => {
-        if (!allIssueNumbers.includes(issueNum)) {
-          allIssueNumbers.push(issueNum);
-        }
-      });
+    const dateQuery = lastReleaseDate ? `closed:>=${lastReleaseDate}` : '';
+    const query = `repo:${context.repo.owner}/${context.repo.repo} is:issue is:closed ${dateQuery} path:${chartPath}`;
+    core.info(`Searching for issues with query: ${query}`);
+    const issuesResponse = await github.rest.search.issuesAndPullRequests({
+      q: query,
+      per_page: maxIssues,
+      sort: 'updated',
+      order: 'desc'
     });
-    core.info(`Found ${allIssueNumbers.length} referenced issues in commits`);
-    const issues = [];
-    for (const issueNumber of allIssueNumbers) {
-      try {
-        const issueResponse = await github.rest.issues.get({
-          owner: context.repo.owner,
-          repo: context.repo.repo,
-          issue_number: issueNumber
-        });
-        issues.push({
-          Labels: issueResponse.data.labels.map(label => label.name),
-          Number: issueResponse.data.number,
-          State: issueResponse.data.state,
-          Title: issueResponse.data.title,
-          URL: issueResponse.data.html_url
-        });
-      } catch (error) {
-        core.warning(`Error fetching issue #${issueNumber}: ${error.message}`);
-      }
-    }
-    core.info(`Successfully fetched ${issues.length} issues for ${chartPath}`);
+    core.info(`Found ${issuesResponse.data.items.length} closed issues for ${chartPath} chart.`);
+    const issues = issuesResponse.data.items.map(issue => ({
+      Labels: issue.labels.map(label => label.name),
+      Number: issue.number,
+      State: issue.state,
+      Title: issue.title,
+      URL: issue.html_url
+    }));
     return issues;
   } catch (error) {
-    core.warning(`Failed to fetch issues for chart ${chartType}/${chartName}: ${error.message}`);
+    core.warning(`Failed to fetch closed issues for ${chartPath} chart: ${error.message}`);
     return [];
   }
 }
 
 module.exports = {
-  extractIssueReferences,
-  getLastReleaseDate,
   getReleaseIssues
 };
