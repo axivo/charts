@@ -35,6 +35,7 @@ const CONFIG = {
     templatePath: '.github/pages/index.md.hbs'
   }
 };
+const githubApi = require('./github-api');
 const path = require('path');
 const yaml = require('js-yaml');
 
@@ -102,6 +103,7 @@ async function createChartReleases({
         const iconExists = await fileExists(fs, iconPath);
         const releaseBody = await generateChartRelease({
           fs,
+          github,
           core,
           context,
           chartName,
@@ -232,6 +234,7 @@ function formatReleaseName(name, version) {
  */
 async function generateChartRelease({
   fs,
+  github,
   core,
   context,
   chartName,
@@ -258,6 +261,7 @@ async function generateChartRelease({
     });
     const template = Handlebars.compile(templateContent);
     const chartSources = chartMetadata.sources || [];
+    const issues = await githubApi.getReleaseIssues({ github, context, core, chartType, chartName });
     const templateContext = {
       AppVersion: chartMetadata.appVersion || '',
       Branch: context.payload.repository.default_branch,
@@ -269,6 +273,7 @@ async function generateChartRelease({
       })),
       Description: chartMetadata.description || '',
       Icon: iconExists ? CONFIG.chart.icon : null,
+      Issues: issues.length > 0 ? issues : null,
       KubeVersion: chartMetadata.kubeVersion || '',
       Name: chartName,
       RepoURL: context.payload.repository.html_url,

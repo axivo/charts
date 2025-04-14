@@ -24,6 +24,14 @@
 - {{#if Dependency.Source}}[{{ Dependency.Name }}]({{ Dependency.Source }}){{else}}{{ Dependency.Name }}{{/if}}: `{{ Dependency.Version }}`
 {{/each}}
 {{/if}}
+{{#if Issues}}
+
+### Related Issues
+
+{{#each Issues as |Issue|}}
+- {{ Issue.URL }}
+{{/each}}
+{{/if}}
 
 ### Documentation
 
