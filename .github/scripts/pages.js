@@ -81,31 +81,25 @@ async function generateChartIndex({
     try {
       indexContent = await fs.readFile(indexPath, 'utf8');
       core.info(`Successfully read index.yaml, size: ${indexContent.length} bytes`);
-    } catch (error) {
-      // Try reading from the root directory if not in the dist directory
-      try {
-        indexContent = await fs.readFile(CONFIG.filesystem.indexPathFinal, 'utf8');
-        core.info(`Found index.yaml in root directory`);
-      } catch (rootError) {
-        core.warning(`Failed to read index.yaml: ${error.message}`);
-        core.warning('Creating an empty chart index since no index.yaml exists');
+    } catch (readError) {
+      core.warning(`Failed to read index.yaml: ${readError.message}`);
+      core.warning('Creating an empty chart index since no index.yaml exists');
 
-        // Create a minimal valid index.yaml content to avoid errors
-        const emptyIndex = {
-          apiVersion: 'v1',
-          entries: {},
-          generated: new Date().toISOString()
-        };
-        indexContent = yaml.dump(emptyIndex);
+      // Create a minimal valid index.yaml content to avoid errors
+      const emptyIndex = {
+        apiVersion: 'v1',
+        entries: {},
+        generated: new Date().toISOString()
+      };
+      indexContent = yaml.dump(emptyIndex);
 
-        // Ensure _dist directory exists
-        const distDir = path.dirname(indexPath);
-        await fs.mkdir(distDir, { recursive: true });
+      // Ensure _dist directory exists
+      const distDir = path.dirname(indexPath);
+      await fs.mkdir(distDir, { recursive: true });
 
-        // Write empty index.yaml for future runs
-        await fs.writeFile(indexPath, indexContent, 'utf8');
-        core.info(`Created empty index.yaml at ${indexPath}`);
-      }
+      // Write empty index.yaml for future runs
+      await fs.writeFile(indexPath, indexContent, 'utf8');
+      core.info(`Created empty index.yaml at ${indexPath}`);
     }
 
     const index = yaml.load(indexContent);
