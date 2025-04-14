@@ -312,7 +312,7 @@ async function generateRelease({
       AppVersion: chartMetadata.appVersion || '',
       KubeVersion: chartMetadata.kubeVersion || '',
       Dependencies: chartMetadata.dependencies || [],
-      Icon: iconExists,
+      Icon: iconExists ? CONFIG.chart.icon : null,
       RepoURL: context.payload.repository.html_url,
       Repository: {
         Branch: context.payload.repository.default_branch
