@@ -233,7 +233,7 @@ function formatReleaseTitle(name, version) {
   if (!CONFIG.chart.releaseTitle) {
     return `${name} ${version}`;
   }
-  
+
   // Simple implementation of template replacement
   return CONFIG.chart.releaseTitle
     .replace('{{ .Name }}', name)
@@ -280,7 +280,7 @@ async function generateRelease({
   try {
     // Ensure distribution directory exists
     await fs.mkdir(CONFIG.filesystem.dist, { recursive: true });
-    
+
     // Check if release template exists
     try {
       await fs.access(templatePath);
@@ -289,7 +289,7 @@ async function generateRelease({
       core.warning(`Template file not found at ${templatePath}: ${accessError.message}`);
       return `Release of ${chartName} chart version ${chartVersion}`;
     }
-    
+
     // Load release template
     const templateContent = await fs.readFile(templatePath, 'utf8');
     core.info(`Loaded release template from ${templatePath}`);
@@ -297,7 +297,12 @@ async function generateRelease({
     // Set up Handlebars
     const Handlebars = require('handlebars');
     Handlebars.registerHelper('rawGithubUrl', function (repoUrl, branch, path) {
-      return String(repoUrl).replace('github.com', 'raw.githubusercontent.com') + '/' + branch + '/' + path;
+      return String(repoUrl).replace('github.com', 'raw.githubusercontent.com').concat('/', branch, '/', path);
+    });
+
+    Handlebars.registerHelper('concat', function () {
+      const args = Array.prototype.slice.call(arguments, 0, -1);
+      return args.join('');
     });
 
     // Compile the template
