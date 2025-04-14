@@ -15,8 +15,8 @@
 const CONFIG = {
   // Chart release settings
   chart: {
+    icon: 'icon.png',
     packagesWithIndex: 'true',
-    pagesBranch: '',
     releaseNameTemplate: '{{ .Name }}-v{{ .Version }}',
     repoUrl: 'https://axivo.github.io/charts/',
     skipExisting: 'true'
@@ -92,13 +92,51 @@ async function createChartReleases({
           }
         }
 
+        // Determine chart type (application or library)
+        let chartType = 'application';
+        const libraryChartDir = path.join(CONFIG.filesystem.library, chartName);
+        const appChartDir = path.join(CONFIG.filesystem.application, chartName);
+        
+        // Check if exists in library directory
+        if (await fileExists(fs, libraryChartDir)) {
+          chartType = 'library';
+        }
+
+        // Load chart metadata from Chart.yaml
+        let chartMetadata = {};
+        const chartYamlPath = path.join(chartType === 'library' ? libraryChartDir : appChartDir, 'Chart.yaml');
+        
+        try {
+          const chartYamlContent = await fs.readFile(chartYamlPath, 'utf8');
+          chartMetadata = yaml.load(chartYamlContent);
+          core.info(`Loaded chart metadata from ${chartYamlPath}`);
+        } catch (error) {
+          core.warning(`Failed to load chart metadata: ${error.message}`);
+        }
+
+        // Check if icon exists
+        const iconPath = path.join(chartType === 'library' ? libraryChartDir : appChartDir, CONFIG.chart.icon);
+        const iconExists = await fileExists(fs, iconPath);
+
+        // Generate release body from template
+        const releaseBody = await generateRelease({
+          fs,
+          core,
+          context,
+          chartName,
+          chartVersion,
+          chartType,
+          chartMetadata,
+          iconExists
+        });
+
         // Create release
         const release = await github.rest.repos.createRelease({
           owner: context.repo.owner,
           repo: context.repo.repo,
           tag_name: tagName,
           name: `${chartName} ${chartVersion}`,
-          body: `Release of ${chartName} chart version ${chartVersion}`,
+          body: releaseBody,
           draft: false,
           prerelease: false
         });
@@ -193,6 +231,71 @@ async function findChartYamlFiles(fs, core, directory) {
 function formatReleaseName(name, version) {
   // Simple implementation that mimics the template {{ .Name }}-v{{ .Version }}
   return `${name}-v${version}`;
+}
+
+/**
+ * Generates release content using the template file
+ * 
+ * @param {Object} options - Options for generating the release content
+ * @param {Object} options.fs - Node.js fs module for file operations
+ * @param {Object} options.core - GitHub Actions Core API for logging
+ * @param {Object} options.context - GitHub Actions context
+ * @param {string} options.chartName - Name of the chart
+ * @param {string} options.chartVersion - Version of the chart
+ * @param {string} options.chartType - Type of chart (application/library)
+ * @param {Object} options.chartMetadata - Chart metadata from Chart.yaml
+ * @param {boolean} options.iconExists - Whether an icon exists for the chart
+ * @param {string} [options.templatePath=CONFIG.filesystem.releaseTemplate] - Path to release template
+ * @returns {Promise<string>} - Generated release content
+ */
+async function generateRelease({
+  fs,
+  core,
+  context,
+  chartName,
+  chartVersion,
+  chartType,
+  chartMetadata,
+  iconExists,
+  templatePath = CONFIG.filesystem.releaseTemplate
+}) {
+  try {
+    // Load release template
+    const templateContent = await fs.readFile(templatePath, 'utf8');
+    core.info(`Loaded release template from ${templatePath}`);
+    
+    // Set up Handlebars
+    const Handlebars = require('handlebars');
+    Handlebars.registerHelper('replace', function(str, find, replace) {
+      return str.replace(find, replace);
+    });
+    
+    // Compile the template
+    const template = Handlebars.compile(templateContent);
+    
+    // Prepare template context
+    const templateContext = {
+      Name: chartName,
+      Version: chartVersion,
+      Type: chartType,
+      Description: chartMetadata.description || '',
+      AppVersion: chartMetadata.appVersion || '',
+      KubeVersion: chartMetadata.kubeVersion || '',
+      Dependencies: chartMetadata.dependencies || [],
+      Icon: iconExists,
+      RepoURL: context.payload.repository.html_url,
+      Repository: {
+        Branch: context.payload.repository.default_branch
+      }
+    };
+    
+    // Generate the release content
+    return template(templateContext);
+  } catch (error) {
+    core.warning(`Failed to generate release content: ${error.message}`);
+    // Fallback to simple description
+    return `Release of ${chartName} chart version ${chartVersion}`;
+  }
 }
 
 /**
@@ -443,24 +546,7 @@ async function processChartRelease({
   }
 }
 
-/**
- * Sets GitHub Actions outputs from the CONFIG object
- *
- * @param {Object} core
- */
-function setOutputs(core) {
-  // Map output names
-  core.setOutput('CR_CHARTS_REPO_URL', CONFIG.chart.repoUrl);
-  core.setOutput('CR_INDEX_PATH', CONFIG.filesystem.indexPath);
-  core.setOutput('CR_INDEX_PATH_FINAL', CONFIG.filesystem.indexPathFinal);
-  core.setOutput('CR_PACKAGES_WITH_INDEX', CONFIG.chart.packagesWithIndex);
-  core.setOutput('CR_PAGES_BRANCH', CONFIG.chart.pagesBranch);
-  core.setOutput('CR_RELEASE_NAME_TEMPLATE', CONFIG.chart.releaseNameTemplate);
-  core.setOutput('CR_RELEASE_TEMPLATE', CONFIG.filesystem.releaseTemplate);
-  core.setOutput('CR_SKIP_EXISTING', CONFIG.chart.skipExisting);
-  core.setOutput('DIRECTORY_APPLICATION', CONFIG.filesystem.application);
-  core.setOutput('DIRECTORY_LIBRARY', CONFIG.filesystem.library);
-}
+
 
 /**
  * Setup the build environment for generating the static site
@@ -552,9 +638,9 @@ module.exports = {
   formatReleaseName,
   generateChartIndex,
   generateHelmIndex,
+  generateRelease,
   packageChartsInDirectory,
   processChartRelease,
-  setOutputs,
   setupBuildEnvironment,
   setupChartReleaserConfig
 };

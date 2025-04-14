@@ -53,16 +53,15 @@ jobs:
       - name: Install node.js dependencies
         run: npm install js-yaml handlebars
 
-      - name: Get chart-releaser configuration
-        id: chart-config
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const fs = require('fs/promises');
-            const pagesModule = require('./.github/scripts/pages.js');
-            const { setOutputs, setupChartReleaserConfig } = pagesModule;
-            setOutputs(core);
-            await setupChartReleaserConfig({ core, fs });
+      # - name: Get chart-releaser configuration
+      #   id: chart-config
+      #   uses: actions/github-script@v7
+      #   with:
+      #     script: |
+      #       const fs = require('fs/promises');
+      #       const pagesModule = require('./.github/scripts/pages.js');
+      #       const { setupChartReleaserConfig } = pagesModule;
+      #       await setupChartReleaserConfig({ core, fs });
 
       - name: Process chart release
         uses: actions/github-script@v7
