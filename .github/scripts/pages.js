@@ -13,7 +13,6 @@
  */
 
 const CONFIG = {
-  // Chart release settings
   chart: {
     icon: 'icon.png',
     packagesWithIndex: 'true',
@@ -22,7 +21,6 @@ const CONFIG = {
     repoUrl: 'https://axivo.github.io/charts/',
     skipExisting: 'true'
   },
-
   filesystem: {
     application: 'application',
     dist: './_dist',
@@ -61,22 +59,16 @@ async function createChartReleases({
   try {
     const files = await fs.readdir(packagesDir);
     const packages = files.filter(file => file.endsWith('.tgz'));
-
     core.info(`Found ${packages.length} chart packages to release`);
-
     for (const pkg of packages) {
       const chartPath = path.join(packagesDir, pkg);
-      // Extract chart name and version from filename
       const chartNameWithVersion = pkg.replace('.tgz', '');
       const lastDashIndex = chartNameWithVersion.lastIndexOf('-');
       const chartName = chartNameWithVersion.substring(0, lastDashIndex);
       const chartVersion = chartNameWithVersion.substring(lastDashIndex + 1);
-
       const tagName = formatReleaseName(chartName, chartVersion);
       core.info(`Processing release for ${tagName}`);
-
       try {
-        // Check if release exists
         try {
           await github.rest.repos.getReleaseByTag({
             owner: context.repo.owner,
@@ -86,26 +78,19 @@ async function createChartReleases({
           core.info(`Release ${tagName} already exists, skipping`);
           continue;
         } catch (error) {
-          // Release doesn't exist, proceed with creation
           if (error.status !== 404) {
             throw error;
           }
         }
-
-        // Determine chart type (application or library)
         let chartType = 'application';
         const libraryChartDir = path.join(CONFIG.filesystem.library, chartName);
         const appChartDir = path.join(CONFIG.filesystem.application, chartName);
 
-        // Check if exists in library directory
         if (await fileExists(fs, libraryChartDir)) {
           chartType = 'library';
         }
-
-        // Load chart metadata from Chart.yaml
         let chartMetadata = {};
         const chartYamlPath = path.join(chartType === 'library' ? libraryChartDir : appChartDir, 'Chart.yaml');
-
         try {
           const chartYamlContent = await fs.readFile(chartYamlPath, 'utf8');
           chartMetadata = yaml.load(chartYamlContent);
@@ -113,13 +98,9 @@ async function createChartReleases({
         } catch (error) {
           core.warning(`Failed to load chart metadata: ${error.message}`);
         }
-
-        // Check if icon exists
         const iconPath = path.join(chartType === 'library' ? libraryChartDir : appChartDir, CONFIG.chart.icon);
         const iconExists = await fileExists(fs, iconPath);
-
-        // Generate release body from template
-        const releaseBody = await generateRelease({
+        const releaseBody = await generateChartRelease({
           fs,
           core,
           context,
@@ -129,8 +110,6 @@ async function createChartReleases({
           chartMetadata,
           iconExists
         });
-
-        // Create release
         const release = await github.rest.repos.createRelease({
           owner: context.repo.owner,
           repo: context.repo.repo,
@@ -140,8 +119,6 @@ async function createChartReleases({
           draft: false,
           prerelease: false
         });
-
-        // Upload chart package as asset
         const fileContent = await fs.readFile(chartPath);
         await github.rest.repos.uploadReleaseAsset({
           owner: context.repo.owner,
@@ -150,7 +127,6 @@ async function createChartReleases({
           name: pkg,
           data: fileContent
         });
-
         core.info(`Successfully created release for ${tagName}`);
       } catch (error) {
         core.warning(`Error creating release for ${tagName}: ${error.message}`);
@@ -190,22 +166,16 @@ async function fileExists(fs, filePath) {
  */
 async function findChartYamlFiles(fs, core, directory) {
   const chartDirs = [];
-
-  // Search directory recursively
   async function searchDir(dir) {
     try {
       const entries = await fs.readdir(dir, { withFileTypes: true });
-
       for (const entry of entries) {
         const fullPath = path.join(dir, entry.name);
-
-        // Determine what to do based on entry type
         switch (true) {
           case entry.isDirectory():
             await searchDir(fullPath);
             break;
           case entry.name === 'Chart.yaml':
-            // Found a Chart.yaml file
             chartDirs.push(dir);
             break;
           default:
@@ -214,10 +184,8 @@ async function findChartYamlFiles(fs, core, directory) {
       }
     } catch (error) {
       core.warning(`Error reading directory ${dir}: ${error.message}`);
-      // Skip this directory on error
     }
   }
-
   await searchDir(directory);
   return chartDirs;
 }
@@ -229,12 +197,9 @@ async function findChartYamlFiles(fs, core, directory) {
  * @returns {string}
  */
 function formatReleaseTitle(name, version) {
-  // Use standard format if releaseTitle is not configured
   if (!CONFIG.chart.releaseTitle) {
     return `${name} ${version}`;
   }
-
-  // Simple implementation of template replacement
   return CONFIG.chart.releaseTitle
     .replace('{{ .Name }}', name)
     .replace('{{ .Version }}', version);
@@ -247,7 +212,6 @@ function formatReleaseTitle(name, version) {
  * @returns {string}
  */
 function formatReleaseName(name, version) {
-  // Simple implementation for tag name: name-vversion
   return `${name}-v${version}`;
 }
 
@@ -266,7 +230,7 @@ function formatReleaseName(name, version) {
  * @param {string} [options.templatePath=CONFIG.chart.releaseTemplate] - Path to release template
  * @returns {Promise<string>} - Generated release content
  */
-async function generateRelease({
+async function generateChartRelease({
   fs,
   core,
   context,
@@ -278,10 +242,7 @@ async function generateRelease({
   templatePath = CONFIG.chart.releaseTemplate
 }) {
   try {
-    // Ensure distribution directory exists
     await fs.mkdir(CONFIG.filesystem.dist, { recursive: true });
-
-    // Check if release template exists
     try {
       await fs.access(templatePath);
       core.info(`Release template found at: ${templatePath}`);
@@ -289,26 +250,13 @@ async function generateRelease({
       core.warning(`Template file not found at ${templatePath}: ${accessError.message}`);
       return `Release of ${chartName} chart version ${chartVersion}`;
     }
-
-    // Load release template
     const templateContent = await fs.readFile(templatePath, 'utf8');
     core.info(`Loaded release template from ${templatePath}`);
-
-    // Set up Handlebars
     const Handlebars = require('handlebars');
-    Handlebars.registerHelper('rawGithubUrl', function (repoUrl, branch, path) {
-      return String(repoUrl).replace('github.com', 'raw.githubusercontent.com').concat('/', branch, '/', path);
+    Handlebars.registerHelper('RepoRawURL', function () {
+      return String(context.payload.repository.html_url).replace('github.com', 'raw.githubusercontent.com');
     });
-
-    Handlebars.registerHelper('concat', function () {
-      const args = Array.prototype.slice.call(arguments, 0, -1);
-      return args.join('');
-    });
-
-    // Compile the template
     const template = Handlebars.compile(templateContent);
-
-    // Prepare template context
     const templateContext = {
       Name: chartName,
       Version: chartVersion,
@@ -319,16 +267,11 @@ async function generateRelease({
       Dependencies: chartMetadata.dependencies || [],
       Icon: iconExists ? CONFIG.chart.icon : null,
       RepoURL: context.payload.repository.html_url,
-      Repository: {
-        Branch: context.payload.repository.default_branch
-      }
+      Branch: context.payload.repository.default_branch
     };
-
-    // Generate the release content
     return template(templateContext);
   } catch (error) {
     core.warning(`Failed to generate release content: ${error.message}`);
-    // Fallback to simple description
     return `Release of ${chartName} chart version ${chartVersion}`;
   }
 }
@@ -362,56 +305,40 @@ async function generateChartIndex({
     } catch (readError) {
       core.warning(`Failed to read index.yaml: ${readError.message}`);
       core.warning('Creating an empty chart index since no index.yaml exists');
-
-      // Create a minimal valid index.yaml content to avoid errors
       const emptyIndex = {
         apiVersion: 'v1',
         entries: {},
         generated: new Date().toISOString()
       };
       indexContent = yaml.dump(emptyIndex);
-
-      // Ensure _dist directory exists
       const distDir = path.dirname(indexPath);
       await fs.mkdir(distDir, { recursive: true });
-
-      // Write empty index.yaml for future runs
       await fs.writeFile(indexPath, indexContent, 'utf8');
       core.info(`Created empty index.yaml at ${indexPath}`);
     }
-
     const index = yaml.load(indexContent);
-
     if (!index || !index.entries) {
       core.warning('Invalid or empty index.yaml file, creating an empty index.md.');
-      // Create an empty index.md instead of skipping
       await fs.mkdir(path.dirname(indexMdPath), { recursive: true });
       await fs.writeFile(indexMdPath, '', 'utf8');
-
-      // Also ensure the root index.md exists
       await fs.writeFile('./index.md', '', 'utf8');
       core.info(`Created empty index.md files`);
       return true;
     }
-
     core.info(`Reading template from ${templatePath}`);
     const template = await fs.readFile(templatePath, 'utf8');
     core.info(`Template loaded, size: ${template.length} bytes`);
-
-    // Register helper for template
     const Handlebars = require('handlebars');
-    Handlebars.registerHelper('rawGithubUrl', function (repoUrl, branch, path) {
-      return String(repoUrl).replace('github.com', 'raw.githubusercontent.com') + '/' + branch + '/' + path;
+    Handlebars.registerHelper('RepoRawURL', function () {
+      return String(repoUrl).replace('github.com', 'raw.githubusercontent.com');
     });
-
     const repoUrl = context.payload.repository.html_url;
     const defaultBranchName = context.payload.repository.default_branch;
-
     const charts = Object.entries(index.entries)
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([name, versions]) => {
         if (!versions || !versions.length) return null;
-        const latest = versions[0]; // Assuming versions[0] is the latest
+        const latest = versions[0];
         return {
           Name: name,
           Version: latest.version || '',
@@ -420,27 +347,19 @@ async function generateChartIndex({
         };
       })
       .filter(Boolean);
-
     const compiledTemplate = Handlebars.compile(template);
     const newContent = compiledTemplate({
       Charts: charts,
       RepoURL: repoUrl,
       Branch: defaultBranchName
     });
-
     core.info(`Generated content length: ${newContent.length} bytes`);
-
-    // Ensure directory exists before writing file
     await fs.mkdir(path.dirname(indexMdPath), { recursive: true });
-
-    // Also write directly to the root index.md for Jekyll
     core.info(`Writing index.md to root directory and ${indexMdPath}`);
     await fs.writeFile('./index.md', newContent, 'utf8');
     await fs.writeFile(indexMdPath, newContent, 'utf8');
-
     core.info('Successfully generated index.md');
     return true;
-
   } catch (error) {
     core.setFailed(`Failed to generate index.md: ${error.message}`);
     throw error;
@@ -470,11 +389,8 @@ async function generateHelmIndex({
   try {
     const indexDir = path.dirname(indexPath);
     await fs.mkdir(indexDir, { recursive: true });
-
     await exec.exec('helm', ['repo', 'index', packagesDir, '--url', repoUrl]);
-
     await fs.copyFile(path.join(packagesDir, 'index.yaml'), indexPath);
-
     core.info(`Successfully generated Helm repository index at ${indexPath}`);
   } catch (error) {
     const errorMsg = `Failed to generate Helm repository index: ${error.message}`;
@@ -502,25 +418,18 @@ async function packageChartsInDirectory({
   outputDir
 }) {
   try {
-    // Get directories containing Chart.yaml files
     const chartDirsArray = await findChartYamlFiles(fs, core, dirPath);
-
     if (!chartDirsArray.length) {
       core.info(`No charts found in ${dirPath}`);
       return;
     }
-
     const charts = chartDirsArray;
     for (const chartDir of charts) {
       core.info(`Packaging chart: ${chartDir}`);
-
-      // Update dependencies before packaging
       core.info(`Updating dependencies for: ${chartDir}`);
       await exec.exec('helm', ['dependency', 'update', chartDir]);
-
       await exec.exec('helm', ['package', chartDir, '--destination', outputDir]);
     }
-
     core.info(`Successfully packaged ${charts.length} charts from ${dirPath}`);
   } catch (error) {
     const errorMsg = `Failed to package charts in ${dirPath}: ${error.message}`;
@@ -553,26 +462,19 @@ async function processChartRelease({
   try {
     const packagesDir = CONFIG.filesystem.temp;
     const indexPath = CONFIG.filesystem.indexPath;
-
-    // Ensure packages directory exists
     await fs.mkdir(packagesDir, { recursive: true });
     core.info(`Created directory: ${packagesDir}`);
-
     core.info('Packaging application charts...');
     const appDirPath = CONFIG.filesystem.application;
     await packageChartsInDirectory({ exec, core, fs, dirPath: appDirPath, outputDir: packagesDir });
-
     core.info('Packaging library charts...');
     const libDirPath = CONFIG.filesystem.library;
     await packageChartsInDirectory({ exec, core, fs, dirPath: libDirPath, outputDir: packagesDir });
-
     core.info('Creating GitHub releases for charts...');
     await createChartReleases({ github, context, core, fs, packagesDir });
-
     core.info('Generating Helm repository index...');
     const repoUrl = CONFIG.chart.repoUrl;
     await generateHelmIndex({ exec, core, fs, packagesDir, indexPath, repoUrl });
-
     core.info('Chart release process completed successfully');
   } catch (error) {
     const errorMsg = `Chart release process failed: ${error.message}`;
@@ -580,8 +482,6 @@ async function processChartRelease({
     throw new Error(errorMsg);
   }
 }
-
-
 
 /**
  * Setup the build environment for generating the static site
@@ -592,7 +492,6 @@ async function processChartRelease({
  * @returns {Promise<void>}
  */
 async function setupBuildEnvironment({ core, fs }) {
-  // Copy Jekyll config
   try {
     core.info(`Copying ${CONFIG.filesystem.configYmlSrc} to ${CONFIG.filesystem.configYmlPath}`);
     await fs.copyFile(CONFIG.filesystem.configYmlSrc, CONFIG.filesystem.configYmlPath);
@@ -601,14 +500,11 @@ async function setupBuildEnvironment({ core, fs }) {
     core.setFailed(errorMsg);
     throw new Error(errorMsg);
   }
-
-  // Copy or create index.md - ensure root index.md exists for Jekyll
   try {
     const indexMdPath = CONFIG.filesystem.indexMdPath;
     const indexMdSrcPath = CONFIG.filesystem.indexMdSrc;
     const indexMdExists = await fileExists(fs, indexMdPath);
     const rootIndexExists = await fileExists(fs, indexMdSrcPath);
-
     if (indexMdExists) {
       core.info(`Copying ${indexMdPath} to ${indexMdSrcPath}`);
       await fs.copyFile(indexMdPath, indexMdSrcPath);
@@ -623,8 +519,6 @@ async function setupBuildEnvironment({ core, fs }) {
     core.setFailed(errorMsg);
     throw new Error(errorMsg);
   }
-
-  // Remove README.md to avoid conflicts
   try {
     if (await fileExists(fs, './README.md')) {
       core.info('Removing README.md from root to prevent conflicts with index.html');
@@ -635,36 +529,9 @@ async function setupBuildEnvironment({ core, fs }) {
     core.setFailed(errorMsg);
     throw new Error(errorMsg);
   }
-
   core.info('Jekyll preparation complete.');
 }
 
-/**
- * Sets up the chart-releaser configuration by creating necessary directories
- * and checking if the release template exists
- *
- * @param {Object} options - Options for chart configuration setup
- * @param {Object} options.core - GitHub Actions Core API for logging and output
- * @param {Object} options.fs - Node.js fs/promises module for file operations
- * @returns {Promise<void>}
- */
-async function setupChartReleaserConfig({ core, fs }) {
-  try {
-    // Create the distribution directory
-    await fs.mkdir(CONFIG.filesystem.dist, { recursive: true });
-    core.info(`Created directory: ${CONFIG.filesystem.dist}`);
-
-    // Check if release template exists
-    await fs.access(CONFIG.chart.releaseTemplate);
-    core.info(`Release template found at: ${CONFIG.chart.releaseTemplate}`);
-  } catch (error) {
-    const errorMsg = `Failed to setup chart-releaser configuration: ${error.message}`;
-    core.setFailed(errorMsg);
-    throw new Error(errorMsg);
-  }
-}
-
-// Export functions and constants
 module.exports = {
   CONFIG,
   createChartReleases,
@@ -674,9 +541,8 @@ module.exports = {
   formatReleaseTitle,
   generateChartIndex,
   generateHelmIndex,
-  generateRelease,
+  generateChartRelease,
   packageChartsInDirectory,
   processChartRelease,
-  setupBuildEnvironment,
-  setupChartReleaserConfig
+  setupBuildEnvironment
 };

@@ -1,28 +1,30 @@
-{{#if Icon}}
-<img style="clear: right; float: right; margin: 0 15px;" width="256" height="256" src="{{rawGithubUrl RepoURL Repository.Branch (concat Type '/' Name '/' Icon)}}" alt="AXIVO {{Name}} Chart" />
-{{/if}}
-
 ### Details
 
-{{#if Description}}
-- Description: {{Description}}
+{{#if Icon}}
+<a href="{{ RepoURL }}/tree/{{ Branch }}/{{ Type }}/{{ Name }}">
+  <img align="right" width="128" height="128" src="{{ RepoRawURL }}/{{ Branch }}/{{ Type }}/{{ Name }}/{{ Icon }}" alt="AXIVO {{ Name }} Chart" />
+</a>
+
 {{/if}}
-- Type: {{Type}}
+{{#if Description}}
+- Description: {{ Description }}
+{{/if}}
+- Type: {{ Type }}
 {{#if AppVersion}}
-- App Version: {{AppVersion}}
+- App Version: {{ AppVersion }}
 {{/if}}
 {{#if KubeVersion}}
-- Kubernetes Version: {{KubeVersion}}
+- Kubernetes Version: {{ KubeVersion }}
 {{/if}}
-
 {{#if Dependencies}}
+
 ### Dependencies
 
 {{#each Dependencies}}
-- {{this.Name}}: {{this.Version}}
+- {{ this.Name }}: {{ this.Version }}
 {{/each}}
 {{/if}}
 
 ### Documentation
 
-Review the related chart [README]({{RepoURL}}/tree/{{Repository.Branch}}/{{Type}}/{{Name}}), for additional details.
+Review the related chart [README]({{ RepoURL }}/tree/{{ Branch }}/{{ Type }}/{{ Name }}), for additional details.
