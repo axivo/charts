@@ -9,19 +9,19 @@
 {{#if Description}}
 - Description: {{ Description }}
 {{/if}}
-- Type: {{ Type }}
+- Type: `{{ Type }}`
 {{#if AppVersion}}
-- App Version: {{ AppVersion }}
+- App Version: `{{ AppVersion }}`
 {{/if}}
 {{#if KubeVersion}}
-- Kubernetes Version: {{ KubeVersion }}
+- Kubernetes Version: `{{ KubeVersion }}`
 {{/if}}
 {{#if Dependencies}}
 
 ### Dependencies
 
-{{#each Dependencies}}
-- {{ this.Name }}: {{ this.Version }}
+{{#each Dependencies as |Dependency|}}
+- [{{ Dependency.Name }}]({{ Dependency.Repository }}): {{ Dependency.Version }}
 {{/each}}
 {{/if}}
 

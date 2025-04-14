@@ -23,15 +23,15 @@ const CONFIG = {
   },
   filesystem: {
     application: 'application',
-    dist: './_dist',
-    library: 'library',
-    temp: '.cr-release-packages',
     configYmlPath: './_config.yml',
     configYmlSrc: '.github/pages/config.yml',
+    dist: './_dist',
     indexMdPath: './_dist/index.md',
     indexMdSrc: './index.md',
     indexPath: './_dist/index.yaml',
     indexPathFinal: 'index.yaml',
+    library: 'library',
+    temp: '.cr-release-packages',
     templatePath: '.github/pages/index.md.hbs'
   }
 };
@@ -258,16 +258,20 @@ async function generateChartRelease({
     });
     const template = Handlebars.compile(templateContent);
     const templateContext = {
-      Name: chartName,
-      Version: chartVersion,
-      Type: chartType,
-      Description: chartMetadata.description || '',
       AppVersion: chartMetadata.appVersion || '',
-      KubeVersion: chartMetadata.kubeVersion || '',
-      Dependencies: chartMetadata.dependencies || [],
+      Branch: context.payload.repository.default_branch,
+      Dependencies: (chartMetadata.dependencies || []).map(dependency => ({
+        Name: dependency.name,
+        Repository: dependency.repository,
+        Version: dependency.version
+      })),
+      Description: chartMetadata.description || '',
       Icon: iconExists ? CONFIG.chart.icon : null,
+      KubeVersion: chartMetadata.kubeVersion || '',
+      Name: chartName,
       RepoURL: context.payload.repository.html_url,
-      Branch: context.payload.repository.default_branch
+      Type: chartType,
+      Version: chartVersion
     };
     return template(templateContext);
   } catch (error) {
@@ -340,10 +344,10 @@ async function generateChartIndex({
         if (!versions || !versions.length) return null;
         const latest = versions[0];
         return {
+          Description: latest.description || '',
           Name: name,
-          Version: latest.version || '',
-          Type: latest.type || 'application', // Default type if missing
-          Description: latest.description || ''
+          Type: latest.type || 'application',
+          Version: latest.version || ''
         };
       })
       .filter(Boolean);
@@ -540,8 +544,8 @@ module.exports = {
   formatReleaseName,
   formatReleaseTitle,
   generateChartIndex,
-  generateHelmIndex,
   generateChartRelease,
+  generateHelmIndex,
   packageChartsInDirectory,
   processChartRelease,
   setupBuildEnvironment
