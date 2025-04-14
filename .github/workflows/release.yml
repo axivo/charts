@@ -38,7 +38,7 @@ jobs:
         with:
           script: |
             const configureGit = require('./.github/scripts/git-config.js');
-            await configureGit({github, context, core, exec});
+            await configureGit({ github, context, core, exec });
 
       - name: Setup helm
         uses: azure/setup-helm@v4
@@ -48,7 +48,7 @@ jobs:
       - name: Setup node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
 
       - name: Install node.js dependencies
         run: npm install js-yaml handlebars
@@ -64,35 +64,15 @@ jobs:
             setOutputs(core);
             await setupChartReleaserConfig({ core, fs });
 
-      - name: Release application charts
-        uses: helm/chart-releaser-action@v1
+      - name: Run chart-releaser
+        uses: helm/chart-releaser-action@v1.7.0
         env:
-          CR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          CR_INDEX_PATH: ${{ steps.chart-config.outputs.CR_INDEX_PATH }}
-          CR_SKIP_EXISTING: ${{ steps.chart-config.outputs.CR_SKIP_EXISTING }}
-          CR_PAGES_BRANCH: ${{ steps.chart-config.outputs.CR_PAGES_BRANCH }}
           CR_CHARTS_REPO_URL: ${{ steps.chart-config.outputs.CR_CHARTS_REPO_URL }}
+          CR_PACKAGES_WITH_INDEX: ${{ steps.chart-config.outputs.CR_PACKAGES_WITH_INDEX }}
           CR_RELEASE_NAME_TEMPLATE: ${{ steps.chart-config.outputs.CR_RELEASE_NAME_TEMPLATE }}
           CR_RELEASE_TEMPLATE: ${{ steps.chart-config.outputs.CR_RELEASE_TEMPLATE }}
-          CR_PACKAGES_WITH_INDEX: ${{ steps.chart-config.outputs.CR_PACKAGES_WITH_INDEX }}
-        with:
-          charts_dir: ${{ steps.chart-config.outputs.DIRECTORY_APPLICATION }}
-          skip_existing: true
-
-      - name: Release library charts
-        uses: helm/chart-releaser-action@v1
-        env:
-          CR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          CR_INDEX_PATH: ${{ steps.chart-config.outputs.CR_INDEX_PATH }}
           CR_SKIP_EXISTING: ${{ steps.chart-config.outputs.CR_SKIP_EXISTING }}
-          CR_PAGES_BRANCH: ${{ steps.chart-config.outputs.CR_PAGES_BRANCH }}
-          CR_CHARTS_REPO_URL: ${{ steps.chart-config.outputs.CR_CHARTS_REPO_URL }}
-          CR_RELEASE_NAME_TEMPLATE: ${{ steps.chart-config.outputs.CR_RELEASE_NAME_TEMPLATE }}
-          CR_RELEASE_TEMPLATE: ${{ steps.chart-config.outputs.CR_RELEASE_TEMPLATE }}
-          CR_PACKAGES_WITH_INDEX: ${{ steps.chart-config.outputs.CR_PACKAGES_WITH_INDEX }}
-        with:
-          charts_dir: ${{ steps.chart-config.outputs.DIRECTORY_LIBRARY }}
-          skip_existing: true
+          CR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Generate chart index page
         uses: actions/github-script@v7
@@ -116,7 +96,7 @@ jobs:
           source: ./
           destination: ./_site
 
-      - name: Setup Pages
+      - name: Setup pages
         id: pages
         uses: actions/configure-pages@v5
 
