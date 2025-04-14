@@ -96,7 +96,7 @@ async function createChartReleases({
         let chartType = 'application';
         const libraryChartDir = path.join(CONFIG.filesystem.library, chartName);
         const appChartDir = path.join(CONFIG.filesystem.application, chartName);
-        
+
         // Check if exists in library directory
         if (await fileExists(fs, libraryChartDir)) {
           chartType = 'library';
@@ -105,7 +105,7 @@ async function createChartReleases({
         // Load chart metadata from Chart.yaml
         let chartMetadata = {};
         const chartYamlPath = path.join(chartType === 'library' ? libraryChartDir : appChartDir, 'Chart.yaml');
-        
+
         try {
           const chartYamlContent = await fs.readFile(chartYamlPath, 'utf8');
           chartMetadata = yaml.load(chartYamlContent);
@@ -260,19 +260,22 @@ async function generateRelease({
   templatePath = CONFIG.filesystem.releaseTemplate
 }) {
   try {
+    // Verify template exists
+    await setupChartReleaserConfig({ core, fs });
+
     // Load release template
     const templateContent = await fs.readFile(templatePath, 'utf8');
     core.info(`Loaded release template from ${templatePath}`);
-    
+
     // Set up Handlebars
     const Handlebars = require('handlebars');
-    Handlebars.registerHelper('replace', function(str, find, replace) {
+    Handlebars.registerHelper('replace', function (str, find, replace) {
       return str.replace(find, replace);
     });
-    
+
     // Compile the template
     const template = Handlebars.compile(templateContent);
-    
+
     // Prepare template context
     const templateContext = {
       Name: chartName,
@@ -288,7 +291,7 @@ async function generateRelease({
         Branch: context.payload.repository.default_branch
       }
     };
-    
+
     // Generate the release content
     return template(templateContext);
   } catch (error) {
