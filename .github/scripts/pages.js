@@ -55,18 +55,6 @@ async function fileExists(fs, filePath) {
   }
 }
 
-/**
- * Generate the chart index page from the index.yaml file
- * 
- * @param {Object} options - Options for chart index generation
- * @param {Object} options.context - GitHub Actions context for repository info
- * @param {Object} options.core - GitHub Actions Core API for logging and output
- * @param {Object} options.fs - Node.js fs/promises module for file operations
- * @param {string} [options.indexPath=CONFIG.filesystem.indexPath] - Path to the index.yaml file
- * @param {string} [options.indexMdPath=CONFIG.filesystem.indexMdPath] - Path where to write the generated index.md
- * @param {string} [options.templatePath=CONFIG.filesystem.templatePath] - Path to the Handlebars template
- * @returns {Promise<boolean>} - True if successful, false if skipped
- */
 async function generateChartIndex({
   context,
   core,
@@ -76,43 +64,36 @@ async function generateChartIndex({
   templatePath = CONFIG.filesystem.templatePath
 }) {
   try {
-    core.info(`Reading index YAML from ${indexPath}`);
+    await fs.mkdir(path.dirname(indexPath), { recursive: true });
+    await fs.mkdir(path.dirname(indexMdPath), { recursive: true });
+
     let indexContent;
     try {
       indexContent = await fs.readFile(indexPath, 'utf8');
-      core.info(`Successfully read index.yaml, size: ${indexContent.length} bytes`);
-    } catch (readError) {
-      core.warning(`Failed to read index.yaml: ${readError.message}`);
-      core.warning('Creating an empty chart index since no index.yaml exists');
-
-      // Create a minimal valid index.yaml content to avoid errors
-      const emptyIndex = {
-        apiVersion: 'v1',
-        entries: {},
-        generated: new Date().toISOString()
-      };
-      indexContent = yaml.dump(emptyIndex);
-
-      // Ensure _dist directory exists
-      const distDir = path.dirname(indexPath);
-      await fs.mkdir(distDir, { recursive: true });
-
-      // Write empty index.yaml for future runs
-      await fs.writeFile(indexPath, indexContent, 'utf8');
-      core.info(`Created empty index.yaml at ${indexPath}`);
+    } catch (error) {
+      // Try reading from the root directory if not in the dist directory
+      try {
+        indexContent = await fs.readFile(CONFIG.filesystem.indexPathFinal, 'utf8');
+        core.info(`Found ${indexPathFinal} in root directory`);
+      } catch (rootError) {
+        core.warning(`Failed to read ${indexPathFinal} from any location: ${error.message}, ${rootError.message}`);
+        const emptyIndex = {
+          apiVersion: 'v1',
+          entries: {},
+          generated: new Date().toISOString()
+        };
+        indexContent = yaml.dump(emptyIndex);
+        await fs.writeFile(indexPath, indexContent, 'utf8');
+      }
     }
 
     const index = yaml.load(indexContent);
-
     if (!index || !index.entries) {
-      core.warning('Invalid or empty index.yaml file, creating an empty index.md.');
-      // Create an empty index.md instead of skipping
+      core.warning(`Invalid or empty ${indexPathFinal} file, creating an empty file.`);
       await fs.mkdir(path.dirname(indexMdPath), { recursive: true });
       await fs.writeFile(indexMdPath, '', 'utf8');
-
-      // Also ensure the root index.md exists
       await fs.writeFile(CONFIG.filesystem.indexMdSrc, '', 'utf8');
-      core.info(`Created empty index.md files`);
+      core.info(`Created empty ${indexPathFinal} files at ${indexMdPath} and ${CONFIG.filesystem.indexMdSrc}`);
       return true;
     }
 
@@ -120,51 +101,37 @@ async function generateChartIndex({
     const template = await fs.readFile(templatePath, 'utf8');
     core.info(`Template loaded, size: ${template.length} bytes`);
 
-    // Register helper for template
     const Handlebars = require('handlebars');
-    Handlebars.registerHelper('rawGithubUrl', function (repoUrl, branch, path) {
-      return String(repoUrl).replace('github.com', 'raw.githubusercontent.com') + '/' + branch + '/' + path;
-    });
+    Handlebars.registerHelper('rawGithubUrl', (repoUrl, branch, path) =>
+      `${String(repoUrl).replace('github.com', 'raw.githubusercontent.com')}/${branch}/${path}`
+    );
 
-    const repoUrl = context.payload.repository.html_url;
-    const defaultBranchName = context.payload.repository.default_branch;
-
-    const charts = Object.entries(index.entries)
+    const charts = index.entries && Object.entries(index.entries)
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([name, versions]) => {
         if (!versions || !versions.length) return null;
-        const latest = versions[0]; // Assuming versions[0] is the latest
+        const latest = versions[0];
         return {
           Name: name,
           Version: latest.version || '',
-          Type: latest.type || 'application', // Default type if missing
+          Type: latest.type || 'application',
           Description: latest.description || ''
         };
       })
-      .filter(Boolean);
+      .filter(Boolean) || [];
 
-    const compiledTemplate = Handlebars.compile(template);
-    const newContent = compiledTemplate({
+    const content = Handlebars.compile(template)({
       Charts: charts,
-      RepoURL: repoUrl,
-      Branch: defaultBranchName
+      RepoURL: context.payload.repository.html_url,
+      Branch: context.payload.repository.default_branch
     });
 
-    core.info(`Generated content length: ${newContent.length} bytes`);
+    await fs.writeFile(CONFIG.filesystem.indexMdSrc, content, 'utf8');
+    await fs.writeFile(indexMdPath, content, 'utf8');
 
-    // Ensure directory exists before writing file
-    await fs.mkdir(path.dirname(indexMdPath), { recursive: true });
-
-    // Also write directly to the root index.md for Jekyll
-    core.info(`Writing index.md to root directory and ${indexMdPath}`);
-    await fs.writeFile(CONFIG.filesystem.indexMdSrc, newContent, 'utf8');
-    await fs.writeFile(indexMdPath, newContent, 'utf8');
-
-    core.info('Successfully generated index.md');
     return true;
-
   } catch (error) {
-    core.setFailed(`Failed to generate index.md: ${error.message}`);
+    core.setFailed(`Index generation failed: ${error.message}`);
     throw error;
   }
 }
