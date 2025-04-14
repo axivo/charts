@@ -7,6 +7,7 @@ on:
     paths:
       - .github/pages/config.yml
       - .github/pages/index.md.hbs
+      - .github/pages/release.md.hbs
       - application/**
       - library/**
   workflow_dispatch:
@@ -52,16 +53,6 @@ jobs:
 
       - name: Install node.js dependencies
         run: npm install js-yaml handlebars
-
-      # - name: Get chart-releaser configuration
-      #   id: chart-config
-      #   uses: actions/github-script@v7
-      #   with:
-      #     script: |
-      #       const fs = require('fs/promises');
-      #       const pagesModule = require('./.github/scripts/pages.js');
-      #       const { setupChartReleaserConfig } = pagesModule;
-      #       await setupChartReleaserConfig({ core, fs });
 
       - name: Process chart release
         uses: actions/github-script@v7

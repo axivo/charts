@@ -17,7 +17,8 @@ const CONFIG = {
   chart: {
     icon: 'icon.png',
     packagesWithIndex: 'true',
-    releaseNameTemplate: '{{ .Name }}-v{{ .Version }}',
+    releaseTemplate: '.github/pages/release.md.hbs',
+    releaseTitle: '{{ .Name }}-v{{ .Version }}',
     repoUrl: 'https://axivo.github.io/charts/',
     skipExisting: 'true'
   },
@@ -33,7 +34,6 @@ const CONFIG = {
     indexMdSrc: './index.md',
     indexPath: './_dist/index.yaml',
     indexPathFinal: 'index.yaml',
-    releaseTemplate: '.github/release_template.md',
     templatePath: '.github/pages/index.md.hbs'
   }
 };
@@ -135,7 +135,7 @@ async function createChartReleases({
           owner: context.repo.owner,
           repo: context.repo.repo,
           tag_name: tagName,
-          name: `${chartName} ${chartVersion}`,
+          name: formatReleaseTitle(chartName, chartVersion),
           body: releaseBody,
           draft: false,
           prerelease: false
@@ -223,13 +223,31 @@ async function findChartYamlFiles(fs, core, directory) {
 }
 
 /**
+ * Formats a release title according to the template
+ * @param {string} name
+ * @param {string} version
+ * @returns {string}
+ */
+function formatReleaseTitle(name, version) {
+  // Use standard format if releaseTitle is not configured
+  if (!CONFIG.chart.releaseTitle) {
+    return `${name} ${version}`;
+  }
+  
+  // Simple implementation of template replacement
+  return CONFIG.chart.releaseTitle
+    .replace('{{ .Name }}', name)
+    .replace('{{ .Version }}', version);
+}
+
+/**
  * Formats a release name according to the template
  * @param {string} name
  * @param {string} version
  * @returns {string}
  */
 function formatReleaseName(name, version) {
-  // Simple implementation that mimics the template {{ .Name }}-v{{ .Version }}
+  // Simple implementation for tag name: name-vversion
   return `${name}-v${version}`;
 }
 
@@ -245,7 +263,7 @@ function formatReleaseName(name, version) {
  * @param {string} options.chartType - Type of chart (application/library)
  * @param {Object} options.chartMetadata - Chart metadata from Chart.yaml
  * @param {boolean} options.iconExists - Whether an icon exists for the chart
- * @param {string} [options.templatePath=CONFIG.filesystem.releaseTemplate] - Path to release template
+ * @param {string} [options.templatePath=CONFIG.chart.releaseTemplate] - Path to release template
  * @returns {Promise<string>} - Generated release content
  */
 async function generateRelease({
@@ -257,20 +275,29 @@ async function generateRelease({
   chartType,
   chartMetadata,
   iconExists,
-  templatePath = CONFIG.filesystem.releaseTemplate
+  templatePath = CONFIG.chart.releaseTemplate
 }) {
   try {
-    // Verify template exists
-    await setupChartReleaserConfig({ core, fs });
-
+    // Ensure distribution directory exists
+    await fs.mkdir(CONFIG.filesystem.dist, { recursive: true });
+    
+    // Check if release template exists
+    try {
+      await fs.access(templatePath);
+      core.info(`Release template found at: ${templatePath}`);
+    } catch (accessError) {
+      core.warning(`Template file not found at ${templatePath}: ${accessError.message}`);
+      return `Release of ${chartName} chart version ${chartVersion}`;
+    }
+    
     // Load release template
     const templateContent = await fs.readFile(templatePath, 'utf8');
     core.info(`Loaded release template from ${templatePath}`);
 
     // Set up Handlebars
     const Handlebars = require('handlebars');
-    Handlebars.registerHelper('replace', function (str, find, replace) {
-      return str.replace(find, replace);
+    Handlebars.registerHelper('rawGithubUrl', function (repoUrl, branch, path) {
+      return String(repoUrl).replace('github.com', 'raw.githubusercontent.com') + '/' + branch + '/' + path;
     });
 
     // Compile the template
@@ -623,8 +650,8 @@ async function setupChartReleaserConfig({ core, fs }) {
     core.info(`Created directory: ${CONFIG.filesystem.dist}`);
 
     // Check if release template exists
-    await fs.access(CONFIG.filesystem.releaseTemplate);
-    core.info(`Release template found at: ${CONFIG.filesystem.releaseTemplate}`);
+    await fs.access(CONFIG.chart.releaseTemplate);
+    core.info(`Release template found at: ${CONFIG.chart.releaseTemplate}`);
   } catch (error) {
     const errorMsg = `Failed to setup chart-releaser configuration: ${error.message}`;
     core.setFailed(errorMsg);
@@ -639,6 +666,7 @@ module.exports = {
   fileExists,
   findChartYamlFiles,
   formatReleaseName,
+  formatReleaseTitle,
   generateChartIndex,
   generateHelmIndex,
   generateRelease,
