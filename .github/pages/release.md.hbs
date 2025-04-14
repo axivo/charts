@@ -21,7 +21,7 @@
 ### Dependencies
 
 {{#each Dependencies as |Dependency|}}
-- [{{ Dependency.Name }}]({{ Dependency.Repository }}): `{{ Dependency.Version }}`
+- {{#if Dependency.Source}}[{{ Dependency.Name }}]({{ Dependency.Source }}){{else}}{{ Dependency.Name }}{{/if}}: `{{ Dependency.Version }}`
 {{/each}}
 {{/if}}
 

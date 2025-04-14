@@ -257,12 +257,14 @@ async function generateChartRelease({
       return String(context.payload.repository.html_url).replace('github.com', 'raw.githubusercontent.com');
     });
     const template = Handlebars.compile(templateContent);
+    const chartSources = chartMetadata.sources || [];
     const templateContext = {
       AppVersion: chartMetadata.appVersion || '',
       Branch: context.payload.repository.default_branch,
       Dependencies: (chartMetadata.dependencies || []).map(dependency => ({
         Name: dependency.name,
         Repository: dependency.repository,
+        Source: chartSources.length > 0 ? chartSources[0] : null,
         Version: dependency.version
       })),
       Description: chartMetadata.description || '',
