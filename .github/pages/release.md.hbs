@@ -14,14 +14,14 @@
 - App Version: `{{ AppVersion }}`
 {{/if}}
 {{#if KubeVersion}}
-- Kubernetes Version: `{{ KubeVersion }}`
+- Kubernetes Version: `{% raw %}{{ KubeVersion }}{% endraw %}`
 {{/if}}
 {{#if Dependencies}}
 
 ### Dependencies
 
 {{#each Dependencies as |Dependency|}}
-- [{{ Dependency.Name }}]({{ Dependency.Repository }}): {{ Dependency.Version }}
+- [{{ Dependency.Name }}]({{ Dependency.Repository }}): `{{ Dependency.Version }}`
 {{/each}}
 {{/if}}
 
