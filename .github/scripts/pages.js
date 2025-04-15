@@ -256,6 +256,9 @@ async function generateChartRelease({
     const templateContent = await fs.readFile(templatePath, 'utf8');
     core.info(`Loaded release template from ${templatePath}`);
     const Handlebars = require('handlebars');
+    Handlebars.registerHelper('eq', function (a, b) {
+      return a === b;
+    });
     Handlebars.registerHelper('RepoRawURL', function () {
       return String(context.payload.repository.html_url).replace('github.com', 'raw.githubusercontent.com');
     });
@@ -340,11 +343,14 @@ async function generateChartIndex({
     const template = await fs.readFile(templatePath, 'utf8');
     core.info(`Template loaded, size: ${template.length} bytes`);
     const Handlebars = require('handlebars');
+    const repoUrl = context.payload.repository.html_url;
+    const defaultBranchName = context.payload.repository.default_branch;
     Handlebars.registerHelper('RepoRawURL', function () {
       return String(repoUrl).replace('github.com', 'raw.githubusercontent.com');
     });
-    const repoUrl = context.payload.repository.html_url;
-    const defaultBranchName = context.payload.repository.default_branch;
+    Handlebars.registerHelper('eq', function (a, b) {
+      return a === b;
+    });
     const charts = Object.entries(index.entries)
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([name, versions]) => {
