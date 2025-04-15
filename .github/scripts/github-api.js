@@ -111,7 +111,7 @@ async function createRelease({
     const repositoryId = result.repository.id;
     const mutation = `
       mutation($repositoryId: ID!, $tagName: String!, $name: String!, $body: String!, $isDraft: Boolean!, $isPrerelease: Boolean!) {
-        createRelease(input: {
+        createReleaseForRepository(input: {
           repositoryId: $repositoryId,
           tagName: $tagName, 
           name: $name,
@@ -142,7 +142,7 @@ async function createRelease({
       isPrerelease: prerelease
     };
     const mutationResult = await github.graphql(mutation, mutationVariables);
-    const release = mutationResult.createRelease.release;
+    const release = mutationResult.createReleaseForRepository.release;
     const releaseData = {
       id: release.databaseId,
       name: release.name,
