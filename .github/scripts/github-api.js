@@ -93,7 +93,7 @@ async function getReleaseIssues({
         repository(owner: $owner, name: $repo) {
           issues(
             first: $maxIssues, 
-            states: [CLOSED], 
+            states: [OPEN, CLOSED], 
             orderBy: {field: UPDATED_AT, direction: DESC},
             ${filterByClause}
           ) {
