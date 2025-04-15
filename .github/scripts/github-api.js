@@ -95,7 +95,7 @@ async function createRelease({
   prerelease = false
 }) {
   try {
-    core.info(`Creating release: ${name} with tag ${tagName}...`);
+    core.info(`Creating ${name} release with ${tagName} tag...`);
     const query = `
       query($owner: String!, $repo: String!) {
         repository(owner: $owner, name: $repo) {
@@ -110,15 +110,8 @@ async function createRelease({
     const result = await github.graphql(query, variables);
     const repositoryId = result.repository.id;
     const mutation = `
-      mutation($repositoryId: ID!, $tagName: String!, $name: String!, $body: String!, $isDraft: Boolean!, $isPrerelease: Boolean!) {
-        createReleaseForRepository(input: {
-          repositoryId: $repositoryId,
-          tagName: $tagName, 
-          name: $name,
-          description: $body,
-          isDraft: $isDraft,
-          isPrerelease: $isPrerelease
-        }) {
+      mutation($input: CreateReleaseInput!) {
+        createRelease(input: $input) {
           release {
             id
             databaseId
@@ -134,15 +127,17 @@ async function createRelease({
       }
     `;
     const mutationVariables = {
-      repositoryId: repositoryId,
-      tagName: tagName,
-      name: name,
-      body: body,
-      isDraft: draft,
-      isPrerelease: prerelease
+      input: {
+        repositoryId: repositoryId,
+        tagName: tagName,
+        name: name,
+        description: body,
+        isDraft: draft,
+        isPrerelease: prerelease
+      }
     };
     const mutationResult = await github.graphql(mutation, mutationVariables);
-    const release = mutationResult.createReleaseForRepository.release;
+    const release = mutationResult.createRelease.release;
     const releaseData = {
       id: release.databaseId,
       name: release.name,
@@ -153,7 +148,7 @@ async function createRelease({
       prerelease: release.isPrerelease,
       html_url: release.url
     };
-    core.info(`Successfully created release: ${name}, id: ${releaseData.id}`);
+    core.info(`Successfully created ${name} release with ${releaseData.id} id`);
     return releaseData;
   } catch (error) {
     const errorMessage = error.errors ? error.errors.map(e => e.message).join(', ') : error.message;
@@ -249,7 +244,7 @@ async function getReleaseIssues({
 }) {
   const chartPath = `${chartType}/${chartName}`;
   try {
-    core.info(`Fetching closed issues for ${chartPath} chart...`);
+    core.info(`Fetching issues for ${chartPath} chart...`);
     const lastReleaseDate = await _getLastReleaseDate({
       github,
       context,
@@ -302,7 +297,7 @@ async function getReleaseIssues({
     return issues;
   } catch (error) {
     const errorMessage = error.errors ? error.errors.map(e => e.message).join(', ') : error.message;
-    core.warning(`Failed to fetch closed issues for ${chartPath} chart: ${errorMessage}`);
+    core.warning(`Failed to fetch issues for ${chartPath} chart: ${errorMessage}`);
     return [];
   }
 }
@@ -328,7 +323,8 @@ async function uploadReleaseAsset({
   assetData
 }) {
   try {
-    core.info(`Uploading asset ${assetName} to release id: ${releaseId}...`);
+    core.info(`Uploading ${assetName} asset to ${releaseId} release id...`);
+    // GraphQL API doesn't support file uploads, using REST API for this specific function
     const asset = await github.rest.repos.uploadReleaseAsset({
       owner: context.repo.owner,
       repo: context.repo.repo,
@@ -336,7 +332,7 @@ async function uploadReleaseAsset({
       name: assetName,
       data: assetData
     });
-    core.info(`Successfully uploaded asset: ${assetName}`);
+    core.info(`Successfully uploaded ${assetName} asset`);
     return asset.data;
   } catch (error) {
     core.warning(`Failed to upload release asset: ${error.message}`);
