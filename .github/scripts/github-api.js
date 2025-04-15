@@ -72,26 +72,50 @@ async function getReleaseIssues({
       core,
       chartName
     });
-    const dateQuery = lastReleaseDate ? `closed:>=${lastReleaseDate}` : '';
-    const query = `repo:${context.repo.owner}/${context.repo.repo} is:issue is:closed ${dateQuery} path:${chartPath}`;
-    core.info(`Searching for issues with query: ${query}`);
-    const issuesResponse = await github.rest.search.issuesAndPullRequests({
-      q: query,
-      per_page: maxIssues,
-      sort: 'updated',
-      order: 'desc'
+    const query = `
+      query($owner: String!, $repo: String!, $maxIssues: Int!, $lastReleaseDate: DateTime) {
+        repository(owner: $owner, name: $repo) {
+          issues(first: $maxIssues, states: [CLOSED], orderBy: {field: UPDATED_AT, direction: DESC}, 
+            ${lastReleaseDate ? `filterBy: {since: "${lastReleaseDate}"}` : ''}) {
+            nodes { number state title url bodyText labels(first: 10) { nodes { name } } }
+          }
+        }
+      }
+    `;
+    core.info(`Querying GitHub API for issues related to ${chartPath}`);
+    const result = await github.graphql(query, {
+      owner: context.repo.owner,
+      repo: context.repo.repo,
+      maxIssues: maxIssues,
+      lastReleaseDate: lastReleaseDate
     });
-    core.info(`Found ${issuesResponse.data.items.length} closed issues for ${chartPath} chart.`);
-    const issues = issuesResponse.data.items.map(issue => ({
-      Labels: issue.labels.map(label => label.name),
+    const allIssues = result.repository.issues.nodes;
+    const chartNameLower = chartName.toLowerCase();
+    const chartPathLower = chartPath.toLowerCase();
+    const relevantIssues = allIssues.filter(issue => {
+      const hasRequiredLabel = issue.labels.nodes.some(label =>
+        label.name === "bug" || label.name === "feature"
+      );
+      if (!hasRequiredLabel) return false;
+      const title = issue.title.toLowerCase();
+      const body = issue.bodyText.toLowerCase();
+      if (title.includes(chartNameLower)) return true;
+      if (body.includes(chartNameLower)) return true;
+      if (body.includes(chartPathLower)) return true;
+      return false;
+    });
+    core.info(`Found ${relevantIssues.length} closed issues for ${chartPath} chart.`);
+    const issues = relevantIssues.map(issue => ({
+      Labels: issue.labels.nodes.map(label => label.name),
       Number: issue.number,
       State: issue.state,
       Title: issue.title,
-      URL: issue.html_url
+      URL: issue.url
     }));
     return issues;
   } catch (error) {
-    core.warning(`Failed to fetch closed issues for ${chartPath} chart: ${error.message}`);
+    const errorMessage = error.errors ? error.errors.map(e => e.message).join(', ') : error.message;
+    core.warning(`Failed to fetch closed issues for ${chartPath} chart: ${errorMessage}`);
     return [];
   }
 }

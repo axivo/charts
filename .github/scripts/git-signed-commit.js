@@ -57,25 +57,19 @@ async function createSignedCommit({
   commitMessage
 }) {
   try {
-    // Validate inputs
     if (!branchName) {
       throw new Error('branchName is required');
     }
-
     if (!expectedHeadOid) {
       throw new Error('expectedHeadOid is required');
     }
-
     if (!commitMessage) {
       throw new Error('commitMessage is required');
     }
-
     if (additions.length === 0 && deletions.length === 0) {
       core.info('No changes to commit');
       return null;
     }
-
-    // Create GraphQL mutation input
     const input = {
       branch: {
         repositoryNameWithOwner: context.payload.repository.full_name,
@@ -88,18 +82,13 @@ async function createSignedCommit({
       },
       message: { headline: commitMessage }
     };
-
-    // GraphQL mutation for creating a commit
     const mutation = `
       mutation CreateCommitOnBranch($input: CreateCommitOnBranchInput!) {
         createCommitOnBranch(input: $input) { commit { oid } }
       }
     `;
-
-    // Execute the mutation
     const { createCommitOnBranch } = await github.graphql(mutation, { input });
     const commitOid = createCommitOnBranch.commit.oid;
-
     core.info(`Signed commit created with OID: ${commitOid}`);
     return commitOid;
   } catch (error) {
@@ -125,12 +114,10 @@ async function getGitStagedChanges(runGit, fs) {
         return { path: file, contents: Buffer.from(contents).toString('base64') };
       })
   );
-
   const deletions = (await runGit(['diff', '--name-only', '--staged', '--diff-filter=D']))
     .split('\n')
     .filter(Boolean)
     .map(file => ({ path: file }));
-
   return { additions, deletions };
 }
 
