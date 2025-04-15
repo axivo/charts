@@ -9,7 +9,7 @@ github:
   repository_url: https://github.com/axivo/charts
   show_downloads: false
 
-# Jekyll build settings
+# Jekyll theme settings
 head: >
   <style>
     div.footer { display: none !important; }
