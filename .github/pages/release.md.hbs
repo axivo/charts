@@ -29,7 +29,7 @@
 ### Related Issues
 
 {{#each Issues as |Issue|}}
-- {{ Issue.URL }}
+- {{#if (eq Issue.State "closed")}}🟢{{else}}🔵{{/if}} [{{ Issue.Title }} #{{ Issue.Number }}]({{ Issue.URL }})
 {{/each}}
 {{/if}}
 
