@@ -57,7 +57,7 @@ jobs:
           node-version: 22
 
       - name: Install node.js dependencies
-        run: npm install js-yaml handlebars crypto
+        run: npm install js-yaml handlebars
 
       - name: Update Chart.lock files
         uses: actions/github-script@v7
