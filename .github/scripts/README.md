@@ -116,3 +116,7 @@ All functions implement error handling with:
 ## Maintenance
 
 When adding new functionality to workflows, consider whether the functionality should be added to these helper scripts to promote code reuse and maintainability. Follow the established patterns and coding guidelines to maintain consistency across the codebase.
+
+## Version Management
+
+All hardcoded software versions present in these scripts (such as Helm, Node.js, or any other external dependencies) are automatically updated by [Renovate](https://github.com/renovatebot/renovate). Do not manually modify version numbers in these scripts, as Renovate will manage these dependencies to ensure the latest compatible versions are used.
