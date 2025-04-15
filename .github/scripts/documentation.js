@@ -19,7 +19,6 @@ const CONFIG = {
     version: '1.14.2'
   },
   git: {
-    commitMessage: 'docs(github-action): update documentation',
     signedCommitModule: './git-signed-commit.js'
   }
 };
@@ -43,7 +42,7 @@ async function installHelmDocs({
     const tmpDir = os.tmpdir();
     const packagePath = `${tmpDir}/helm-docs_${version}_Linux_x86_64.deb`;
     const packageUrl = `${CONFIG.helmDocs.baseUrl}/v${version}/helm-docs_${version}_Linux_x86_64.deb`;
-    core.info(`Installing helm-docs version ${version}...`);
+    core.info(`Installing helm-docs version ${version}`);
     const runSudo = async (args) => (await exec.exec('sudo', args));
     await runSudo(['wget', '-qP', tmpDir, packageUrl]);
     await runSudo(['apt-get', '-y', 'install', packagePath]);
@@ -75,36 +74,40 @@ async function updateDocumentation({
 }) {
   try {
     const signedCommitModule = CONFIG.git.signedCommitModule;
-    core.info(`Importing git signed commit module from: ${signedCommitModule}`);
+    core.info(`Importing git signed commit module from ${signedCommitModule}`);
     const { createSignedCommit, getGitStagedChanges } = require(signedCommitModule);
     const runGit = async (args) => (await exec.getExecOutput('git', args)).stdout.trim();
     const headRef = process.env.GITHUB_HEAD_REF;
-    core.info(`Switching to PR branch: ${headRef}`);
+    core.info(`Switching to PR branch ${headRef}`);
     await runGit(['fetch', 'origin', headRef]);
     await runGit(['switch', headRef]);
-    core.info('Generating documentation with helm-docs...');
+    core.info('Generating documentation with helm-docs');
     await exec.exec('helm-docs');
     await runGit(['add', '.']);
     const files = (await runGit(['diff', '--staged', '--name-only']))
       .split('\n')
       .filter(Boolean);
     if (files.length === 0) {
-      core.info('No file changes detected. Documentation is up to date.');
+      core.info('No file changes detected, documentation is up to date');
       return;
     }
     core.info(`${files.length} files have been updated`);
     const { additions, deletions } = await getGitStagedChanges(runGit, fs);
-    await createSignedCommit({
-      github,
-      context,
-      core,
-      branchName: context.payload.pull_request.head.ref,
-      expectedHeadOid: context.payload.pull_request.head.sha,
-      additions,
-      deletions,
-      commitMessage: CONFIG.git.commitMessage
-    });
-    core.info('Documentation updated and committed successfully');
+    if (additions.length > 0 || deletions.length > 0) {
+      await createSignedCommit({
+        github,
+        context,
+        core,
+        branchName: context.payload.pull_request.head.ref,
+        expectedHeadOid: context.payload.pull_request.head.sha,
+        additions,
+        deletions,
+        commitMessage: 'docs(github-action): update documentation'
+      });
+      core.info('Successfully updated and committed documentation');
+    } else {
+      core.info('No documentation changes to commit');
+    }
   } catch (error) {
     const errorMsg = `Failed to update documentation: ${error.message}`;
     core.setFailed(errorMsg);

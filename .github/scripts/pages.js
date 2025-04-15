@@ -46,8 +46,10 @@ const CONFIG = {
   }
 };
 const githubApi = require('./github-api');
+const gitSignedCommit = require('./git-signed-commit');
 const path = require('path');
 const yaml = require('js-yaml');
+const crypto = require('crypto');
 
 /**
  * Builds a GitHub release for a single chart and uploads the chart package as an asset
@@ -134,6 +136,56 @@ async function _buildChartRelease({
     const errorMsg = `Failed to create release for ${chartName} v${chartVersion}: ${error.message}`;
     core.setFailed(errorMsg);
     throw new Error(errorMsg);
+  }
+}
+
+/**
+ * Helper function to commit updated lock files
+ * @param {Object} options - Options for committing lock files
+ * @param {Object} options.exec - GitHub Actions exec helpers
+ * @param {Object} options.core - GitHub Actions Core API for logging
+ * @param {Object} options.github - GitHub API client
+ * @param {Object} options.context - GitHub Actions context
+ * @param {Object} options.fs - Node.js fs module for file operations
+ * @param {string[]} options.lockFiles - List of lock files to commit
+ * @returns {Promise<void>}
+ */
+async function _commitLockFiles({
+  exec,
+  core,
+  github,
+  context,
+  fs,
+  lockFiles
+}) {
+  try {
+    const runGit = async (args) => (await exec.getExecOutput('git', args)).stdout.trim();
+    for (const lockFile of lockFiles) {
+      await runGit(['add', lockFile]);
+    }
+    const [branchName, currentHead] = await Promise.all([
+      runGit(['rev-parse', '--abbrev-ref', 'HEAD']),
+      runGit(['rev-parse', 'HEAD'])
+    ]);
+    const { additions, deletions } = await gitSignedCommit.getGitStagedChanges(runGit, fs);
+    if (additions.length > 0 || deletions.length > 0) {
+      await gitSignedCommit.createSignedCommit({
+        github,
+        context,
+        core,
+        branchName,
+        expectedHeadOid: currentHead,
+        additions,
+        deletions,
+        commitMessage: 'chore(github-action): update Chart.lock files'
+      });
+      core.info('Successfully committed Chart.lock file changes');
+    } else {
+      core.info('No Chart.lock file changes to commit');
+    }
+  } catch (error) {
+    const errorMsg = `Failed to commit Chart.lock files: ${error.message}`;
+    core.warning(errorMsg);
   }
 }
 
@@ -359,6 +411,8 @@ async function _generateHelmIndex({
  * @param {Object} options.exec - GitHub Actions exec helpers
  * @param {Object} options.core - GitHub Actions Core API for logging
  * @param {Object} options.fs - Node.js fs module for file operations
+ * @param {Object} options.github - GitHub API client
+ * @param {Object} options.context - GitHub Actions context
  * @param {string} options.dirPath - Directory containing charts
  * @param {string} options.outputDir - Directory to store packaged charts
  * @returns {Promise<void>}
@@ -367,6 +421,8 @@ async function _packageCharts({
   exec,
   core,
   fs,
+  github,
+  context,
   dirPath,
   outputDir
 }) {
@@ -376,11 +432,30 @@ async function _packageCharts({
       core.info(`No charts found in ${dirPath}`);
       return;
     }
+    const chartLockFiles = [];
     for (const chartDir of chartDirs) {
-      core.info(`Packaging ${chartDir} chart...`);
+      const lockFilePath = path.join(chartDir, 'Chart.lock');
+      let originalLockHash = null;
+      if (await _fileExists(fs, lockFilePath)) {
+        const originalContent = await fs.readFile(lockFilePath);
+        originalLockHash = crypto.createHash('sha256').update(originalContent).digest('hex');
+      }
       core.info(`Updating dependencies for ${chartDir} chart...`);
       await exec.exec('helm', ['dependency', 'update', chartDir]);
+      if (await _fileExists(fs, lockFilePath)) {
+        const newContent = await fs.readFile(lockFilePath);
+        const newHash = crypto.createHash('sha256').update(newContent).digest('hex');
+        if (originalLockHash !== newHash) {
+          chartLockFiles.push(lockFilePath);
+          core.info(`Chart.lock updated for ${chartDir}`);
+        }
+      }
+      core.info(`Packaging ${chartDir} chart...`);
       await exec.exec('helm', ['package', chartDir, '--destination', outputDir]);
+    }
+    if (chartLockFiles.length > 0) {
+      core.info(`Committing ${chartLockFiles.length} updated Chart.lock files`);
+      await _commitLockFiles({ exec, core, github, context, fs, lockFiles: chartLockFiles });
     }
     core.info(`Successfully packaged ${chartDirs.length} charts from ${dirPath} directory`);
   } catch (error) {
@@ -522,10 +597,10 @@ async function processChartRelease({
     core.info(`Successfully created ${packagesPath} directory`);
     const appDirPath = CONFIG.chart.type.application;
     core.info(`Packaging ${appDirPath} charts...`);
-    await _packageCharts({ exec, core, fs, dirPath: appDirPath, outputDir: packagesPath });
+    await _packageCharts({ exec, core, fs, github, context, dirPath: appDirPath, outputDir: packagesPath });
     const libDirPath = CONFIG.chart.type.library;
     core.info(`Packaging ${libDirPath} charts...`);
-    await _packageCharts({ exec, core, fs, dirPath: libDirPath, outputDir: packagesPath });
+    await _packageCharts({ exec, core, fs, github, context, dirPath: libDirPath, outputDir: packagesPath });
     core.info('Creating GitHub releases for charts...');
     await _createChartReleases({ github, context, core, fs, packagesPath });
     core.info('Generating Helm repository index...');

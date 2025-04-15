@@ -1,0 +1,2 @@
+# .gitattributes
+Chart.lock binary diff=chart-lock
