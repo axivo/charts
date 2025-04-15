@@ -1,4 +1,14 @@
 /**
+ * Git Configuration Utilities
+ * 
+ * This module provides functions for configuring Git in GitHub Actions workflows:
+ * - Setting up Git with GitHub Actions bot identity
+ * - Configuring Git authentication and user information
+ * 
+ * @module git-config
+ */
+
+/**
  * Configure Git for GitHub Actions
  * 
  * This script sets up Git with the GitHub Actions bot identity for making commits
@@ -10,13 +20,8 @@
  * @param {Object} options.core - GitHub Actions Core
  * @param {Object} options.exec - GitHub Actions Exec
  * @returns {Function} runGit - Async function to run Git commands
- * 
- * @example
- * const configureGit = require('../scripts/git-config.js');
- * const runGit = await configureGit({github, context, core, exec});
- * // Now use runGit for other Git operations
  */
-module.exports = async ({ github, context, core, exec }) => {
+async function configureGit({ github, context, core, exec }) {
   const runGit = async (args) => (await exec.getExecOutput('git', args)).stdout.trim();
   try {
     await Promise.all([
@@ -29,4 +34,8 @@ module.exports = async ({ github, context, core, exec }) => {
     core.setFailed(`Failed to configure Git: ${error.message}`);
     throw error;
   }
+}
+
+module.exports = {
+  configureGit
 };

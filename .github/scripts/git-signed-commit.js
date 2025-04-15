@@ -1,7 +1,16 @@
 /**
- * Create a signed commit using GitHub's GraphQL API
+ * Git Signed Commit Utilities
  * 
- * This script creates a verified commit with the provided changes using GitHub's GraphQL API.
+ * This module provides functions for creating signed commits using GitHub's GraphQL API:
+ * - Creating verified commits with file changes
+ * - Preparing file additions from git staged changes
+ * - Managing commit metadata and branch information
+ * 
+ * @module git-signed-commit
+ */
+
+/**
+ * Create a signed commit using GitHub's GraphQL API
  * 
  * @param {Object} options - The options for creating the commit
  * @param {Object} options.github - GitHub API client
@@ -13,38 +22,6 @@
  * @param {Array<Object>} options.deletions - Files to delete, each having {path}
  * @param {string} options.commitMessage - Commit message headline
  * @returns {string} - OID of the created commit
- * 
- * @example
- * const createSignedCommit = require('./.github/scripts/git-signed-commit.js');
- * 
- * // Example for files already staged in git
- * const runGit = async (args) => (await exec.getExecOutput('git', args)).stdout.trim();
- * 
- * const additions = await Promise.all(
- *   (await runGit(['diff', '--name-only', '--staged', '--diff-filter=ACMR']))
- *     .split('\n')
- *     .filter(Boolean)
- *     .map(async file => {
- *       const contents = await fs.readFile(file, 'utf-8');
- *       return { path: file, contents: Buffer.from(contents).toString('base64') };
- *     })
- * );
- * 
- * const deletions = (await runGit(['diff', '--name-only', '--staged', '--diff-filter=D']))
- *   .split('\n')
- *   .filter(Boolean)
- *   .map(file => ({ path: file }));
- * 
- * const commitOid = await createSignedCommit({
- *   github,
- *   context,
- *   core,
- *   branchName: 'main',
- *   expectedHeadOid: await runGit(['rev-parse', 'HEAD']),
- *   additions: additions,
- *   deletions: deletions,
- *   commitMessage: 'feat: update files'
- * });
  */
 async function createSignedCommit({
   github,
@@ -102,7 +79,7 @@ async function createSignedCommit({
 }
 
 /**
- * Helper function to prepare file additions from git staged changes
+ * Helper function to prepare file additions and deletions from git staged changes
  * 
  * @param {Function} runGit - Function to run git commands
  * @param {Object} fs - Node.js fs/promises module
