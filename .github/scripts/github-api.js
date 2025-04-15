@@ -65,30 +65,43 @@ async function getReleaseIssues({
 }) {
   const chartPath = `${chartType}/${chartName}`;
   try {
-    core.info(`Fetching closed issues for ${chartPath} chart ...`);
+    core.info(`Fetching closed issues for ${chartPath} chart...`);
     const lastReleaseDate = await _getLastReleaseDate({
       github,
       context,
       core,
       chartName
     });
+    const queryParams = lastReleaseDate
+      ? '($owner: String!, $repo: String!, $maxIssues: Int!, $lastReleaseDate: DateTime)'
+      : '($owner: String!, $repo: String!, $maxIssues: Int!)';
+    const filterByClause = lastReleaseDate
+      ? 'filterBy: {since: $lastReleaseDate},'
+      : '';
     const query = `
-      query($owner: String!, $repo: String!, $maxIssues: Int!, $lastReleaseDate: DateTime) {
+      query${queryParams} {
         repository(owner: $owner, name: $repo) {
-          issues(first: $maxIssues, states: [CLOSED], orderBy: {field: UPDATED_AT, direction: DESC}, 
-            ${lastReleaseDate ? `filterBy: {since: "${lastReleaseDate}"}` : ''}) {
+          issues(
+            first: $maxIssues, 
+            states: [CLOSED], 
+            orderBy: {field: UPDATED_AT, direction: DESC},
+            ${filterByClause}
+          ) {
             nodes { number state title url bodyText labels(first: 10) { nodes { name } } }
           }
         }
       }
     `;
-    core.info(`Querying GitHub API for issues related to ${chartPath}`);
-    const result = await github.graphql(query, {
+    core.info(`Querying GitHub API for ${chartPath} related issues...`);
+    const variables = {
       owner: context.repo.owner,
       repo: context.repo.repo,
-      maxIssues: maxIssues,
-      lastReleaseDate: lastReleaseDate
-    });
+      maxIssues: maxIssues
+    };
+    if (lastReleaseDate) {
+      variables.lastReleaseDate = lastReleaseDate;
+    }
+    const result = await github.graphql(query, variables);
     const allIssues = result.repository.issues.nodes;
     const chartNameLower = chartName.toLowerCase();
     const chartPathLower = chartPath.toLowerCase();
@@ -104,7 +117,7 @@ async function getReleaseIssues({
       if (body.includes(chartPathLower)) return true;
       return false;
     });
-    core.info(`Found ${relevantIssues.length} closed issues for ${chartPath} chart.`);
+    core.info(`Found ${relevantIssues.length} closed issues for ${chartPath} chart`);
     const issues = relevantIssues.map(issue => ({
       Labels: issue.labels.nodes.map(label => label.name),
       Number: issue.number,
