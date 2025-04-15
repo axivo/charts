@@ -22,9 +22,9 @@ body:
       label: Related Chart
       description: If the feature is related to a specific chart, please select it from dropdown menu.
       options:
-        - applications/sealed-secrets
-        - applications/ubuntu
-        - library/common
+        - sealed-secrets (application)
+        - ubuntu (application)
+        - common (library)
   - type: textarea
     id: related-problem
     attributes:
