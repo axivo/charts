@@ -22,7 +22,7 @@ plugins:
   - jekyll-github-metadata
 
 # Jekyll custom head configuration
-head: >
+head: >-
   <style>
     div.footer { display: none !important; }
   </style>
