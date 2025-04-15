@@ -160,21 +160,21 @@ async function _commitLockFiles({
 }) {
   try {
     const runGit = async (args) => (await exec.getExecOutput('git', args)).stdout.trim();
-    for (const lockFile of lockFiles) {
-      await runGit(['add', lockFile]);
+    const headRef = process.env.GITHUB_HEAD_REF;
+    core.info(`Switching to PR branch ${headRef}`);
+    await runGit(['fetch', 'origin', headRef]);
+    await runGit(['switch', headRef]);
+    if (lockFiles.length > 0) {
+      await runGit(['add', ...lockFiles]);
     }
-    const [branchName, currentHead] = await Promise.all([
-      runGit(['rev-parse', '--abbrev-ref', 'HEAD']),
-      runGit(['rev-parse', 'HEAD'])
-    ]);
     const { additions, deletions } = await gitSignedCommit.getGitStagedChanges(runGit, fs);
     if (additions.length > 0 || deletions.length > 0) {
       await gitSignedCommit.createSignedCommit({
         github,
         context,
         core,
-        branchName,
-        expectedHeadOid: currentHead,
+        branchName: context.payload.pull_request.head.ref,
+        expectedHeadOid: context.payload.pull_request.head.sha,
         additions,
         deletions,
         commitMessage: 'chore(github-action): update Chart.lock files'
@@ -615,6 +615,72 @@ async function processChartRelease({
 }
 
 /**
+ * Updates Chart.lock files for charts in a pull request
+ * 
+ * @param {Object} options - Options for updating Chart.lock files
+ * @param {Object} options.github - GitHub API client
+ * @param {Object} options.context - GitHub Actions context for repository info
+ * @param {Object} options.core - GitHub Actions Core API for logging and output
+ * @param {Object} options.exec - GitHub Actions exec helpers for running commands
+ * @param {Object} options.fs - Node.js fs module for file operations
+ * @returns {Promise<void>}
+ */
+async function updateChartLockFiles({
+  github,
+  context,
+  core,
+  exec,
+  fs
+}) {
+  try {
+    const runGit = async (args) => (await exec.getExecOutput('git', args)).stdout.trim();
+    const headRef = process.env.GITHUB_HEAD_REF;
+    if (!headRef) {
+      core.warning('Not running in a pull request context, skipping Chart.lock updates');
+      return;
+    }
+    core.info(`Switching to PR branch ${headRef}`);
+    await runGit(['fetch', 'origin', headRef]);
+    await runGit(['switch', headRef]);
+    const appDirPath = CONFIG.chart.type.application;
+    const libDirPath = CONFIG.chart.type.library;
+    const chartLockFiles = [];
+    core.info('Finding charts with dependency changes...');
+    const appChartDirs = await _findChartYamlFiles(fs, core, appDirPath);
+    const libChartDirs = await _findChartYamlFiles(fs, core, libDirPath);
+    const allChartDirs = [...appChartDirs, ...libChartDirs];
+    core.info(`Found ${allChartDirs.length} charts to process`);
+    for (const chartDir of allChartDirs) {
+      const lockFilePath = path.join(chartDir, 'Chart.lock');
+      let originalLockHash = null;
+      if (await _fileExists(fs, lockFilePath)) {
+        const originalContent = await fs.readFile(lockFilePath);
+        originalLockHash = crypto.createHash('sha256').update(originalContent).digest('hex');
+      }
+      core.info(`Updating dependencies for ${chartDir} chart...`);
+      await exec.exec('helm', ['dependency', 'update', chartDir]);
+      if (await _fileExists(fs, lockFilePath)) {
+        const newContent = await fs.readFile(lockFilePath);
+        const newHash = crypto.createHash('sha256').update(newContent).digest('hex');
+        if (originalLockHash !== newHash) {
+          chartLockFiles.push(lockFilePath);
+          core.info(`Chart.lock updated for ${chartDir}`);
+        }
+      }
+    }
+    if (chartLockFiles.length > 0) {
+      core.info(`Committing ${chartLockFiles.length} updated Chart.lock files`);
+      await _commitLockFiles({ exec, core, github, context, fs, lockFiles: chartLockFiles });
+    } else {
+      core.info('No Chart.lock files to update');
+    }
+  } catch (error) {
+    const errorMsg = `Failed to update Chart.lock files: ${error.message}`;
+    core.setFailed(errorMsg);
+    throw new Error(errorMsg);
+  }
+}
+/**
  * Setup the build environment for generating the static site
  * 
  * @param {Object} options - Options for build environment setup
@@ -646,9 +712,11 @@ async function setupBuildEnvironment({ core, fs }) {
   }
   try {
     const indexMdHome = CONFIG.filesystem.indexMdHome;
-    const indexMdHomeExists = await _fileExists(fs, indexMdHome);
     const indexMdPath = CONFIG.filesystem.indexMdPath;
-    const indexMdPathExists = await _fileExists(fs, indexMdPath);
+    const [indexMdHomeExists, indexMdPathExists] = await Promise.all([
+      _fileExists(fs, indexMdHome),
+      _fileExists(fs, indexMdPath)
+    ]);
     if (indexMdHomeExists) {
       core.info(`Using existing index.md at ${indexMdHome}`);
     } else if (indexMdPathExists) {
@@ -682,5 +750,6 @@ module.exports = {
   CONFIG,
   generateChartIndex,
   processChartRelease,
-  setupBuildEnvironment
+  setupBuildEnvironment,
+  updateChartLockFiles
 };

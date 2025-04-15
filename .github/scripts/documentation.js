@@ -17,11 +17,9 @@ const CONFIG = {
   helmDocs: {
     baseUrl: 'https://github.com/norwoodj/helm-docs/releases/download',
     version: '1.14.2'
-  },
-  git: {
-    signedCommitModule: './git-signed-commit.js'
   }
 };
+const gitSignedCommit = require('./git-signed-commit');
 
 /**
  * Installs the helm-docs package for generating Helm chart documentation
@@ -73,9 +71,6 @@ async function updateDocumentation({
   fs
 }) {
   try {
-    const signedCommitModule = CONFIG.git.signedCommitModule;
-    core.info(`Importing git signed commit module from ${signedCommitModule}`);
-    const { createSignedCommit, getGitStagedChanges } = require(signedCommitModule);
     const runGit = async (args) => (await exec.getExecOutput('git', args)).stdout.trim();
     const headRef = process.env.GITHUB_HEAD_REF;
     core.info(`Switching to PR branch ${headRef}`);
@@ -91,10 +86,10 @@ async function updateDocumentation({
       core.info('No file changes detected, documentation is up to date');
       return;
     }
-    core.info(`${files.length} files have been updated`);
-    const { additions, deletions } = await getGitStagedChanges(runGit, fs);
+    core.info(`Successfully updated ${files.length} documentation files`);
+    const { additions, deletions } = await gitSignedCommit.getGitStagedChanges(runGit, fs);
     if (additions.length > 0 || deletions.length > 0) {
-      await createSignedCommit({
+      await gitSignedCommit.createSignedCommit({
         github,
         context,
         core,
@@ -102,7 +97,7 @@ async function updateDocumentation({
         expectedHeadOid: context.payload.pull_request.head.sha,
         additions,
         deletions,
-        commitMessage: 'docs(github-action): update documentation'
+        commitMessage: 'chore(github-action): update documentation'
       });
       core.info('Successfully updated and committed documentation');
     } else {
