@@ -39,6 +39,7 @@ const CONFIG = {
     indexMdPath: './_dist/index.md',
     indexPath: './_dist/index.yaml',
     indexRegistry: 'index.yaml',
+    readmePath: './README.md',
     temp: '.cr-release-packages'
   }
 };
@@ -129,7 +130,7 @@ async function _buildChartRelease({
     core.info(`Successfully created release for ${tagName}`);
   } catch (error) {
     const errorMsg = `Failed to create release for ${chartName} v${chartVersion}: ${error.message}`;
-    core.warning(errorMsg);
+    core.setFailed(errorMsg);
     throw new Error(errorMsg);
   }
 }
@@ -194,9 +195,12 @@ async function _createChartReleases({
           packageName: pkg
         });
       } catch (error) {
-        core.warning(`Error processing chart ${chartName} v${chartVersion}: ${error.message}`);
+        const errorMsg = `Error processing chart ${chartName} v${chartVersion}: ${error.message}`;
         if (!CONFIG.chart.skipExisting) {
-          throw error;
+          core.setFailed(errorMsg);
+          throw new Error(errorMsg);
+        } else {
+          core.warning(errorMsg);
         }
       }
     }
@@ -309,7 +313,7 @@ async function _generateChartRelease({
     return template(templateContext);
   } catch (error) {
     core.warning(`Failed to generate release content: ${error.message}`);
-    return `Release of ${chartName} chart version ${chartVersion}`;
+    return `Release of ${chartName} chart with ${chartVersion} version`;
   }
 }
 
@@ -377,9 +381,9 @@ async function _packageCharts({
       await exec.exec('helm', ['dependency', 'update', chartDir]);
       await exec.exec('helm', ['package', chartDir, '--destination', outputDir]);
     }
-    core.info(`Successfully packaged ${charts.length} charts from ${dirPath}`);
+    core.info(`Successfully packaged ${charts.length} charts from ${dirPath} directory`);
   } catch (error) {
-    const errorMsg = `Failed to package charts in ${dirPath}: ${error.message}`;
+    const errorMsg = `Failed to package charts in ${dirPath} directory: ${error.message}`;
     core.setFailed(errorMsg);
     throw new Error(errorMsg);
   }
@@ -429,7 +433,7 @@ async function generateChartIndex({
       core.info(`Successfully read index.yaml, size: ${indexContent.length} bytes`);
     } catch (readError) {
       core.warning(`Failed to read index.yaml: ${readError.message}`);
-      core.warning('Creating an empty chart index since no index.yaml exists');
+      core.warning('Creating an empty chart index...');
       const emptyIndex = {
         apiVersion: 'v1',
         entries: {},
@@ -443,10 +447,10 @@ async function generateChartIndex({
     }
     const index = yaml.load(indexContent);
     if (!index || !index.entries) {
-      core.warning('Invalid or empty index.yaml file, creating an empty index.md.');
+      core.warning('Invalid or empty index.yaml file, creating an empty index.md file...');
       await fs.mkdir(path.dirname(indexMdPath), { recursive: true });
       await fs.writeFile(indexMdPath, '', 'utf8');
-      await fs.writeFile('./index.md', '', 'utf8');
+      await fs.writeFile(CONFIG.filesystem.indexMdHome, '', 'utf8');
       core.info(`Created empty index.md files`);
       return true;
     }
@@ -478,13 +482,14 @@ async function generateChartIndex({
     core.info(`Generated content length: ${newContent.length} bytes`);
     await fs.mkdir(path.dirname(indexMdPath), { recursive: true });
     core.info(`Writing index.md to root directory and ${indexMdPath}`);
-    await fs.writeFile('./index.md', newContent, 'utf8');
+    await fs.writeFile(CONFIG.filesystem.indexMdHome, newContent, 'utf8');
     await fs.writeFile(indexMdPath, newContent, 'utf8');
     core.info('Successfully generated index.md');
     return true;
   } catch (error) {
-    core.setFailed(`Failed to generate index.md: ${error.message}`);
-    throw error;
+    const errorMsg = `Failed to generate index.md: ${error.message}`;
+    core.setFailed(errorMsg);
+    throw new Error(errorMsg);
   }
 }
 
@@ -570,9 +575,9 @@ async function setupBuildEnvironment({ core, fs }) {
     throw new Error(errorMsg);
   }
   try {
-    if (await _fileExists(fs, './README.md')) {
-      core.info('Removing README.md from root to prevent conflicts with index.html');
-      await fs.unlink('./README.md');
+    if (await _fileExists(fs, CONFIG.filesystem.readmePath)) {
+      core.info(`Removing ${CONFIG.filesystem.readmePath} from root to prevent conflicts with index.html`);
+      await fs.unlink(CONFIG.filesystem.readmePath);
     }
   } catch (error) {
     const errorMsg = `Failed to remove README.md: ${error.message}`;

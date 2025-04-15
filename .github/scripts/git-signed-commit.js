@@ -73,8 +73,9 @@ async function createSignedCommit({
     core.info(`Signed commit created with OID: ${commitOid}`);
     return commitOid;
   } catch (error) {
-    core.setFailed(`Failed to create signed commit: ${error.message}`);
-    throw error;
+    const errorMsg = `Failed to create signed commit: ${error.message}`;
+    core.setFailed(errorMsg);
+    throw new Error(errorMsg);
   }
 }
 

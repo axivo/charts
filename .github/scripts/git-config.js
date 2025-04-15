@@ -31,8 +31,9 @@ async function configureGit({ github, context, core, exec }) {
     core.info('Git configured with GitHub Actions bot identity');
     return runGit;
   } catch (error) {
-    core.setFailed(`Failed to configure Git: ${error.message}`);
-    throw error;
+    const errorMsg = `Failed to configure Git: ${error.message}`;
+    core.setFailed(errorMsg);
+    throw new Error(errorMsg);
   }
 }
 

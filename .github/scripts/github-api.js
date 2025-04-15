@@ -64,9 +64,9 @@ async function _getLastReleaseDate({
     }
     return null;
   } catch (error) {
-    const errorMessage = error.errors ? error.errors.map(e => e.message).join(', ') : error.message;
-    core.warning(`Failed to get last release date for ${chartName}: ${errorMessage}`);
-    return null;
+    const errorMsg = `Failed to get last release date for ${chartName}: ${error.message}`;
+    core.setFailed(errorMsg);
+    throw new Error(errorMsg);
   }
 }
 
@@ -151,9 +151,9 @@ async function createRelease({
     core.info(`Successfully created ${name} release with ${releaseData.id} id`);
     return releaseData;
   } catch (error) {
-    const errorMessage = error.errors ? error.errors.map(e => e.message).join(', ') : error.message;
-    core.warning(`Failed to create release: ${errorMessage}`);
-    throw error;
+    const errorMsg = `Failed to create release: ${error.message}`;
+    core.setFailed(errorMsg);
+    throw new Error(errorMsg);
   }
 }
 
@@ -216,9 +216,9 @@ async function getReleaseByTag({
     if (error.errors && error.errors.some(e => e.type === 'NOT_FOUND')) {
       return null;
     }
-    const errorMessage = error.errors ? error.errors.map(e => e.message).join(', ') : error.message;
-    core.warning(`Error checking for release with tag ${tagName}: ${errorMessage}`);
-    throw error;
+    const errorMsg = `Error checking for release with tag ${tagName}: ${error.message}`;
+    core.setFailed(errorMsg);
+    throw new Error(errorMsg);
   }
 }
 
@@ -296,9 +296,9 @@ async function getReleaseIssues({
     }));
     return issues;
   } catch (error) {
-    const errorMessage = error.errors ? error.errors.map(e => e.message).join(', ') : error.message;
-    core.warning(`Failed to fetch issues for ${chartPath} chart: ${errorMessage}`);
-    return [];
+    const errorMsg = `Failed to fetch issues for ${chartPath} chart: ${error.message}`;
+    core.setFailed(errorMsg);
+    throw new Error(errorMsg);
   }
 }
 
@@ -335,8 +335,9 @@ async function uploadReleaseAsset({
     core.info(`Successfully uploaded ${assetName} asset`);
     return asset.data;
   } catch (error) {
-    core.warning(`Failed to upload release asset: ${error.message}`);
-    throw error;
+    const errorMsg = `Failed to upload release asset: ${error.message}`;
+    core.setFailed(errorMsg);
+    throw new Error(errorMsg);
   }
 }
 
