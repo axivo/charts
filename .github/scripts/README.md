@@ -15,7 +15,7 @@ This directory contains helper scripts used by GitHub Actions workflows in the r
 - Use consistent log message formats with `core.info`, `core.warning`, and `core.setFailed`
 - Return data structure should be consistent across similar functions
 - Function parameter validation should happen immediately at the beginning of functions before any API calls
-- Use GraphQL API, instead of deprecated REST API
+- Use GraphQL API instead of REST API, when possible
 - GraphQL queries should use consistent formatting with proper indentation
 
 ## Script Overview

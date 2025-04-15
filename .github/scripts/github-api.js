@@ -96,57 +96,26 @@ async function createRelease({
 }) {
   try {
     core.info(`Creating ${name} release with ${tagName} tag...`);
-    const query = `
-      query($owner: String!, $repo: String!) {
-        repository(owner: $owner, name: $repo) {
-          id
-        }
-      }
-    `;
-    const variables = {
+    // GraphQL API doesn't support creating releases, using REST API for this function
+    const response = await github.rest.repos.createRelease({
       owner: context.repo.owner,
-      repo: context.repo.repo
-    };
-    const result = await github.graphql(query, variables);
-    const repositoryId = result.repository.id;
-    const mutation = `
-      mutation($input: CreateReleaseInput!) {
-        createRelease(input: $input) {
-          release {
-            id
-            databaseId
-            name
-            tagName
-            createdAt
-            isDraft
-            isPrerelease
-            url
-            description
-          }
-        }
-      }
-    `;
-    const mutationVariables = {
-      input: {
-        repositoryId: repositoryId,
-        tagName: tagName,
-        name: name,
-        description: body,
-        isDraft: draft,
-        isPrerelease: prerelease
-      }
-    };
-    const mutationResult = await github.graphql(mutation, mutationVariables);
-    const release = mutationResult.createRelease.release;
+      repo: context.repo.repo,
+      tag_name: tagName,
+      name: name,
+      body: body,
+      draft: draft,
+      prerelease: prerelease
+    });
+    const release = response.data;
     const releaseData = {
-      id: release.databaseId,
+      id: release.id,
       name: release.name,
-      tag_name: release.tagName,
-      body: release.description,
-      created_at: release.createdAt,
-      draft: release.isDraft,
-      prerelease: release.isPrerelease,
-      html_url: release.url
+      tag_name: release.tag_name,
+      body: release.body,
+      created_at: release.created_at,
+      draft: release.draft,
+      prerelease: release.prerelease,
+      html_url: release.html_url
     };
     core.info(`Successfully created ${name} release with ${releaseData.id} id`);
     return releaseData;
