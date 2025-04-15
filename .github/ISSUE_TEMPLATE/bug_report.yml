@@ -22,9 +22,9 @@ body:
       label: Related Chart
       description: If the bug is related to a specific chart, please select it from dropdown menu.
       options:
-        - __sealed-secrets__ (application)
-        - __ubuntu__ (application)
-        - __common__ (library)
+        - sealed-secrets (application)
+        - ubuntu (application)
+        - common (library)
   - type: textarea
     id: what-happened
     attributes:
