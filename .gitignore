@@ -17,6 +17,7 @@ index.yaml
 
 # GitHub Pages
 _dist/
+_includes/
 _site/
 _config.yml
 index.html
