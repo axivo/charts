@@ -19,17 +19,18 @@
 const CONFIG = {
   chart: {
     icon: 'icon.png',
+    indexTemplate: '.github/pages/index.md.hbs',
     packagesWithIndex: 'true',
     releaseTemplate: '.github/pages/release.md.hbs',
     releaseTitle: '{{ .Name }}-v{{ .Version }}',
     repoUrl: 'https://axivo.github.io/charts/',
-    skipExisting: 'true'
+    skipExisting: 'true',
     type: {
-
+      application: 'application',
+      library: 'library'
     }
   },
   filesystem: {
-    application: 'application',
     configYmlPath: './_config.yml',
     configYmlSrc: '.github/pages/config.yml',
     dist: './_dist',
@@ -37,9 +38,7 @@ const CONFIG = {
     indexMdPath: './_dist/index.md',
     indexPath: './_dist/index.yaml',
     indexRegistry: 'index.yaml',
-    library: 'library',
-    temp: '.cr-release-packages',
-    templatePath: '.github/pages/index.md.hbs'
+    temp: '.cr-release-packages'
   }
 };
 const githubApi = require('./github-api');
@@ -107,9 +106,8 @@ async function createChartReleases({
           }
         }
         let chartType = 'application';
-        const libraryChartDir = path.join(CONFIG.filesystem.library, chartName);
-        const appChartDir = path.join(CONFIG.filesystem.application, chartName);
-
+        const appChartDir = path.join(CONFIG.chart.type.application, chartName);
+        const libraryChartDir = path.join(CONFIG.chart.type.library, chartName);
         if (await fileExists(fs, libraryChartDir)) {
           chartType = 'library';
         }
@@ -252,7 +250,7 @@ function formatReleaseName(name, version) {
  * @param {string} options.chartType - Type of chart (application/library)
  * @param {Object} options.chartMetadata - Chart metadata from Chart.yaml
  * @param {boolean} options.iconExists - Whether an icon exists for the chart
- * @param {string} [options.templatePath=CONFIG.chart.releaseTemplate] - Path to release template
+ * @param {string} [options.releaseTemplate=CONFIG.chart.releaseTemplate] - Path to release template
  * @returns {Promise<string>} - Generated release content
  */
 async function generateChartRelease({
@@ -265,20 +263,20 @@ async function generateChartRelease({
   chartType,
   chartMetadata,
   iconExists,
-  templatePath = CONFIG.chart.releaseTemplate
+  releaseTemplate = CONFIG.chart.releaseTemplate
 }) {
   try {
     await fs.mkdir(CONFIG.filesystem.dist, { recursive: true });
     try {
-      await fs.access(templatePath);
-      core.info(`Release template found at: ${templatePath}`);
+      await fs.access(releaseTemplate);
+      core.info(`Release template found at: ${releaseTemplate}`);
     } catch (accessError) {
-      core.warning(`Template file not found at ${templatePath}: ${accessError.message}`);
+      core.warning(`Template file not found at ${releaseTemplate}: ${accessError.message}`);
       return `Release of ${chartName} chart version ${chartVersion}`;
     }
     const repoUrl = context.payload.repository.html_url;
-    const templateContent = await fs.readFile(templatePath, 'utf8');
-    core.info(`Loaded release template from ${templatePath}`);
+    const templateContent = await fs.readFile(releaseTemplate, 'utf8');
+    core.info(`Loaded release template from ${releaseTemplate}`);
     const Handlebars = registerHandlebarsHelpers(repoUrl);
     const template = Handlebars.compile(templateContent);
     const chartSources = chartMetadata.sources || [];
@@ -317,7 +315,7 @@ async function generateChartRelease({
  * @param {Object} options.fs - Node.js fs/promises module for file operations
  * @param {string} [options.indexPath=CONFIG.filesystem.indexPath] - Path to the index.yaml file
  * @param {string} [options.indexMdPath=CONFIG.filesystem.indexMdPath] - Path where to write the generated index.md
- * @param {string} [options.templatePath=CONFIG.filesystem.templatePath] - Path to the Handlebars template
+ * @param {string} [options.indexTemplate=CONFIG.chart.indexTemplate] - Path to the Handlebars template
  * @returns {Promise<boolean>} - True if successful, false if skipped
  */
 async function generateChartIndex({
@@ -326,7 +324,7 @@ async function generateChartIndex({
   fs,
   indexPath = CONFIG.filesystem.indexPath,
   indexMdPath = CONFIG.filesystem.indexMdPath,
-  templatePath = CONFIG.filesystem.templatePath
+  indexTemplate = CONFIG.chart.indexTemplate
 }) {
   try {
     core.info(`Reading index YAML from ${indexPath}`);
@@ -357,8 +355,8 @@ async function generateChartIndex({
       core.info(`Created empty index.md files`);
       return true;
     }
-    core.info(`Reading template from ${templatePath}`);
-    const template = await fs.readFile(templatePath, 'utf8');
+    core.info(`Reading template from ${indexTemplate}`);
+    const template = await fs.readFile(indexTemplate, 'utf8');
     core.info(`Template loaded, size: ${template.length} bytes`);
     const repoUrl = context.payload.repository.html_url;
     const defaultBranchName = context.payload.repository.default_branch;
@@ -439,7 +437,7 @@ async function generateHelmIndex({
  * @param {string} options.outputDir - Directory to store packaged charts
  * @returns {Promise<void>}
  */
-async function packageChartsInDirectory({
+async function packageCharts({
   exec,
   core,
   fs,
@@ -494,11 +492,11 @@ async function processChartRelease({
     await fs.mkdir(packagesDir, { recursive: true });
     core.info(`Created directory: ${packagesDir}`);
     core.info('Packaging application charts...');
-    const appDirPath = CONFIG.filesystem.application;
-    await packageChartsInDirectory({ exec, core, fs, dirPath: appDirPath, outputDir: packagesDir });
+    const appDirPath = CONFIG.chart.type.application;
+    await packageCharts({ exec, core, fs, dirPath: appDirPath, outputDir: packagesDir });
     core.info('Packaging library charts...');
-    const libDirPath = CONFIG.filesystem.library;
-    await packageChartsInDirectory({ exec, core, fs, dirPath: libDirPath, outputDir: packagesDir });
+    const libDirPath = CONFIG.chart.type.library;
+    await packageCharts({ exec, core, fs, dirPath: libDirPath, outputDir: packagesDir });
     core.info('Creating GitHub releases for charts...');
     await createChartReleases({ github, context, core, fs, packagesDir });
     core.info('Generating Helm repository index...');
@@ -572,7 +570,7 @@ module.exports = {
   generateChartIndex,
   generateChartRelease,
   generateHelmIndex,
-  packageChartsInDirectory,
+  packageCharts,
   processChartRelease,
   setupBuildEnvironment
 };
