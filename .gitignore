@@ -10,10 +10,13 @@ node_modules/
 *.tgz
 .cr-release-packages/
 .cr-index/
-_dist/
 
 # Helm Docs (if generated locally)
 .helm-docs
+
+# GitHub Pages
+_dist/
+_site/
 
 # Logs
 *.log
