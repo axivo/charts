@@ -41,8 +41,8 @@ const CONFIG = {
     indexMdPath: './_dist/index.md',
     indexPath: './_dist/index.yaml',
     indexRegistry: 'index.yaml',
-    readmePath: './README.md',
-    temp: '.cr-release-packages'
+    packagesPath: '.cr-release-packages',
+    readmePath: './README.md'
   }
 };
 const githubApi = require('./github-api');
@@ -145,7 +145,7 @@ async function _buildChartRelease({
  * @param {Object} options.context - GitHub Actions context for repository info
  * @param {Object} options.core - GitHub Actions Core API for logging and output
  * @param {Object} options.fs - Node.js fs module for file operations
- * @param {string} [options.packagesDir=CONFIG.filesystem.temp] - Directory with chart packages
+ * @param {string} [options.packagesPath=CONFIG.filesystem.packagesPath] - Directory with chart packages
  * @returns {Promise<void>}
  */
 async function _createChartReleases({
@@ -153,14 +153,14 @@ async function _createChartReleases({
   context,
   core,
   fs,
-  packagesDir = CONFIG.filesystem.temp
+  packagesPath = CONFIG.filesystem.packagesPath
 }) {
   try {
-    const files = await fs.readdir(packagesDir);
+    const files = await fs.readdir(packagesPath);
     const packages = files.filter(file => file.endsWith('.tgz'));
     core.info(`Found ${packages.length} chart packages to release`);
     for (const pkg of packages) {
-      const chartPath = path.join(packagesDir, pkg);
+      const chartPath = path.join(packagesPath, pkg);
       const chartNameWithVersion = pkg.replace('.tgz', '');
       const lastDashIndex = chartNameWithVersion.lastIndexOf('-');
       const chartName = chartNameWithVersion.substring(0, lastDashIndex);
@@ -326,7 +326,7 @@ async function _generateChartRelease({
  * @param {Object} options.exec - GitHub Actions exec helpers
  * @param {Object} options.core - GitHub Actions Core API for logging
  * @param {Object} options.fs - Node.js fs module for file operations
- * @param {string} options.packagesDir - Directory with packaged charts
+ * @param {string} options.packagesPath - Directory with packaged charts
  * @param {string} options.indexPath - Output path for the index file
  * @param {string} options.repoUrl - URL of the Helm repository
  * @returns {Promise<void>}
@@ -335,15 +335,15 @@ async function _generateHelmIndex({
   exec,
   core,
   fs,
-  packagesDir,
+  packagesPath,
   indexPath,
   repoUrl
 }) {
   try {
     const indexDir = path.dirname(indexPath);
     await fs.mkdir(indexDir, { recursive: true });
-    await exec.exec('helm', ['repo', 'index', packagesDir, '--url', repoUrl]);
-    await fs.copyFile(path.join(packagesDir, CONFIG.filesystem.indexRegistry), indexPath);
+    await exec.exec('helm', ['repo', 'index', packagesPath, '--url', repoUrl]);
+    await fs.copyFile(path.join(packagesPath, CONFIG.filesystem.indexRegistry), indexPath);
     core.info(`Successfully generated Helm repository index at ${indexPath}`);
   } catch (error) {
     const errorMsg = `Failed to generate Helm repository index: ${error.message}`;
@@ -371,19 +371,18 @@ async function _packageCharts({
   outputDir
 }) {
   try {
-    const chartDirsArray = await _findChartYamlFiles(fs, core, dirPath);
-    if (!chartDirsArray.length) {
+    const chartDirs = await _findChartYamlFiles(fs, core, dirPath);
+    if (!chartDirs.length) {
       core.info(`No charts found in ${dirPath}`);
       return;
     }
-    const charts = chartDirsArray;
-    for (const chartDir of charts) {
-      core.info(`Packaging chart: ${chartDir}`);
-      core.info(`Updating dependencies for: ${chartDir}`);
+    for (const chartDir of chartDirs) {
+      core.info(`Packaging ${chartDir} chart...`);
+      core.info(`Updating dependencies for ${chartDir} chart...`);
       await exec.exec('helm', ['dependency', 'update', chartDir]);
       await exec.exec('helm', ['package', chartDir, '--destination', outputDir]);
     }
-    core.info(`Successfully packaged ${charts.length} charts from ${dirPath} directory`);
+    core.info(`Successfully packaged ${chartDirs.length} charts from ${dirPath} directory`);
   } catch (error) {
     const errorMsg = `Failed to package charts in ${dirPath} directory: ${error.message}`;
     core.setFailed(errorMsg);
@@ -517,21 +516,21 @@ async function processChartRelease({
   exec
 }) {
   try {
-    const packagesDir = CONFIG.filesystem.temp;
     const indexPath = CONFIG.filesystem.indexPath;
-    await fs.mkdir(packagesDir, { recursive: true });
-    core.info(`Created directory: ${packagesDir}`);
-    core.info('Packaging application charts...');
+    const packagesPath = CONFIG.filesystem.packagesPath;
+    await fs.mkdir(packagesPath, { recursive: true });
+    core.info(`Successfully created ${packagesPath} directory`);
     const appDirPath = CONFIG.chart.type.application;
-    await _packageCharts({ exec, core, fs, dirPath: appDirPath, outputDir: packagesDir });
-    core.info('Packaging library charts...');
+    core.info(`Packaging ${appDirPath} charts...`);
+    await _packageCharts({ exec, core, fs, dirPath: appDirPath, outputDir: packagesPath });
     const libDirPath = CONFIG.chart.type.library;
-    await _packageCharts({ exec, core, fs, dirPath: libDirPath, outputDir: packagesDir });
+    core.info(`Packaging ${libDirPath} charts...`);
+    await _packageCharts({ exec, core, fs, dirPath: libDirPath, outputDir: packagesPath });
     core.info('Creating GitHub releases for charts...');
-    await _createChartReleases({ github, context, core, fs, packagesDir });
+    await _createChartReleases({ github, context, core, fs, packagesPath });
     core.info('Generating Helm repository index...');
     const repoUrl = CONFIG.chart.repoUrl;
-    await _generateHelmIndex({ exec, core, fs, packagesDir, indexPath, repoUrl });
+    await _generateHelmIndex({ exec, core, fs, packagesPath, indexPath, repoUrl });
     core.info('Chart release process completed successfully');
   } catch (error) {
     const errorMsg = `Chart release process failed: ${error.message}`;
@@ -590,9 +589,10 @@ async function setupBuildEnvironment({ core, fs }) {
     throw new Error(errorMsg);
   }
   try {
-    if (await _fileExists(fs, CONFIG.filesystem.readmePath)) {
-      core.info(`Removing ${CONFIG.filesystem.readmePath} from root to prevent conflicts with index.html`);
-      await fs.unlink(CONFIG.filesystem.readmePath);
+    const readmePath = CONFIG.filesystem.readmePath
+    if (await _fileExists(fs, readmePath)) {
+      core.info(`Removing ${readmePath} from root to prevent conflicts with index.html`);
+      await fs.unlink(readmePath);
     }
   } catch (error) {
     const errorMsg = `Failed to remove README.md: ${error.message}`;
