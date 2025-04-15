@@ -14,7 +14,7 @@
  */
 const CONFIG = {
   release: {
-    labels: ["bug", "feature"]
+    labels: ['bug', 'feature']
   }
 };
 

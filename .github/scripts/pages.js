@@ -24,16 +24,19 @@ const CONFIG = {
     releaseTitle: '{{ .Name }}-v{{ .Version }}',
     repoUrl: 'https://axivo.github.io/charts/',
     skipExisting: 'true'
+    type: {
+
+    }
   },
   filesystem: {
     application: 'application',
     configYmlPath: './_config.yml',
     configYmlSrc: '.github/pages/config.yml',
     dist: './_dist',
+    indexMdHome: './index.md',
     indexMdPath: './_dist/index.md',
-    indexMdSrc: './index.md',
     indexPath: './_dist/index.yaml',
-    indexPathFinal: 'index.yaml',
+    indexRegistry: 'index.yaml',
     library: 'library',
     temp: '.cr-release-packages',
     templatePath: '.github/pages/index.md.hbs'
@@ -416,7 +419,7 @@ async function generateHelmIndex({
     const indexDir = path.dirname(indexPath);
     await fs.mkdir(indexDir, { recursive: true });
     await exec.exec('helm', ['repo', 'index', packagesDir, '--url', repoUrl]);
-    await fs.copyFile(path.join(packagesDir, 'index.yaml'), indexPath);
+    await fs.copyFile(path.join(packagesDir, indexRegistry), indexPath);
     core.info(`Successfully generated Helm repository index at ${indexPath}`);
   } catch (error) {
     const errorMsg = `Failed to generate Helm repository index: ${error.message}`;
@@ -527,18 +530,18 @@ async function setupBuildEnvironment({ core, fs }) {
     throw new Error(errorMsg);
   }
   try {
+    const indexMdHome = CONFIG.filesystem.indexMdHome;
+    const indexMdHomeExists = await fileExists(fs, indexMdHome);
     const indexMdPath = CONFIG.filesystem.indexMdPath;
-    const indexMdSrcPath = CONFIG.filesystem.indexMdSrc;
-    const indexMdExists = await fileExists(fs, indexMdPath);
-    const rootIndexExists = await fileExists(fs, indexMdSrcPath);
-    if (indexMdExists) {
-      core.info(`Copying ${indexMdPath} to ${indexMdSrcPath}`);
-      await fs.copyFile(indexMdPath, indexMdSrcPath);
-    } else if (rootIndexExists) {
-      core.info(`Using existing index.md at ${indexMdSrcPath}`);
+    const indexMdPathExists = await fileExists(fs, indexMdPath);
+    if (indexMdHomeExists) {
+      core.info(`Using existing index.md at ${indexMdHome}`);
+    } else if (indexMdPathExists) {
+      core.info(`Copying ${indexMdPath} to ${indexMdHome}`);
+      await fs.copyFile(indexMdPath, indexMdHome);
     } else {
-      core.info(`No index.md found at ${indexMdPath} or ${indexMdSrcPath}, creating empty file`);
-      await fs.writeFile(indexMdSrcPath, '', 'utf8');
+      core.info(`No index.md found at ${indexMdPath} or ${indexMdHome}, creating empty file`);
+      await fs.writeFile(indexMdHome, '', 'utf8');
     }
   } catch (error) {
     const errorMsg = `Failed to process index.md: ${error.message}`;
