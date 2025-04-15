@@ -21,6 +21,8 @@ plugins:
   - jekyll-seo-tag
   - jekyll-github-metadata
 
-# Jekyll custom styling configuration
-style: >
-  div.footer { display: none !important; }
+# Jekyll custom head configuration
+head: >
+  <style>
+    div.footer { display: none !important; }
+  </style>

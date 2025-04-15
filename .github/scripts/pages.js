@@ -33,9 +33,10 @@ const CONFIG = {
   },
   deployment: 'production',
   filesystem: {
-    configYmlPath: './_config.yml',
-    configYmlSrc: '.github/pages/config.yml',
-    dist: './_dist',
+    configHome: './_config.yml',
+    configPath: '.github/pages/config.yml',
+    distPath: './_dist',
+    headCustomPath: './_includes/head-custom.html',
     indexMdHome: './index.md',
     indexMdPath: './_dist/index.md',
     indexPath: './_dist/index.yaml',
@@ -278,7 +279,7 @@ async function _generateChartRelease({
   releaseTemplate = CONFIG.chart.releaseTemplate
 }) {
   try {
-    await fs.mkdir(CONFIG.filesystem.dist, { recursive: true });
+    await fs.mkdir(CONFIG.filesystem.distPath, { recursive: true });
     try {
       await fs.access(releaseTemplate);
       core.info(`Release template found at: ${releaseTemplate}`);
@@ -550,8 +551,20 @@ async function processChartRelease({
 async function setupBuildEnvironment({ core, fs }) {
   try {
     core.info(`Setting up build environment for ${CONFIG.deployment} deployment`)
-    core.info(`Copying ${CONFIG.filesystem.configYmlSrc} to ${CONFIG.filesystem.configYmlPath}`);
-    await fs.copyFile(CONFIG.filesystem.configYmlSrc, CONFIG.filesystem.configYmlPath);
+    core.info(`Copying ${CONFIG.filesystem.configPath} to ${CONFIG.filesystem.configHome}`);
+    await fs.copyFile(CONFIG.filesystem.configPath, CONFIG.filesystem.configHome);
+    try {
+      const configContent = await fs.readFile(CONFIG.filesystem.configPath, 'utf8');
+      const config = yaml.load(configContent);
+      if (config.head) {
+        const headCustomPath = path.dirname(CONFIG.filesystem.headCustomPath);
+        await fs.mkdir(headCustomPath, { recursive: true });
+        await fs.writeFile(CONFIG.filesystem.headCustomPath, config.head, 'utf8');
+        core.info(`Created ${CONFIG.filesystem.headCustomPath} with custom head content`);
+      }
+    } catch (headError) {
+      core.warning(`Failed to process custom head content: ${headError.message}`);
+    }
   } catch (error) {
     const errorMsg = `Failed to copy Jekyll config: ${error.message}`;
     core.setFailed(errorMsg);
