@@ -7,9 +7,10 @@ node_modules/
 
 # Helm
 **/charts/
-*.tgz
 .cr-release-packages/
 .cr-index/
+*.tgz
+index.yaml
 
 # Helm Docs (if generated locally)
 .helm-docs
@@ -17,6 +18,9 @@ node_modules/
 # GitHub Pages
 _dist/
 _site/
+_config.yml
+index.html
+index.md
 
 # Logs
 *.log
@@ -30,9 +34,9 @@ Icon
 ._*
 
 # Temporary files
-*.tmp
 *.bak
 *.swp
+*.tmp
 *~
 
 # VS Code (keep .vscode settings)

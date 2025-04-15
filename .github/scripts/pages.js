@@ -31,6 +31,7 @@ const CONFIG = {
       library: 'library'
     }
   },
+  deployment: 'production',
   filesystem: {
     configYmlPath: './_config.yml',
     configYmlSrc: '.github/pages/config.yml',
@@ -548,6 +549,7 @@ async function processChartRelease({
  */
 async function setupBuildEnvironment({ core, fs }) {
   try {
+    core.info(`Setting up build environment for ${CONFIG.deployment} deployment`)
     core.info(`Copying ${CONFIG.filesystem.configYmlSrc} to ${CONFIG.filesystem.configYmlPath}`);
     await fs.copyFile(CONFIG.filesystem.configYmlSrc, CONFIG.filesystem.configYmlPath);
   } catch (error) {
@@ -584,8 +586,10 @@ async function setupBuildEnvironment({ core, fs }) {
     core.setFailed(errorMsg);
     throw new Error(errorMsg);
   }
-  core.info('Jekyll preparation complete.');
+  core.setOutput('deployment', CONFIG.deployment)
+  core.info(`Jekyll preparation complete for ${CONFIG.deployment} environment`);
 }
+
 module.exports = {
   CONFIG,
   generateChartIndex,

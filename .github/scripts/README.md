@@ -2,6 +2,15 @@
 
 This directory contains helper scripts used by GitHub Actions workflows in the repository.
 
+## Deployment Types
+
+The scripts support two deployment types controlled by the `CONFIG.deployment` setting in `pages.js`:
+
+- `production`: Builds charts and deploys to GitHub Pages. This is the default mode used when running on the main repository.
+- `staging`: Builds charts locally on the current branch without deploying to GitHub Pages. This mode is useful for testing changes before applying them to production.
+
+The deployment type is made available as an output from the `setupBuildEnvironment` function, which can be accessed in workflows as `steps.setup.outputs.deployment`. This allows conditional execution of deployment steps based on the deployment environment.
+
 ## Coding Guidelines
 
 - No comments or empty lines inside function bodies, code should be self-explanatory

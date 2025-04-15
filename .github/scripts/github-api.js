@@ -251,8 +251,9 @@ async function getReleaseIssues({
     const result = await github.graphql(query, variables);
     const allIssues = result.repository.issues.nodes;
     const relevantIssues = allIssues.filter(issue => {
-      const hasRequiredLabel = issue.labels.nodes.some(label => CONFIG.release.labels.includes(label.name));
-      return hasRequiredLabel;
+      const isChartRelated = issue.bodyText.includes(chartPath)
+      const isLabelRelated = issue.labels.nodes.some(label => CONFIG.release.labels.includes(label.name))
+      return isChartRelated && isLabelRelated
     });
     core.info(`Found ${relevantIssues.length} closed issues for ${chartPath} chart`);
     const issues = relevantIssues.map(issue => ({
