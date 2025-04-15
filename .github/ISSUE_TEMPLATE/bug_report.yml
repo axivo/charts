@@ -16,6 +16,15 @@ body:
       options:
         - label: I have searched the existing issues
           required: true
+  - type: dropdown
+    id: chart
+    attributes:
+      label: Related Chart
+      description: If the bug is related to a specific chart, please select it from dropdown menu.
+      options:
+        - applications/sealed-secrets
+        - applications/ubuntu
+        - library/common
   - type: textarea
     id: what-happened
     attributes:
