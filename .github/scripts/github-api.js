@@ -8,6 +8,12 @@
  * @module github-api
  */
 
+const CONFIG = {
+  release: {
+    labels: ["bug", "feature"]
+  }
+};
+
 /**
  * Gets the date of the last release for a chart
  * 
@@ -103,19 +109,9 @@ async function getReleaseIssues({
     }
     const result = await github.graphql(query, variables);
     const allIssues = result.repository.issues.nodes;
-    const chartNameLower = chartName.toLowerCase();
-    const chartPathLower = chartPath.toLowerCase();
     const relevantIssues = allIssues.filter(issue => {
-      const hasRequiredLabel = issue.labels.nodes.some(label =>
-        label.name === "bug" || label.name === "feature"
-      );
-      if (!hasRequiredLabel) return false;
-      const title = issue.title.toLowerCase();
-      const body = issue.bodyText.toLowerCase();
-      if (title.includes(chartNameLower)) return true;
-      if (body.includes(chartNameLower)) return true;
-      if (body.includes(chartPathLower)) return true;
-      return false;
+      const hasRequiredLabel = issue.labels.nodes.some(label => CONFIG.release.labels.includes(label.name));
+      return hasRequiredLabel;
     });
     core.info(`Found ${relevantIssues.length} closed issues for ${chartPath} chart`);
     const issues = relevantIssues.map(issue => ({
