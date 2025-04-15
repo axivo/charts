@@ -10,7 +10,8 @@
  */
 
 /**
- * Centralized configuration for the documentation workflow
+ * Configuration constants for Documentation module
+ * Contains settings for helm-docs install and other Git-related parameters
  */
 const CONFIG = {
   helmDocs: {
@@ -42,16 +43,10 @@ async function installHelmDocs({
     const tmpDir = os.tmpdir();
     const packagePath = `${tmpDir}/helm-docs_${version}_Linux_x86_64.deb`;
     const packageUrl = `${CONFIG.helmDocs.baseUrl}/v${version}/helm-docs_${version}_Linux_x86_64.deb`;
-
     core.info(`Installing helm-docs version ${version}...`);
-
-    // Helper function to run sudo commands
     const runSudo = async (args) => (await exec.exec('sudo', args));
-
-    // Download and install the package
     await runSudo(['wget', '-qP', tmpDir, packageUrl]);
     await runSudo(['apt-get', '-y', 'install', packagePath]);
-
     core.info('helm-docs successfully installed');
   } catch (error) {
     const errorMsg = `Failed to install helm-docs: ${error.message}`;
@@ -79,40 +74,25 @@ async function updateDocumentation({
   fs
 }) {
   try {
-    // Import git utilities - using the path from config
     const signedCommitModule = CONFIG.git.signedCommitModule;
     core.info(`Importing git signed commit module from: ${signedCommitModule}`);
     const { createSignedCommit, getGitStagedChanges } = require(signedCommitModule);
-
-    // Helper function to run git commands
     const runGit = async (args) => (await exec.getExecOutput('git', args)).stdout.trim();
-
-    // Fetch and switch to the PR branch
     const headRef = process.env.GITHUB_HEAD_REF;
     core.info(`Switching to PR branch: ${headRef}`);
     await runGit(['fetch', 'origin', headRef]);
     await runGit(['switch', headRef]);
-
-    // Generate documentation with helm-docs
     core.info('Generating documentation with helm-docs...');
     await exec.exec('helm-docs');
-
-    // Stage changes
     await runGit(['add', '.']);
-
-    // Check if there are any changes
     const files = (await runGit(['diff', '--staged', '--name-only']))
       .split('\n')
       .filter(Boolean);
-
     if (files.length === 0) {
       core.info('No file changes detected. Documentation is up to date.');
       return;
     }
-
     core.info(`${files.length} files have been updated`);
-
-    // Get the changes and create a commit
     const { additions, deletions } = await getGitStagedChanges(runGit, fs);
     await createSignedCommit({
       github,
@@ -124,7 +104,6 @@ async function updateDocumentation({
       deletions,
       commitMessage: CONFIG.git.commitMessage
     });
-
     core.info('Documentation updated and committed successfully');
   } catch (error) {
     const errorMsg = `Failed to update documentation: ${error.message}`;
@@ -133,7 +112,6 @@ async function updateDocumentation({
   }
 }
 
-// Export all the functions and constants
 module.exports = {
   CONFIG,
   installHelmDocs,

@@ -4,13 +4,15 @@
  * This module provides centralized functions for interacting with the GitHub API:
  * - Fetching repository issues
  * - Retrieving release information
+ * - Creating GitHub releases
+ * - Uploading release assets
  * 
  * @module github-api
  */
 
 /**
  * Configuration constants for GitHub API module
- * Contains settings for release issue filtering and other API-related parameters
+ * Contains settings for release issue labels filtering and other API-related parameters
  */
 const CONFIG = {
   release: {
@@ -35,21 +37,193 @@ async function _getLastReleaseDate({
   chartName
 }) {
   try {
-    const releases = await github.rest.repos.listReleases({
+    core.info(`Fetching last release date for ${chartName} chart...`);
+    const query = `
+      query($owner: String!, $repo: String!) {
+        repository(owner: $owner, name: $repo) {
+          releases(first: 100, orderBy: {field: CREATED_AT, direction: DESC}) {
+            nodes {
+              tagName
+              createdAt
+            }
+          }
+        }
+      }
+    `;
+    const variables = {
       owner: context.repo.owner,
-      repo: context.repo.repo,
-      per_page: 100
-    });
-    const chartReleases = releases.data.filter(release =>
-      release.tag_name.startsWith(`${chartName}-v`)
-    ).sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+      repo: context.repo.repo
+    };
+    const result = await github.graphql(query, variables);
+    const releases = result.repository.releases.nodes;
+    const chartReleases = releases.filter(release =>
+      release.tagName.startsWith(`${chartName}-v`)
+    ).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
     if (chartReleases.length > 0) {
-      return chartReleases[0].created_at;
+      return chartReleases[0].createdAt;
     }
     return null;
   } catch (error) {
-    core.warning(`Failed to get last release date for ${chartName}: ${error.message}`);
+    const errorMessage = error.errors ? error.errors.map(e => e.message).join(', ') : error.message;
+    core.warning(`Failed to get last release date for ${chartName}: ${errorMessage}`);
     return null;
+  }
+}
+
+/**
+ * Creates a new GitHub release
+ * 
+ * @param {Object} options - Options for creating the release
+ * @param {Object} options.github - GitHub API client
+ * @param {Object} options.context - GitHub Actions context
+ * @param {Object} options.core - GitHub Actions Core API for logging
+ * @param {string} options.tagName - Tag name for the release
+ * @param {string} options.name - Display name for the release
+ * @param {string} options.body - Body content of the release
+ * @param {boolean} [options.draft=false] - Whether the release is a draft
+ * @param {boolean} [options.prerelease=false] - Whether the release is a prerelease
+ * @returns {Promise<Object>} - The created release data
+ */
+async function createRelease({
+  github,
+  context,
+  core,
+  tagName,
+  name,
+  body,
+  draft = false,
+  prerelease = false
+}) {
+  try {
+    core.info(`Creating release: ${name} with tag ${tagName}...`);
+    const query = `
+      query($owner: String!, $repo: String!) {
+        repository(owner: $owner, name: $repo) {
+          id
+        }
+      }
+    `;
+    const variables = {
+      owner: context.repo.owner,
+      repo: context.repo.repo
+    };
+    const result = await github.graphql(query, variables);
+    const repositoryId = result.repository.id;
+    const mutation = `
+      mutation($repositoryId: ID!, $tagName: String!, $name: String!, $body: String!, $isDraft: Boolean!, $isPrerelease: Boolean!) {
+        createRelease(input: {
+          repositoryId: $repositoryId,
+          tagName: $tagName, 
+          name: $name,
+          description: $body,
+          isDraft: $isDraft,
+          isPrerelease: $isPrerelease
+        }) {
+          release {
+            id
+            databaseId
+            name
+            tagName
+            createdAt
+            isDraft
+            isPrerelease
+            url
+            description
+          }
+        }
+      }
+    `;
+    const mutationVariables = {
+      repositoryId: repositoryId,
+      tagName: tagName,
+      name: name,
+      body: body,
+      isDraft: draft,
+      isPrerelease: prerelease
+    };
+    const mutationResult = await github.graphql(mutation, mutationVariables);
+    const release = mutationResult.createRelease.release;
+    const releaseData = {
+      id: release.databaseId,
+      name: release.name,
+      tag_name: release.tagName,
+      body: release.description,
+      created_at: release.createdAt,
+      draft: release.isDraft,
+      prerelease: release.isPrerelease,
+      html_url: release.url
+    };
+    core.info(`Successfully created release: ${name}, id: ${releaseData.id}`);
+    return releaseData;
+  } catch (error) {
+    const errorMessage = error.errors ? error.errors.map(e => e.message).join(', ') : error.message;
+    core.warning(`Failed to create release: ${errorMessage}`);
+    throw error;
+  }
+}
+
+/**
+ * Checks if a GitHub release with the specified tag exists
+ * 
+ * @param {Object} options - Options for checking the release
+ * @param {Object} options.github - GitHub API client
+ * @param {Object} options.context - GitHub Actions context
+ * @param {Object} options.core - GitHub Actions Core API for logging
+ * @param {string} options.tagName - The tag name to check
+ * @returns {Promise<Object|null>} - Release data if found, null if not found
+ */
+async function getReleaseByTag({
+  github,
+  context,
+  core,
+  tagName
+}) {
+  try {
+    core.info(`Checking for release with tag ${tagName}...`);
+    const query = `
+      query($owner: String!, $repo: String!, $tagName: String!) {
+        repository(owner: $owner, name: $repo) {
+          release(tagName: $tagName) {
+            id
+            databaseId
+            name
+            description
+            tagName
+            createdAt
+            isDraft
+            isPrerelease
+            url
+          }
+        }
+      }
+    `;
+    const variables = {
+      owner: context.repo.owner,
+      repo: context.repo.repo,
+      tagName: tagName
+    };
+    const result = await github.graphql(query, variables);
+    if (result.repository.release) {
+      core.info(`Found existing release with tag ${tagName}`);
+      return {
+        id: result.repository.release.databaseId,
+        name: result.repository.release.name,
+        body: result.repository.release.description,
+        tag_name: result.repository.release.tagName,
+        created_at: result.repository.release.createdAt,
+        draft: result.repository.release.isDraft,
+        prerelease: result.repository.release.isPrerelease,
+        html_url: result.repository.release.url
+      };
+    }
+    return null;
+  } catch (error) {
+    if (error.errors && error.errors.some(e => e.type === 'NOT_FOUND')) {
+      return null;
+    }
+    const errorMessage = error.errors ? error.errors.map(e => e.message).join(', ') : error.message;
+    core.warning(`Error checking for release with tag ${tagName}: ${errorMessage}`);
+    throw error;
   }
 }
 
@@ -133,6 +307,46 @@ async function getReleaseIssues({
   }
 }
 
+/**
+ * Uploads an asset to a GitHub release
+ * 
+ * @param {Object} options - Options for uploading the asset
+ * @param {Object} options.github - GitHub API client
+ * @param {Object} options.context - GitHub Actions context
+ * @param {Object} options.core - GitHub Actions Core API for logging
+ * @param {number} options.releaseId - ID of the release to attach the asset to
+ * @param {string} options.assetName - Name of the asset to upload
+ * @param {Buffer|string} options.assetData - Content of the asset to upload
+ * @returns {Promise<Object>} - The uploaded asset data
+ */
+async function uploadReleaseAsset({
+  github,
+  context,
+  core,
+  releaseId,
+  assetName,
+  assetData
+}) {
+  try {
+    core.info(`Uploading asset ${assetName} to release id: ${releaseId}...`);
+    const asset = await github.rest.repos.uploadReleaseAsset({
+      owner: context.repo.owner,
+      repo: context.repo.repo,
+      release_id: releaseId,
+      name: assetName,
+      data: assetData
+    });
+    core.info(`Successfully uploaded asset: ${assetName}`);
+    return asset.data;
+  } catch (error) {
+    core.warning(`Failed to upload release asset: ${error.message}`);
+    throw error;
+  }
+}
+
 module.exports = {
-  getReleaseIssues
+  createRelease,
+  getReleaseByTag,
+  getReleaseIssues,
+  uploadReleaseAsset
 };

@@ -83,8 +83,12 @@ async function createSignedCommit({
       message: { headline: commitMessage }
     };
     const mutation = `
-      mutation CreateCommitOnBranch($input: CreateCommitOnBranchInput!) {
-        createCommitOnBranch(input: $input) { commit { oid } }
+      mutation($input: CreateCommitOnBranchInput!) {
+        createCommitOnBranch(input: $input) {
+          commit {
+            oid
+          }
+        }
       }
     `;
     const { createCommitOnBranch } = await github.graphql(mutation, { input });
@@ -121,7 +125,6 @@ async function getGitStagedChanges(runGit, fs) {
   return { additions, deletions };
 }
 
-// Export functions
 module.exports = {
   createSignedCommit,
   getGitStagedChanges
