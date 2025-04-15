@@ -9,6 +9,9 @@
  * @module documentation
  */
 
+const os = require('os');
+const gitSignedCommit = require('./git-signed-commit');
+
 /**
  * Configuration constants for Documentation module
  * Contains settings for helm-docs install and other Git-related parameters
@@ -19,7 +22,6 @@ const CONFIG = {
     version: '1.14.2'
   }
 };
-const gitSignedCommit = require('./git-signed-commit');
 
 /**
  * Installs the helm-docs package for generating Helm chart documentation
@@ -36,7 +38,6 @@ async function installHelmDocs({
   version = CONFIG.helmDocs.version
 }) {
   try {
-    const os = require('os');
     const tmpDir = os.tmpdir();
     const packagePath = `${tmpDir}/helm-docs_${version}_Linux_x86_64.deb`;
     const packageUrl = `${CONFIG.helmDocs.baseUrl}/v${version}/helm-docs_${version}_Linux_x86_64.deb`;
@@ -73,6 +74,10 @@ async function updateDocumentation({
   try {
     const runGit = async (args) => (await exec.getExecOutput('git', args)).stdout.trim();
     const headRef = process.env.GITHUB_HEAD_REF;
+    if (!headRef) {
+      core.warning('No pull request branch found, skipping documentation update');
+      return;
+    }
     core.info(`Switching to PR branch ${headRef}`);
     await runGit(['fetch', 'origin', headRef]);
     await runGit(['switch', headRef]);
@@ -89,12 +94,13 @@ async function updateDocumentation({
     core.info(`Successfully updated ${files.length} documentation files`);
     const { additions, deletions } = await gitSignedCommit.getGitStagedChanges(runGit, fs);
     if (additions.length > 0 || deletions.length > 0) {
+      const currentHead = context.payload.pull_request.head.sha
       await gitSignedCommit.createSignedCommit({
         github,
         context,
         core,
-        branchName: context.payload.pull_request.head.ref,
-        expectedHeadOid: context.payload.pull_request.head.sha,
+        branchName: headRef,
+        expectedHeadOid: currentHead,
         additions,
         deletions,
         commitMessage: 'chore(github-action): update documentation'

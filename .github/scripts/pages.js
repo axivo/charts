@@ -1,4 +1,3 @@
-
 /**
  * GitHub Pages and Chart Release Utilities
  * 
@@ -12,6 +11,12 @@
  * 
  * @module pages
  */
+
+const crypto = require('crypto');
+const path = require('path');
+const yaml = require('js-yaml');
+const githubApi = require('./github-api');
+const gitSignedCommit = require('./git-signed-commit');
 
 /**
  * Configuration constants for GitHub Pages module
@@ -45,11 +50,6 @@ const CONFIG = {
     readmePath: './README.md'
   }
 };
-const githubApi = require('./github-api');
-const gitSignedCommit = require('./git-signed-commit');
-const path = require('path');
-const yaml = require('js-yaml');
-const crypto = require('crypto');
 
 /**
  * Builds a GitHub release for a single chart and uploads the chart package as an asset
@@ -161,6 +161,10 @@ async function _commitLockFiles({
   try {
     const runGit = async (args) => (await exec.getExecOutput('git', args)).stdout.trim();
     const headRef = process.env.GITHUB_HEAD_REF;
+    if (!headRef) {
+      core.warning('No pull request branch found, skipping Chart.lock files update');
+      return;
+    }
     core.info(`Switching to PR branch ${headRef}`);
     await runGit(['fetch', 'origin', headRef]);
     await runGit(['switch', headRef]);
@@ -169,9 +173,7 @@ async function _commitLockFiles({
     }
     const { additions, deletions } = await gitSignedCommit.getGitStagedChanges(runGit, fs);
     if (additions.length > 0 || deletions.length > 0) {
-      // Get the current HEAD commit after all the git operations
       const currentHead = await runGit(['rev-parse', 'HEAD']);
-
       await gitSignedCommit.createSignedCommit({
         github,
         context,
@@ -182,7 +184,7 @@ async function _commitLockFiles({
         deletions,
         commitMessage: 'chore(github-action): update Chart.lock files'
       });
-      core.info('Successfully committed Chart.lock file changes');
+      core.info('Successfully committed Chart.lock files update');
     } else {
       core.info('No Chart.lock file changes to commit');
     }
@@ -640,7 +642,7 @@ async function updateChartLockFiles({
     const runGit = async (args) => (await exec.getExecOutput('git', args)).stdout.trim();
     const headRef = process.env.GITHUB_HEAD_REF;
     if (!headRef) {
-      core.warning('Not running in a pull request context, skipping Chart.lock updates');
+      core.warning('No pull request branch found, skipping Chart.lock updates');
       return;
     }
     core.info(`Getting the latest changes for ${headRef} branch...`);
@@ -652,8 +654,10 @@ async function updateChartLockFiles({
     const libDirPath = CONFIG.chart.type.library;
     const chartLockFiles = [];
     core.info('Finding charts with dependency changes...');
-    const appChartDirs = await _findChartYamlFiles(fs, core, appDirPath);
-    const libChartDirs = await _findChartYamlFiles(fs, core, libDirPath);
+    const [appChartDirs, libChartDirs] = await Promise.all([
+      _findChartYamlFiles(fs, core, appDirPath),
+      _findChartYamlFiles(fs, core, libDirPath)
+    ]);
     const allChartDirs = [...appChartDirs, ...libChartDirs];
     core.info(`Found ${allChartDirs.length} charts to process`);
     for (const chartDir of allChartDirs) {

@@ -15,10 +15,11 @@ The deployment type is made available as an output from the `setupBuildEnvironme
 
 - No comments or empty lines inside function bodies, code should be self-explanatory
 - Variable naming should follow camelCase convention
-- Function organization within a file should follow the following order (all in alphabetical order):
+- File organization should follow this order:
+  - module imports (Node.js built-in modules first, then third-party modules, then local modules)
   - configuration constants
-  - internal functions
-  - exported functions
+  - internal functions (in alphabetical order)
+  - exported functions (in alphabetical order)
 - Function parameters should use destructured objects for better readability
 - Error handling should include detailed error messages for GraphQL operations
 - Use consistent log message formats with `core.info`, `core.warning`, and `core.setFailed`
