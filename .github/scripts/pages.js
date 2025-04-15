@@ -417,7 +417,7 @@ async function generateHelmIndex({
     const indexDir = path.dirname(indexPath);
     await fs.mkdir(indexDir, { recursive: true });
     await exec.exec('helm', ['repo', 'index', packagesDir, '--url', repoUrl]);
-    await fs.copyFile(path.join(packagesDir, indexRegistry), indexPath);
+    await fs.copyFile(path.join(packagesDir, CONFIG.filesystem.indexRegistry), indexPath);
     core.info(`Successfully generated Helm repository index at ${indexPath}`);
   } catch (error) {
     const errorMsg = `Failed to generate Helm repository index: ${error.message}`;
