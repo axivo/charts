@@ -10,19 +10,17 @@ github:
   show_downloads: false
 
 # Jekyll build settings
-theme: jekyll-theme-primer
-markdown: kramdown
+head: >
+  <style>
+    div.footer { display: none !important; }
+  </style>
 highlighter: rouge
 kramdown:
   syntax_highlighter_opts:
     block:
       line_numbers: false
+markdown: kramdown
 plugins:
   - jekyll-seo-tag
   - jekyll-github-metadata
-
-# Jekyll custom head configuration
-head: >
-  <style>
-    div.footer { display: none !important; }
-  </style>
+theme: jekyll-theme-primer
