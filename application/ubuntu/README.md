@@ -1,6 +1,6 @@
 # ubuntu
 
-![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square)  ![Version: 1.4.5](https://img.shields.io/badge/Version-1.4.5-informational?style=flat-square)  ![AppVersion: 24.04](https://img.shields.io/badge/AppVersion-24.04-informational?style=flat-square)
+![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square)  ![Version: 1.4.6](https://img.shields.io/badge/Version-1.4.6-informational?style=flat-square)  ![AppVersion: 24.04](https://img.shields.io/badge/AppVersion-24.04-informational?style=flat-square)
 
 ArgoCD application for a minimal Ubuntu `24.04` LTS container, deployed into AXIVO [K3s Cluster](https://github.com/axivo/k3s-cluster). Review the cluster [documentation](https://axivo.com/k3s-cluster/), for additional details. The application deployment is also compatible with a generic Kubernetes cluster.
 
