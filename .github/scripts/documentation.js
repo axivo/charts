@@ -94,7 +94,7 @@ async function updateDocumentation({
     core.info(`Successfully updated ${files.length} documentation files`);
     const { additions, deletions } = await gitSignedCommit.getGitStagedChanges(runGit, fs);
     if (additions.length > 0 || deletions.length > 0) {
-      const currentHead = context.payload.pull_request.head.sha
+      const currentHead = await runGit(['rev-parse', 'HEAD']);
       await gitSignedCommit.createSignedCommit({
         github,
         context,
