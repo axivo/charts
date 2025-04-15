@@ -8,6 +8,10 @@
  * @module github-api
  */
 
+/**
+ * Configuration constants for GitHub API module
+ * Contains settings for release issue filtering and other API-related parameters
+ */
 const CONFIG = {
   release: {
     labels: ["bug", "feature"]

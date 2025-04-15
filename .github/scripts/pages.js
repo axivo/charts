@@ -12,6 +12,10 @@
  * @module pages
  */
 
+/**
+ * Configuration constants for GitHub Pages module
+ * Contains paths, templates, and settings used throughout the chart release process
+ */
 const CONFIG = {
   chart: {
     icon: 'icon.png',
@@ -38,6 +42,22 @@ const CONFIG = {
 const githubApi = require('./github-api');
 const path = require('path');
 const yaml = require('js-yaml');
+
+/**
+ * Registers common Handlebars helpers
+ * @param {string} repoUrl - Repository URL
+ * @returns {Object} - Handlebars instance with registered helpers
+ */
+function registerHandlebarsHelpers(repoUrl) {
+  const Handlebars = require('handlebars');
+  Handlebars.registerHelper('eq', function (a, b) {
+    return a === b;
+  });
+  Handlebars.registerHelper('RepoRawURL', function () {
+    return String(repoUrl).replace('github.com', 'raw.githubusercontent.com');
+  });
+  return Handlebars;
+}
 
 /**
  * Creates GitHub releases for packaged charts and uploads the chart packages as release assets
@@ -253,15 +273,10 @@ async function generateChartRelease({
       core.warning(`Template file not found at ${templatePath}: ${accessError.message}`);
       return `Release of ${chartName} chart version ${chartVersion}`;
     }
+    const repoUrl = context.payload.repository.html_url;
     const templateContent = await fs.readFile(templatePath, 'utf8');
     core.info(`Loaded release template from ${templatePath}`);
-    const Handlebars = require('handlebars');
-    Handlebars.registerHelper('eq', function (a, b) {
-      return a === b;
-    });
-    Handlebars.registerHelper('RepoRawURL', function () {
-      return String(context.payload.repository.html_url).replace('github.com', 'raw.githubusercontent.com');
-    });
+    const Handlebars = registerHandlebarsHelpers(repoUrl);
     const template = Handlebars.compile(templateContent);
     const chartSources = chartMetadata.sources || [];
     const issues = await githubApi.getReleaseIssues({ github, context, core, chartType, chartName });
@@ -279,7 +294,7 @@ async function generateChartRelease({
       Issues: issues.length > 0 ? issues : null,
       KubeVersion: chartMetadata.kubeVersion || '',
       Name: chartName,
-      RepoURL: context.payload.repository.html_url,
+      RepoURL: repoUrl,
       Type: chartType,
       Version: chartVersion
     };
@@ -342,15 +357,9 @@ async function generateChartIndex({
     core.info(`Reading template from ${templatePath}`);
     const template = await fs.readFile(templatePath, 'utf8');
     core.info(`Template loaded, size: ${template.length} bytes`);
-    const Handlebars = require('handlebars');
     const repoUrl = context.payload.repository.html_url;
     const defaultBranchName = context.payload.repository.default_branch;
-    Handlebars.registerHelper('RepoRawURL', function () {
-      return String(repoUrl).replace('github.com', 'raw.githubusercontent.com');
-    });
-    Handlebars.registerHelper('eq', function (a, b) {
-      return a === b;
-    });
+    const Handlebars = registerHandlebarsHelpers(repoUrl);
     const charts = Object.entries(index.entries)
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([name, versions]) => {
@@ -551,6 +560,7 @@ async function setupBuildEnvironment({ core, fs }) {
 
 module.exports = {
   CONFIG,
+  registerHandlebarsHelpers,
   createChartReleases,
   fileExists,
   findChartYamlFiles,
