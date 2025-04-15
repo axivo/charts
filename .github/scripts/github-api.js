@@ -96,7 +96,6 @@ async function createRelease({
 }) {
   try {
     core.info(`Creating ${name} release with ${tagName} tag...`);
-    // GraphQL API doesn't support creating releases, using REST API for this function
     const response = await github.rest.repos.createRelease({
       owner: context.repo.owner,
       repo: context.repo.repo,
@@ -293,7 +292,6 @@ async function uploadReleaseAsset({
 }) {
   try {
     core.info(`Uploading ${assetName} asset to ${releaseId} release id...`);
-    // GraphQL API doesn't support file uploads, using REST API for this specific function
     const asset = await github.rest.repos.uploadReleaseAsset({
       owner: context.repo.owner,
       repo: context.repo.repo,
