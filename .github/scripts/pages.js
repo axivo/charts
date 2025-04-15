@@ -169,12 +169,15 @@ async function _commitLockFiles({
     }
     const { additions, deletions } = await gitSignedCommit.getGitStagedChanges(runGit, fs);
     if (additions.length > 0 || deletions.length > 0) {
+      // Get the current HEAD commit after all the git operations
+      const currentHead = await runGit(['rev-parse', 'HEAD']);
+
       await gitSignedCommit.createSignedCommit({
         github,
         context,
         core,
-        branchName: context.payload.pull_request.head.ref,
-        expectedHeadOid: context.payload.pull_request.head.sha,
+        branchName: headRef,
+        expectedHeadOid: currentHead,
         additions,
         deletions,
         commitMessage: 'chore(github-action): update Chart.lock files'
@@ -616,6 +619,7 @@ async function processChartRelease({
 
 /**
  * Updates Chart.lock files for charts in a pull request
+ * This should run after documentation updates are complete
  * 
  * @param {Object} options - Options for updating Chart.lock files
  * @param {Object} options.github - GitHub API client
@@ -639,9 +643,11 @@ async function updateChartLockFiles({
       core.warning('Not running in a pull request context, skipping Chart.lock updates');
       return;
     }
-    core.info(`Switching to PR branch ${headRef}`);
+    core.info(`Getting the latest changes for ${headRef} branch...`);
     await runGit(['fetch', 'origin', headRef]);
+    core.info(`Switching to PR branch ${headRef}`);
     await runGit(['switch', headRef]);
+    await runGit(['pull', 'origin', headRef]);
     const appDirPath = CONFIG.chart.type.application;
     const libDirPath = CONFIG.chart.type.library;
     const chartLockFiles = [];

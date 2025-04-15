@@ -15,6 +15,11 @@ on:
       - application/**
       - library/**
   workflow_dispatch:
+  workflow_run:
+    workflows:
+      - Update Documentation
+    types:
+      - completed
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -29,7 +34,6 @@ jobs:
   chart:
     name: Update
     runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
