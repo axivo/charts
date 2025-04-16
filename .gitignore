@@ -23,6 +23,11 @@ _config.yml
 index.html
 index.md
 
+# Node.js
+node_modules/
+package.json
+package-lock.json
+
 # Logs
 *.log
 logs/
