@@ -168,9 +168,9 @@ async function _commitLockFiles({
       core.warning('No pull request branch found, skipping Chart.lock files update');
       return;
     }
-    core.info(`Switching to PR branch ${headRef}`);
-    await runGit(['fetch', 'origin', headRef]);
+    core.info(`Getting the latest changes for ${headRef} branch...`);
     await runGit(['switch', headRef]);
+    await runGit(['pull', 'origin', headRef]);
     if (lockFiles.length > 0) {
       await runGit(['add', ...lockFiles]);
     }
@@ -659,8 +659,6 @@ async function updateChartLockFiles({
       return;
     }
     core.info(`Getting the latest changes for ${headRef} branch...`);
-    await runGit(['fetch', 'origin', headRef]);
-    core.info(`Switching to PR branch ${headRef}`);
     await runGit(['switch', headRef]);
     await runGit(['pull', 'origin', headRef]);
     const chartLockFiles = [];

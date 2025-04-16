@@ -1,0 +1,52 @@
+name: Chart
+
+on:
+  pull_request:
+    paths:
+      - application/*/Chart.yaml
+      - library/*/Chart.yaml
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    name: Update
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Configure repository
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { configureGit } = require('./.github/scripts/git-config.js');
+            await configureGit({ github, context, core, exec });
+
+      - name: Setup helm
+        uses: azure/setup-helm@v4
+        with:
+          version: v3.17.3
+
+      - name: Setup node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install node.js dependencies
+        run: npm install js-yaml handlebars
+
+      - name: Update chart lock files
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs/promises');
+            const { updateChartLockFiles } = require('./.github/scripts/pages.js');
+            await updateChartLockFiles({ github, context, core, exec, fs });
