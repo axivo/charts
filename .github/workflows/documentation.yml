@@ -9,6 +9,7 @@ on:
       - library/*/Chart.yaml
       - library/*/README.md.gotmpl
       - library/*/values.yaml
+  workflow_dispatch:
 
 concurrency:
   cancel-in-progress: true
