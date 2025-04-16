@@ -626,6 +626,7 @@ async function updateLockFiles({
     core.info(`Getting the latest changes for ${headRef} branch...`);
     await runGit(['fetch', 'origin', headRef]);
     await runGit(['switch', headRef]);
+    await runGit(['pull', 'origin', headRef]);
     const lockFiles = [];
     core.info('Finding charts with dependency changes...');
     const charts = await _findCharts({ core });
