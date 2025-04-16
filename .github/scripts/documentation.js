@@ -24,7 +24,7 @@ const CONFIG = {
 };
 
 /**
- * Installs the helm-docs package for generating Helm chart documentation
+ * Sets up the helm-docs package for generating Helm chart documentation
  * 
  * @param {Object} options - Options for installing helm-docs
  * @param {Object} options.core - GitHub Actions Core API for logging and output
@@ -32,22 +32,23 @@ const CONFIG = {
  * @param {string} [options.version=CONFIG.helmDocs.version] - Version of helm-docs to install
  * @returns {Promise<void>}
  */
-async function installHelmDocs({
+async function setupHelmDocs({
   core,
   exec,
   version = CONFIG.helmDocs.version
 }) {
   try {
     const tmpDir = os.tmpdir();
-    const packagePath = `${tmpDir}/helm-docs_${version}_Linux_x86_64.deb`;
-    const packageUrl = `${CONFIG.helmDocs.baseUrl}/v${version}/helm-docs_${version}_Linux_x86_64.deb`;
-    core.info(`Installing helm-docs version ${version}`);
+    const packageFile = `helm-docs_${version}_Linux_x86_64.deb`;
+    const packagePath = `${tmpDir}/${packageFile}`;
+    const packageUrl = `${CONFIG.helmDocs.baseUrl}/v${version}/${packageFile}`;
+    core.info(`Setting up helm-docs v${version}...`);
     const runSudo = async (args) => (await exec.getExecOutput('sudo', args)).stdout.trim();
     await runSudo(['wget', '-qP', tmpDir, packageUrl]);
     await runSudo(['apt-get', '-y', 'install', packagePath]);
-    core.info('helm-docs successfully installed');
+    core.info('Successfully setup helm-docs package');
   } catch (error) {
-    const errorMsg = `Failed to install helm-docs: ${error.message}`;
+    const errorMsg = `Failed to setup helm-docs package: ${error.message}`;
     core.setFailed(errorMsg);
     throw new Error(errorMsg);
   }
@@ -112,6 +113,6 @@ async function updateDocumentation({
 
 module.exports = {
   CONFIG,
-  installHelmDocs,
+  setupHelmDocs,
   updateDocumentation
 };

@@ -38,7 +38,7 @@ Provides utilities for automating chart documentation updates.
 - None
 
 **Exported Functions:**
-- `installHelmDocs` - Installs the helm-docs package for generating Helm chart documentation
+- `setupHelmDocs` - Installs the helm-docs package for generating Helm chart documentation
 - `updateDocumentation` - Updates documentation in a pull request by generating docs and committing changes
 
 **Configuration:**
