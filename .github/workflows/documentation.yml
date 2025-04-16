@@ -10,6 +10,11 @@ on:
       - library/*/README.md.gotmpl
       - library/*/values.yaml
   workflow_dispatch:
+  workflow_run:
+    workflows:
+      - Chart
+    types:
+      - completed
 
 concurrency:
   cancel-in-progress: true

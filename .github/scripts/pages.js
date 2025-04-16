@@ -165,7 +165,7 @@ async function _commitLockFiles({
     const runGit = async (args) => (await exec.getExecOutput('git', args)).stdout.trim();
     const headRef = process.env.GITHUB_HEAD_REF;
     if (!headRef) {
-      core.warning('No pull request branch found, skipping Chart.lock files update');
+      core.warning('No pull request branch found, skipping dependency lock files update');
       return;
     }
     core.info(`Getting the latest changes for ${headRef} branch...`);
@@ -185,14 +185,14 @@ async function _commitLockFiles({
         expectedHeadOid: currentHead,
         additions,
         deletions,
-        commitMessage: 'chore(github-action): update Chart.lock files'
+        commitMessage: 'chore(github-action): update dependency lock files'
       });
-      core.info('Successfully committed Chart.lock files update');
+      core.info('Successfully committed dependency lock files update');
     } else {
-      core.info('No Chart.lock file changes to commit');
+      core.info('No dependency lock file changes to commit');
     }
   } catch (error) {
-    const errorMsg = `Failed to commit Chart.lock files: ${error.message}`;
+    const errorMsg = `Failed to commit dependency lock files: ${error.message}`;
     core.warning(errorMsg);
   }
 }
