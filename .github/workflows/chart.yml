@@ -1,7 +1,9 @@
 name: Chart
 
 on:
-  pull_request:
+  push:
+    branches:
+      - main
     paths:
       - application/*/Chart.yaml
       - library/*/Chart.yaml

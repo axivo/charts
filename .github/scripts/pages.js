@@ -171,7 +171,6 @@ async function _commitLockFiles({
     core.info(`Getting the latest changes for ${headRef} branch...`);
     await runGit(['fetch', 'origin', headRef]);
     await runGit(['switch', headRef]);
-    await runGit(['pull', 'origin', headRef]);
     if (lockFiles.length > 0) {
       await runGit(['add', ...lockFiles]);
     }
@@ -662,7 +661,6 @@ async function updateChartLockFiles({
     core.info(`Getting the latest changes for ${headRef} branch...`);
     await runGit(['fetch', 'origin', headRef]);
     await runGit(['switch', headRef]);
-    await runGit(['pull', 'origin', headRef]);
     const chartLockFiles = [];
     core.info('Finding charts with dependency changes...');
     const allChartDirs = await _findAllCharts({ fs, core });
