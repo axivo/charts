@@ -55,12 +55,12 @@ jobs:
       - name: Install node.js dependencies
         run: npm install js-yaml handlebars
 
-      - name: Process chart release
+      - name: Process chart releases
         uses: actions/github-script@v7
         with:
           script: |
-            const { processChartRelease } = require('./.github/scripts/pages.js');
-            await processChartRelease({ github, context, core, exec });
+            const { processChartReleases } = require('./.github/scripts/pages.js');
+            await processChartReleases({ github, context, core, exec });
 
       - name: Generate chart index page
         uses: actions/github-script@v7

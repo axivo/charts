@@ -14,12 +14,12 @@
  * This script sets up Git with the GitHub Actions bot identity for making commits
  * in workflows. Returns the runGit function that can be used for additional Git operations.
  * 
- * @param {Object} options - Destructured GitHub Actions context and utilities
+ * @param {Object} options - Function parameters
  * @param {Object} options.github - GitHub API client (unused but kept for workflow compatibility)
- * @param {Object} options.context - Workflow context
- * @param {Object} options.core - GitHub Actions Core
- * @param {Object} options.exec - GitHub Actions Exec
- * @returns {Function} runGit - Async function to run Git commands
+ * @param {Object} options.context - GitHub Actions context for repository info
+ * @param {Object} options.core - GitHub Actions Core API for logging and output
+ * @param {Object} options.exec - GitHub Actions exec helpers for running commands
+ * @returns {Promise<Function>} - Async function to run Git commands
  */
 async function configureGit({ github, context, core, exec }) {
   const runGit = async (args) => (await exec.getExecOutput('git', args)).stdout.trim();

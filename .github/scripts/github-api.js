@@ -23,10 +23,10 @@ const CONFIG = {
 /**
  * Gets the date of the last release for a chart
  * 
- * @param {Object} options - Options for fetching the last release
+ * @param {Object} options - Function parameters
  * @param {Object} options.github - GitHub API client
- * @param {Object} options.context - GitHub Actions context
- * @param {Object} options.core - GitHub Actions Core API for logging
+ * @param {Object} options.context - GitHub Actions context for repository info
+ * @param {Object} options.core - GitHub Actions Core API for logging and output
  * @param {string} options.chartName - Name of the chart
  * @returns {Promise<string|null>} - ISO date string of the last release or null if none found
  */
@@ -73,10 +73,10 @@ async function _getLastReleaseDate({
 /**
  * Creates a new GitHub release
  * 
- * @param {Object} options - Options for creating the release
+ * @param {Object} options - Function parameters
  * @param {Object} options.github - GitHub API client
- * @param {Object} options.context - GitHub Actions context
- * @param {Object} options.core - GitHub Actions Core API for logging
+ * @param {Object} options.context - GitHub Actions context for repository info
+ * @param {Object} options.core - GitHub Actions Core API for logging and output
  * @param {string} options.tagName - Tag name for the release
  * @param {string} options.name - Display name for the release
  * @param {string} options.body - Body content of the release
@@ -128,10 +128,10 @@ async function createRelease({
 /**
  * Checks if a GitHub release with the specified tag exists
  * 
- * @param {Object} options - Options for checking the release
+ * @param {Object} options - Function parameters
  * @param {Object} options.github - GitHub API client
- * @param {Object} options.context - GitHub Actions context
- * @param {Object} options.core - GitHub Actions Core API for logging
+ * @param {Object} options.context - GitHub Actions context for repository info
+ * @param {Object} options.core - GitHub Actions Core API for logging and output
  * @param {string} options.tagName - The tag name to check
  * @returns {Promise<Object|null>} - Release data if found, null if not found
  */
@@ -193,10 +193,10 @@ async function getReleaseByTag({
 /**
  * Fetches issues related to a specific chart since the last release
  * 
- * @param {Object} options - Options for fetching issues
+ * @param {Object} options - Function parameters
  * @param {Object} options.github - GitHub API client
- * @param {Object} options.context - GitHub Actions context
- * @param {Object} options.core - GitHub Actions Core API for logging
+ * @param {Object} options.context - GitHub Actions context for repository info
+ * @param {Object} options.core - GitHub Actions Core API for logging and output
  * @param {string} options.chartType - Type of chart (application/library)
  * @param {string} options.chartName - Name of the chart
  * @param {number} [options.maxIssues=50] - Maximum number of issues to retrieve
@@ -276,10 +276,10 @@ async function getReleaseIssues({
 /**
  * Uploads an asset to a GitHub release
  * 
- * @param {Object} options - Options for uploading the asset
+ * @param {Object} options - Function parameters
  * @param {Object} options.github - GitHub API client
- * @param {Object} options.context - GitHub Actions context
- * @param {Object} options.core - GitHub Actions Core API for logging
+ * @param {Object} options.context - GitHub Actions context for repository info
+ * @param {Object} options.core - GitHub Actions Core API for logging and output
  * @param {number} options.releaseId - ID of the release to attach the asset to
  * @param {string} options.assetName - Name of the asset to upload
  * @param {Buffer|string} options.assetData - Content of the asset to upload

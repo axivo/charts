@@ -72,14 +72,10 @@ async function updateDocumentation({
   try {
     const runGit = async (args) => (await exec.getExecOutput('git', args)).stdout.trim();
     const headRef = process.env.GITHUB_HEAD_REF;
-    if (!headRef) {
-      core.warning('No pull request branch found, skipping documentation update');
-      return;
-    }
     core.info(`Getting the latest changes for ${headRef} branch...`);
     await runGit(['fetch', 'origin', headRef]);
     await runGit(['switch', headRef]);
-    core.info('Generating documentation with helm-docs');
+    core.info('Generating documentation with helm-docs...');
     await exec.exec('helm-docs');
     await runGit(['add', '.']);
     const files = (await runGit(['diff', '--staged', '--name-only']))

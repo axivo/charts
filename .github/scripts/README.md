@@ -95,9 +95,9 @@ Provides centralized configuration and functions for Helm chart releases and Git
 
 **Exported Functions:**
 - `generateChartIndex` - Generates the chart index page from the index.yaml file
-- `processChartRelease` - Handles the complete Helm chart release process
+- `processChartReleases` - Handles the complete Helm chart release process
 - `setupBuildEnvironment` - Sets up the build environment for generating the static site
-- `updateChartLockFiles` - Updates Chart.lock files for charts in a pull request
+- `updateLockFiles` - Updates Chart.lock files for charts in a pull request
 - `updateIssueTemplates` - Updates issue templates with current chart options
 
 ## Function Parameters

@@ -14,16 +14,16 @@ const fs = require('fs/promises');
 /**
  * Create a signed commit using GitHub's GraphQL API
  * 
- * @param {Object} options - The options for creating the commit
+ * @param {Object} options - Function parameters
  * @param {Object} options.github - GitHub API client
- * @param {Object} options.context - Workflow context
- * @param {Object} options.core - GitHub Actions Core
+ * @param {Object} options.context - GitHub Actions context for repository info
+ * @param {Object} options.core - GitHub Actions Core API for logging and output
  * @param {string} options.branchName - Branch name to commit to
  * @param {string} options.expectedHeadOid - Expected HEAD SHA of the branch (for validation)
  * @param {Array<Object>} options.additions - Files to add/modify, each having {path, contents} where contents is base64 encoded
  * @param {Array<Object>} options.deletions - Files to delete, each having {path}
  * @param {string} options.commitMessage - Commit message headline
- * @returns {string} - OID of the created commit
+ * @returns {Promise<string|null>} - OID of the created commit or null if no changes
  */
 async function createSignedCommit({
   github,
@@ -85,7 +85,7 @@ async function createSignedCommit({
  * Helper function to prepare file additions and deletions from git staged changes
  * 
  * @param {Function} runGit - Function to run git commands
- * @returns {Object} - Object containing additions and deletions arrays
+ * @returns {Promise<Object>} - Object containing additions and deletions arrays
  */
 async function getGitStagedChanges(runGit) {
   const additions = await Promise.all(

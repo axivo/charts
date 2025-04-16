@@ -51,8 +51,8 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            const { updateChartLockFiles } = require('./.github/scripts/pages.js');
-            await updateChartLockFiles({ github, context, core, exec });
+            const { updateLockFiles } = require('./.github/scripts/pages.js');
+            await updateLockFiles({ github, context, core, exec });
 
       - name: Install helm-docs
         uses: actions/github-script@v7

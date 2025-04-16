@@ -32,15 +32,15 @@ const CONFIG = {
     releaseTemplate: '.github/pages/release.md.hbs',
     releaseTitle: '{{ .Name }}-v{{ .Version }}',
     repoUrl: 'https://axivo.github.io/charts/',
-    skipExisting: 'true',
-    type: {
-      application: 'application',
-      library: 'library'
-    }
+    skipExisting: true
   },
   deployment: 'production',
   filesystem: {
     bugReportPath: '.github/ISSUE_TEMPLATE/bug_report.yml',
+    chart: {
+      application: 'application',
+      library: 'library'
+    },
     configHome: './_config.yml',
     configPath: '.github/pages/config.yml',
     distPath: './_dist',
@@ -58,17 +58,17 @@ const CONFIG = {
 /**
  * Builds a GitHub release for a single chart and uploads the chart package as an asset
  * 
- * @param {Object} options - Options for building a chart release
- * @param {Object} options.github - GitHub API client
- * @param {Object} options.context - GitHub Actions context for repository info
- * @param {Object} options.core - GitHub Actions Core API for logging and output
- * @param {string} options.chartName - Name of the chart
- * @param {string} options.chartVersion - Version of the chart
- * @param {string} options.chartType - Type of chart (application/library)
- * @param {Object} options.chartMetadata - Chart metadata from Chart.yaml
- * @param {boolean} options.iconExists - Whether an icon exists for the chart
- * @param {string} options.chartPath - Path to the chart package
- * @param {string} options.packageName - Name of the package file
+ * @param {Object} params - Function parameters
+ * @param {Object} params.github - GitHub API client
+ * @param {Object} params.context - GitHub Actions context for repository info
+ * @param {Object} params.core - GitHub Actions Core API for logging and output
+ * @param {string} params.chartName - Name of the chart
+ * @param {string} params.chartVersion - Version of the chart
+ * @param {string} params.chartType - Type of chart (application/library)
+ * @param {Object} params.chartMetadata - Chart metadata from Chart.yaml
+ * @param {boolean} params.iconExists - Whether an icon exists for the chart
+ * @param {string} params.chartPath - Path to the chart package
+ * @param {string} params.packageName - Name of the package file
  * @returns {Promise<void>}
  */
 async function _buildChartRelease({
@@ -141,13 +141,14 @@ async function _buildChartRelease({
 }
 
 /**
- * Helper function to commit updated lock files
- * @param {Object} options - Options for committing lock files
- * @param {Object} options.exec - GitHub Actions exec helpers
- * @param {Object} options.core - GitHub Actions Core API for logging
- * @param {Object} options.github - GitHub API client
- * @param {Object} options.context - GitHub Actions context
- * @param {string[]} options.lockFiles - List of lock files to commit
+ * Helper function to commit updated dependency lock files
+ * 
+ * @param {Object} params - Function parameters
+ * @param {Object} params.exec - GitHub Actions exec helpers
+ * @param {Object} params.core - GitHub Actions Core API for logging
+ * @param {Object} params.github - GitHub API client
+ * @param {Object} params.context - GitHub Actions context
+ * @param {string[]} params.lockFiles - List of dependency lock files to commit
  * @returns {Promise<void>}
  */
 async function _commitLockFiles({
@@ -160,13 +161,6 @@ async function _commitLockFiles({
   try {
     const runGit = async (args) => (await exec.getExecOutput('git', args)).stdout.trim();
     const headRef = process.env.GITHUB_HEAD_REF;
-    if (!headRef) {
-      core.warning('No pull request branch found, skipping dependency lock files update');
-      return;
-    }
-    core.info(`Getting the latest changes for ${headRef} branch...`);
-    await runGit(['fetch', 'origin', headRef]);
-    await runGit(['switch', headRef]);
     if (lockFiles.length > 0) {
       await runGit(['add', ...lockFiles]);
     }
@@ -196,11 +190,11 @@ async function _commitLockFiles({
 /**
  * Creates GitHub releases for packaged charts and uploads the chart packages as release assets
  * 
- * @param {Object} options - Options for creating GitHub releases
- * @param {Object} options.github - GitHub API client
- * @param {Object} options.context - GitHub Actions context for repository info
- * @param {Object} options.core - GitHub Actions Core API for logging and output
- * @param {string} [options.packagesPath=CONFIG.filesystem.packagesPath] - Directory with chart packages
+ * @param {Object} params - Function parameters
+ * @param {Object} params.github - GitHub API client
+ * @param {Object} params.context - GitHub Actions context for repository info
+ * @param {Object} params.core - GitHub Actions Core API for logging and output
+ * @param {string} [params.packagesPath=CONFIG.filesystem.packagesPath] - Directory with chart packages
  * @returns {Promise<void>}
  */
 async function _createChartReleases({
@@ -220,14 +214,13 @@ async function _createChartReleases({
       const chartName = chartNameWithVersion.substring(0, lastDashIndex);
       const chartVersion = chartNameWithVersion.substring(lastDashIndex + 1);
       try {
-        let chartType = 'application';
-        const appChartDir = path.join(CONFIG.chart.type.application, chartName);
-        const libraryChartDir = path.join(CONFIG.chart.type.library, chartName);
-        if (await _fileExists(libraryChartDir)) {
-          chartType = 'library';
-        }
+        const appChartDir = path.join(CONFIG.filesystem.chart.application, chartName);
+        const libChartDir = path.join(CONFIG.filesystem.chart.library, chartName);
+        const libChartExists = await _fileExists(libChartDir);
+        const chartType = libChartExists ? 'library' : 'application';
+        const chartDir = chartType === CONFIG.filesystem.chart.library ? libChartDir : appChartDir;
         let chartMetadata = {};
-        const chartYamlPath = path.join(chartType === 'library' ? libraryChartDir : appChartDir, 'Chart.yaml');
+        const chartYamlPath = path.join(chartDir, 'Chart.yaml');
         try {
           const chartYamlContent = await fs.readFile(chartYamlPath, 'utf8');
           chartMetadata = yaml.load(chartYamlContent);
@@ -235,7 +228,7 @@ async function _createChartReleases({
         } catch (error) {
           core.warning(`Failed to load chart metadata: ${error.message}`);
         }
-        const iconPath = path.join(chartType === 'library' ? libraryChartDir : appChartDir, CONFIG.chart.icon);
+        const iconPath = path.join(chartDir, CONFIG.chart.icon);
         const iconExists = await _fileExists(iconPath);
         await _buildChartRelease({
           github,
@@ -268,6 +261,7 @@ async function _createChartReleases({
 
 /**
  * Helper function to check if a file exists
+ * 
  * @param {string} filePath - Path to check
  * @returns {Promise<boolean>} - True if file exists, false otherwise
  */
@@ -276,13 +270,13 @@ async function _fileExists(filePath) {
 }
 
 /**
- * Finds all charts in application and library paths
+ * Finds charts in application and library paths
  * 
- * @param {Object} options - Options for finding charts
- * @param {Object} options.core - GitHub Actions Core API for logging
- * @returns {Promise<string[]>} - Array of chart directories
+ * @param {Object} params - Function parameters
+ * @param {Object} params.core - GitHub Actions Core API for logging
+ * @returns {Promise<{application: string[], library: string[]}>} - Object containing arrays of chart directories by type
  */
-async function _findAllCharts({
+async function _findCharts({
   core
 }) {
   const charts = {
@@ -290,8 +284,8 @@ async function _findAllCharts({
     library: []
   };
   const paths = [
-    { dir: CONFIG.chart.type.application, type: 'application' },
-    { dir: CONFIG.chart.type.library, type: 'library' }
+    { dir: CONFIG.filesystem.chart.application, type: 'application' },
+    { dir: CONFIG.filesystem.chart.library, type: 'library' }
   ];
   await Promise.all(paths.map(async ({ dir, type }) => {
     try {
@@ -309,21 +303,21 @@ async function _findAllCharts({
       core.warning(`Error reading directory ${dir}: ${error.message}`);
     }
   }));
-  return [...charts.application, ...charts.library];
+  return charts;
 }
 
 /**
  * Generates release content using the template file
  * 
- * @param {Object} options - Options for generating the release content
- * @param {Object} options.core - GitHub Actions Core API for logging
- * @param {Object} options.context - GitHub Actions context
- * @param {string} options.chartName - Name of the chart
- * @param {string} options.chartVersion - Version of the chart
- * @param {string} options.chartType - Type of chart (application/library)
- * @param {Object} options.chartMetadata - Chart metadata from Chart.yaml
- * @param {boolean} options.iconExists - Whether an icon exists for the chart
- * @param {string} [options.releaseTemplate=CONFIG.chart.releaseTemplate] - Path to release template
+ * @param {Object} params - Function parameters
+ * @param {Object} params.core - GitHub Actions Core API for logging
+ * @param {Object} params.context - GitHub Actions context
+ * @param {string} params.chartName - Name of the chart
+ * @param {string} params.chartVersion - Version of the chart
+ * @param {string} params.chartType - Type of chart (application/library)
+ * @param {Object} params.chartMetadata - Chart metadata from Chart.yaml
+ * @param {boolean} params.iconExists - Whether an icon exists for the chart
+ * @param {string} [params.releaseTemplate=CONFIG.chart.releaseTemplate] - Path to release template
  * @returns {Promise<string>} - Generated release content
  */
 async function _generateChartRelease({
@@ -381,12 +375,12 @@ async function _generateChartRelease({
 /**
  * Generates the Helm repository index file
  * 
- * @param {Object} options - Options for generating the index
- * @param {Object} options.exec - GitHub Actions exec helpers
- * @param {Object} options.core - GitHub Actions Core API for logging
- * @param {string} options.packagesPath - Directory with packaged charts
- * @param {string} options.indexPath - Output path for the index file
- * @param {string} options.repoUrl - URL of the Helm repository
+ * @param {Object} params - Function parameters
+ * @param {Object} params.exec - GitHub Actions exec helpers
+ * @param {Object} params.core - GitHub Actions Core API for logging
+ * @param {string} params.packagesPath - Directory with packaged charts
+ * @param {string} params.indexPath - Output path for the index file
+ * @param {string} params.repoUrl - URL of the Helm repository
  * @returns {Promise<void>}
  */
 async function _generateHelmIndex({
@@ -412,13 +406,12 @@ async function _generateHelmIndex({
 /**
  * Packages all charts in a specified directory
  * 
- * @param {Object} options - Options for packaging charts
- * @param {Object} options.exec - GitHub Actions exec helpers
- * @param {Object} options.core - GitHub Actions Core API for logging
- * @param {Object} options.github - GitHub API client
- * @param {Object} options.context - GitHub Actions context
- * @param {string} options.dirPath - Directory containing charts
- * @param {string} options.outputDir - Directory to store packaged charts
+ * @param {Object} params - Function parameters
+ * @param {Object} params.exec - GitHub Actions exec helpers
+ * @param {Object} params.core - GitHub Actions Core API for logging
+ * @param {Object} params.github - GitHub API client
+ * @param {Object} params.context - GitHub Actions context
+ * @param {string} params.outputDir - Directory to store packaged charts
  * @returns {Promise<void>}
  */
 async function _packageCharts({
@@ -426,16 +419,16 @@ async function _packageCharts({
   core,
   github,
   context,
-  outputDir,
-  contextName = 'all' // Added for logging context
+  outputDir
 }) {
   try {
-    const chartDirs = await _findAllCharts({ core });
+    const charts = await _findCharts({ core });
+    const chartDirs = [...charts.application, ...charts.library];
     if (!chartDirs.length) {
       core.info(`No charts found`);
       return;
     }
-    const chartLockFiles = [];
+    const lockFiles = [];
     for (const chartDir of chartDirs) {
       const lockFilePath = path.join(chartDir, 'Chart.lock');
       let originalLockHash = null;
@@ -449,18 +442,18 @@ async function _packageCharts({
         const newContent = await fs.readFile(lockFilePath);
         const newHash = crypto.createHash('sha256').update(newContent).digest('hex');
         if (originalLockHash !== newHash) {
-          chartLockFiles.push(lockFilePath);
+          lockFiles.push(lockFilePath);
           core.info(`Chart.lock updated for ${chartDir}`);
         }
       }
       core.info(`Packaging ${chartDir} chart...`);
       await exec.exec('helm', ['package', chartDir, '--destination', outputDir]);
     }
-    if (chartLockFiles.length > 0) {
-      core.info(`Committing ${chartLockFiles.length} updated Chart.lock files`);
-      await _commitLockFiles({ exec, core, github, context, lockFiles: chartLockFiles });
+    if (lockFiles.length > 0) {
+      core.info(`Committing ${lockFiles.length} updated dependency lock files...`);
+      await _commitLockFiles({ exec, core, github, context, lockFiles });
     }
-    core.info(`Successfully packaged ${chartDirs.length} charts for context: ${contextName}`);
+    core.info(`Successfully packaged ${chartDirs.length} charts`);
   } catch (error) {
     const errorMsg = `Failed to package charts: ${error.message}`;
     core.setFailed(errorMsg);
@@ -470,6 +463,7 @@ async function _packageCharts({
 
 /**
  * Registers common Handlebars helpers
+ * 
  * @param {string} repoUrl - Repository URL
  * @returns {Object} - Handlebars instance with registered helpers
  */
@@ -486,12 +480,12 @@ function _registerHandlebarsHelpers(repoUrl) {
 /**
  * Generate the chart index page from the index.yaml file
  * 
- * @param {Object} options - Options for chart index generation
- * @param {Object} options.context - GitHub Actions context for repository info
- * @param {Object} options.core - GitHub Actions Core API for logging and output
- * @param {string} [options.indexPath=CONFIG.filesystem.indexPath] - Path to the index.yaml file
- * @param {string} [options.indexMdPath=CONFIG.filesystem.indexMdPath] - Path where to write the generated index.md
- * @param {string} [options.indexTemplate=CONFIG.chart.indexTemplate] - Path to the Handlebars template
+ * @param {Object} params - Function parameters
+ * @param {Object} params.context - GitHub Actions context for repository info
+ * @param {Object} params.core - GitHub Actions Core API for logging and output
+ * @param {string} [params.indexPath=CONFIG.filesystem.indexPath] - Path to the index.yaml file
+ * @param {string} [params.indexMdPath=CONFIG.filesystem.indexMdPath] - Path where to write the generated index.md
+ * @param {string} [params.indexTemplate=CONFIG.chart.indexTemplate] - Path to the Handlebars template
  * @returns {Promise<boolean>} - True if successful, false if skipped
  */
 async function generateChartIndex({
@@ -570,19 +564,19 @@ async function generateChartIndex({
 }
 
 /**
- * Handles the complete Helm chart release process:
+ * Handles the complete Helm chart releases process:
  * 1. Packages application and library charts
  * 2. Creates GitHub releases
  * 3. Generates the repository index
  * 
- * @param {Object} options - Options for the chart release process
- * @param {Object} options.github - GitHub API client
- * @param {Object} options.context - GitHub Actions context for repository info
- * @param {Object} options.core - GitHub Actions Core API for logging and output
- * @param {Object} options.exec - GitHub Actions exec helpers for running commands
+ * @param {Object} params - Function parameters
+ * @param {Object} params.github - GitHub API client
+ * @param {Object} params.context - GitHub Actions context for repository info
+ * @param {Object} params.core - GitHub Actions Core API for logging and output
+ * @param {Object} params.exec - GitHub Actions exec helpers for running commands
  * @returns {Promise<void>}
  */
-async function processChartRelease({
+async function processChartReleases({
   github,
   context,
   core,
@@ -591,39 +585,36 @@ async function processChartRelease({
   try {
     const indexPath = CONFIG.filesystem.indexPath;
     const packagesPath = CONFIG.filesystem.packagesPath;
+    core.info(`Creating ${packagesPath} directory...`);
     await fs.mkdir(packagesPath, { recursive: true });
     core.info(`Successfully created ${packagesPath} directory`);
-    const appDirPath = CONFIG.chart.type.application;
-    core.info(`Packaging ${appDirPath} charts...`);
-    await _packageCharts({ exec, core, github, context, outputDir: packagesPath, contextName: appDirPath });
-    const libDirPath = CONFIG.chart.type.library;
-    core.info(`Packaging ${libDirPath} charts...`);
-    await _packageCharts({ exec, core, github, context, outputDir: packagesPath, contextName: libDirPath });
-    core.info('Creating GitHub releases for charts...');
+    core.info('Packaging all charts...');
+    await _packageCharts({ exec, core, github, context, outputDir: packagesPath });
+    core.info('Creating all chart releases...');
     await _createChartReleases({ github, context, core, packagesPath });
     core.info('Generating Helm repository index...');
     const repoUrl = CONFIG.chart.repoUrl;
     await _generateHelmIndex({ exec, core, packagesPath, indexPath, repoUrl });
-    core.info('Chart release process completed successfully');
+    core.info('Successfully completed the chart releases process');
   } catch (error) {
-    const errorMsg = `Chart release process failed: ${error.message}`;
+    const errorMsg = `Chart releases process failed: ${error.message}`;
     core.setFailed(errorMsg);
     throw new Error(errorMsg);
   }
 }
 
 /**
- * Updates Chart.lock files for charts in a pull request
+ * Updates dependency lock files for charts in a pull request
  * This should run after documentation updates are complete
  * 
- * @param {Object} options - Options for updating Chart.lock files
- * @param {Object} options.github - GitHub API client
- * @param {Object} options.context - GitHub Actions context for repository info
- * @param {Object} options.core - GitHub Actions Core API for logging and output
- * @param {Object} options.exec - GitHub Actions exec helpers for running commands
+ * @param {Object} params - Function parameters
+ * @param {Object} params.github - GitHub API client
+ * @param {Object} params.context - GitHub Actions context for repository info
+ * @param {Object} params.core - GitHub Actions Core API for logging and output
+ * @param {Object} params.exec - GitHub Actions exec helpers for running commands
  * @returns {Promise<void>}
  */
-async function updateChartLockFiles({
+async function updateLockFiles({
   github,
   context,
   core,
@@ -632,16 +623,13 @@ async function updateChartLockFiles({
   try {
     const runGit = async (args) => (await exec.getExecOutput('git', args)).stdout.trim();
     const headRef = process.env.GITHUB_HEAD_REF;
-    if (!headRef) {
-      core.warning('No pull request branch found, skipping Chart.lock updates');
-      return;
-    }
     core.info(`Getting the latest changes for ${headRef} branch...`);
     await runGit(['fetch', 'origin', headRef]);
     await runGit(['switch', headRef]);
-    const chartLockFiles = [];
+    const lockFiles = [];
     core.info('Finding charts with dependency changes...');
-    const allChartDirs = await _findAllCharts({ core });
+    const charts = await _findCharts({ core });
+    const allChartDirs = [...charts.application, ...charts.library];
     core.info(`Found ${allChartDirs.length} charts to process`);
     for (const chartDir of allChartDirs) {
       const lockFilePath = path.join(chartDir, 'Chart.lock');
@@ -656,19 +644,19 @@ async function updateChartLockFiles({
         const newContent = await fs.readFile(lockFilePath);
         const newHash = crypto.createHash('sha256').update(newContent).digest('hex');
         if (originalLockHash !== newHash) {
-          chartLockFiles.push(lockFilePath);
+          lockFiles.push(lockFilePath);
           core.info(`Chart.lock updated for ${chartDir}`);
         }
       }
     }
-    if (chartLockFiles.length > 0) {
-      core.info(`Committing ${chartLockFiles.length} updated Chart.lock files`);
-      await _commitLockFiles({ exec, core, github, context, lockFiles: chartLockFiles });
+    if (lockFiles.length > 0) {
+      core.info(`Committing ${lockFiles.length} updated dependency lock files...`);
+      await _commitLockFiles({ exec, core, github, context, lockFiles });
     } else {
-      core.info('No Chart.lock files to update');
+      core.info('No dependency lock files to update');
     }
   } catch (error) {
-    const errorMsg = `Failed to update Chart.lock files: ${error.message}`;
+    const errorMsg = `Failed to update dependency lock files: ${error.message}`;
     core.setFailed(errorMsg);
     throw new Error(errorMsg);
   }
@@ -677,8 +665,8 @@ async function updateChartLockFiles({
 /**
  * Setup the build environment for generating the static site
  * 
- * @param {Object} options - Options for build environment setup
- * @param {Object} options.core - GitHub Actions Core API for logging and output
+ * @param {Object} params - Function parameters
+ * @param {Object} params.core - GitHub Actions Core API for logging and output
  * @returns {Promise<void>}
  */
 async function setupBuildEnvironment({ core }) {
@@ -742,8 +730,8 @@ async function setupBuildEnvironment({ core }) {
 /**
  * Updates issue templates with current chart options
  * 
- * @param {Object} options - Options for updating issue templates
- * @param {Object} options.core - GitHub Actions Core API for logging
+ * @param {Object} params - Function parameters
+ * @param {Object} params.core - GitHub Actions Core API for logging
  * @returns {Promise<void>}
  */
 async function updateIssueTemplates({
@@ -753,11 +741,16 @@ async function updateIssueTemplates({
     const bugReportPath = CONFIG.filesystem.bugReportPath;
     const featureRequestPath = CONFIG.filesystem.featureRequestPath;
     const templatePaths = [bugReportPath, featureRequestPath];
-    const allChartDirs = await _findAllCharts({ core });
-    const appCharts = allChartDirs.filter(dir => dir.startsWith(CONFIG.chart.type.application));
-    const libCharts = allChartDirs.filter(dir => dir.startsWith(CONFIG.chart.type.library));
-    const appChartOptions = appCharts.map(dir => `${path.basename(dir)} (${CONFIG.chart.type.application})`).sort();
-    const libChartOptions = libCharts.map(dir => `${path.basename(dir)} (${CONFIG.chart.type.library})`).sort();
+    const charts = await _findCharts({ core });
+    const allChartDirs = [...charts.application, ...charts.library];
+    if (allChartDirs.length === 0) {
+      core.info('No charts found, skipping issue template updates');
+      return;
+    }
+    const appCharts = charts.application;
+    const libCharts = charts.library;
+    const appChartOptions = appCharts.map(dir => `${path.basename(dir)} (application)`).sort();
+    const libChartOptions = libCharts.map(dir => `${path.basename(dir)} (library)`).sort();
     const chartOptions = [...appChartOptions, ...libChartOptions, 'None'];
     const optionsText = chartOptions.map(option => `        - ${option}`).join('\n');
     const optionsRegex = /(id:\s+chart[\s\S]+options:\n)[\s\S]*?(\s+default:\s+0)/;
@@ -787,8 +780,8 @@ async function updateIssueTemplates({
 module.exports = {
   CONFIG,
   generateChartIndex,
-  processChartRelease,
+  processChartReleases,
   setupBuildEnvironment,
-  updateChartLockFiles,
+  updateLockFiles,
   updateIssueTemplates
 };
