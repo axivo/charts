@@ -423,6 +423,8 @@ async function _packageCharts({
 }) {
   try {
     const charts = await _findCharts({ core });
+    charts.application.sort();
+    charts.library.sort();
     const chartDirs = [...charts.application, ...charts.library];
     if (!chartDirs.length) {
       core.info(`No charts found`);
