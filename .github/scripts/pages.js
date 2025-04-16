@@ -436,14 +436,14 @@ async function _packageCharts({
         const originalContent = await fs.readFile(lockFilePath);
         originalLockHash = crypto.createHash('sha256').update(originalContent).digest('hex');
       }
-      core.info(`Updating dependencies for ${chartDir} chart...`);
+      core.info(`Updating dependency lock file for ${chartDir} chart...`);
       await exec.exec('helm', ['dependency', 'update', chartDir]);
       if (await _fileExists(lockFilePath)) {
         const newContent = await fs.readFile(lockFilePath);
         const newHash = crypto.createHash('sha256').update(newContent).digest('hex');
         if (originalLockHash !== newHash) {
           lockFiles.push(lockFilePath);
-          core.info(`Chart.lock updated for ${chartDir}`);
+          core.info(`Dependecy lock file updated for ${chartDir}`);
         }
       }
       core.info(`Packaging ${chartDir} chart...`);
@@ -754,19 +754,19 @@ async function updateLockFiles({
         const originalContent = await fs.readFile(lockFilePath);
         originalLockHash = crypto.createHash('sha256').update(originalContent).digest('hex');
       }
-      core.info(`Updating dependencies for ${chartDir} chart...`);
+      core.info(`Updating dependency lock file for ${chartDir} chart...`);
       await exec.exec('helm', ['dependency', 'update', chartDir]);
       if (await _fileExists(lockFilePath)) {
         const newContent = await fs.readFile(lockFilePath);
         const newHash = crypto.createHash('sha256').update(newContent).digest('hex');
         if (originalLockHash !== newHash) {
           lockFiles.push(lockFilePath);
-          core.info(`Chart.lock updated for ${chartDir}`);
+          core.info(`Successfully updated dependency lock file for ${chartDir}`);
         }
       }
     }
     if (lockFiles.length > 0) {
-      core.info(`Committing ${lockFiles.length} updated dependency lock files...`);
+      core.info(`Committing ${lockFiles.length} dependency lock files...`);
       await _commitLockFiles({ exec, core, github, context, lockFiles });
     } else {
       core.info('No dependency lock files to update');
