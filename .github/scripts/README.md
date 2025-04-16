@@ -94,7 +94,7 @@ Provides centralized configuration and functions for Helm chart releases and Git
 - `_registerHandlebarsHelpers` - Registers common Handlebars helpers
 
 **Exported Functions:**
-- `generateChartIndex` - Generates the chart index page from the index.yaml file
+- `generateChartsIndex` - Generates the chart index page from the index.yaml file
 - `processChartReleases` - Handles the complete Helm chart release process
 - `setupBuildEnvironment` - Sets up the build environment for generating the static site
 - `updateLockFiles` - Updates Chart.lock files for charts in a pull request

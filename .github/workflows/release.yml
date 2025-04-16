@@ -47,12 +47,12 @@ jobs:
         with:
           version: v3.17.3
 
-      - name: Setup node.js
+      - name: Setup node
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: "22"
 
-      - name: Install node.js dependencies
+      - name: Install node dependencies
         run: npm install js-yaml handlebars
 
       - name: Process chart releases
@@ -62,12 +62,12 @@ jobs:
             const { processChartReleases } = require('./.github/scripts/pages.js');
             await processChartReleases({ github, context, core, exec });
 
-      - name: Generate chart index page
+      - name: Generate charts index
         uses: actions/github-script@v7
         with:
           script: |
-            const { generateChartIndex } = require('./.github/scripts/pages.js');
-            await generateChartIndex({ context, core });
+            const { generateChartsIndex } = require('./.github/scripts/pages.js');
+            await generateChartsIndex({ context, core });
 
       - name: Setup build environment
         id: setup
@@ -77,23 +77,23 @@ jobs:
             const { setupBuildEnvironment } = require('./.github/scripts/pages.js');
             await setupBuildEnvironment({ core });
 
-      - name: Build website
+      - name: Build pages
         uses: actions/jekyll-build-pages@v1
         with:
           source: ./
           destination: ./_site
 
-      - name: Setup pages
+      - name: Configure pages
         id: pages
         uses: actions/configure-pages@v5
 
-      - name: Upload artifact
+      - name: Upload pages artifact
         if: steps.setup.outputs.deployment == 'production'
         uses: actions/upload-pages-artifact@v3
         with:
           path: ./_site
 
-      - name: Deploy to GitHub Pages
+      - name: Deploy pages
         id: deployment
         if: steps.setup.outputs.deployment == 'production'
         uses: actions/deploy-pages@v4

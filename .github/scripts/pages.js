@@ -478,7 +478,7 @@ function _registerHandlebarsHelpers(repoUrl) {
 }
 
 /**
- * Generate the chart index page from the index.yaml file
+ * Generates the charts index page from index.yaml file
  * 
  * @param {Object} params - Function parameters
  * @param {Object} params.context - GitHub Actions context for repository info
@@ -488,7 +488,7 @@ function _registerHandlebarsHelpers(repoUrl) {
  * @param {string} [params.indexTemplate=CONFIG.chart.indexTemplate] - Path to the Handlebars template
  * @returns {Promise<boolean>} - True if successful, false if skipped
  */
-async function generateChartIndex({
+async function generateChartsIndex({
   context,
   core,
   indexPath = CONFIG.filesystem.indexPath,
@@ -779,7 +779,7 @@ async function updateIssueTemplates({
 
 module.exports = {
   CONFIG,
-  generateChartIndex,
+  generateChartsIndex,
   processChartReleases,
   setupBuildEnvironment,
   updateLockFiles,

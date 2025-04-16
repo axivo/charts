@@ -34,24 +34,25 @@ jobs:
             const { configureGit } = require('./.github/scripts/git-config.js');
             await configureGit({ github, context, core, exec });
 
+      - name: Setup go
+        uses: actions/setup-go@v5
+        with:
+          go-version: stable
+
       - name: Setup helm
         uses: azure/setup-helm@v4
         with:
           version: v3.17.3
 
-      - name: Setup helm-docs
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const { setupHelmDocs } = require('./.github/scripts/documentation.js');
-            await setupHelmDocs({ core, exec });
+      - name: Install helm-docs
+        run: go install github.com/norwoodj/helm-docs/cmd/helm-docs@v1.14.2
 
-      - name: Setup node.js
+      - name: Setup node
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: "22"
 
-      - name: Install node.js dependencies
+      - name: Install node dependencies
         run: npm install js-yaml handlebars
 
       - name: Update documentation
