@@ -533,7 +533,7 @@ async function generateChartsIndex({
     const defaultBranchName = context.payload.repository.default_branch;
     const Handlebars = _registerHandlebarsHelpers(repoUrl);
     const charts = Object.entries(index.entries)
-      .sort(([a], [b]) => a.localeCompare(b))
+      .sort(([source], [target]) => source.localeCompare(target))
       .map(([name, versions]) => {
         if (!versions || !versions.length) return null;
         const latest = versions[0];
@@ -557,6 +557,13 @@ async function generateChartsIndex({
     await fs.writeFile(CONFIG.filesystem.indexMdHome, newContent, 'utf8');
     await fs.writeFile(indexMdPath, newContent, 'utf8');
     core.info('Successfully generated index.md');
+    try {
+      core.info('Updating issue templates...');
+      await updateIssueTemplates({ core });
+      core.info('Successfully updated issue templates with chart options');
+    } catch (templateError) {
+      core.warning(`Failed to update issue templates: ${templateError.message}`);
+    }
     return true;
   } catch (error) {
     const errorMsg = `Failed to generate index.md: ${error.message}`;
