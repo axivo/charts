@@ -169,6 +169,7 @@ async function _commitLockFiles({
       return;
     }
     core.info(`Getting the latest changes for ${headRef} branch...`);
+    await runGit(['fetch', 'origin', headRef]);
     await runGit(['switch', headRef]);
     await runGit(['pull', 'origin', headRef]);
     if (lockFiles.length > 0) {
@@ -659,6 +660,7 @@ async function updateChartLockFiles({
       return;
     }
     core.info(`Getting the latest changes for ${headRef} branch...`);
+    await runGit(['fetch', 'origin', headRef]);
     await runGit(['switch', headRef]);
     await runGit(['pull', 'origin', headRef]);
     const chartLockFiles = [];

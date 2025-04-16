@@ -79,6 +79,7 @@ async function updateDocumentation({
       return;
     }
     core.info(`Getting the latest changes for ${headRef} branch...`);
+    await runGit(['fetch', 'origin', headRef]);
     await runGit(['switch', headRef]);
     await runGit(['pull', 'origin', headRef]);
     core.info('Generating documentation with helm-docs');
