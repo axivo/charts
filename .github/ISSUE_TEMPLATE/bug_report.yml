@@ -23,36 +23,13 @@ body:
       description: If the bug is related to a specific chart, please select it from dropdown menu.
       options:
         - sealed-secrets (application)
-        - ubuntu (application)
-        - common (library)
+      default: 0
   - type: textarea
     id: what-happened
     attributes:
       label: What Happened
       description: What did you expect to happen?
       value: "A bug happened!"
-    validations:
-      required: true
-  - type: textarea
-    id: kernel-version
-    attributes:
-      label: Kernel Version
-      description: |
-        Which kernel version is the cluster running on? (run `uname -a`)
-        > [!TIP]
-        > This will be automatically formatted into code, there is no need to insert backticks.
-      render: shell
-    validations:
-      required: true
-  - type: textarea
-    id: k8s-version
-    attributes:
-      label: Kubernetes Version
-      description: |
-        Which Kubernetes version is the cluster running on? (run `kubectl version`)
-        > [!TIP]
-        > This will be automatically formatted into code, there is no need to insert backticks.
-      render: shell
     validations:
       required: true
   - type: textarea

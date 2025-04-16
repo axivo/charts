@@ -14,6 +14,7 @@
 
 const crypto = require('crypto');
 const path = require('path');
+const Handlebars = require('handlebars');
 const yaml = require('js-yaml');
 const githubApi = require('./github-api');
 const gitSignedCommit = require('./git-signed-commit');
@@ -38,9 +39,11 @@ const CONFIG = {
   },
   deployment: 'production',
   filesystem: {
+    bugReportPath: '.github/ISSUE_TEMPLATE/bug_report.yml',
     configHome: './_config.yml',
     configPath: '.github/pages/config.yml',
     distPath: './_dist',
+    featureRequestPath: '.github/ISSUE_TEMPLATE/feature_request.yml',
     headCustomPath: './_includes/head-custom.html',
     indexMdHome: './index.md',
     indexMdPath: './_dist/index.md',
@@ -281,31 +284,42 @@ async function _fileExists(fs, filePath) {
 }
 
 /**
- * Recursively finds directories containing Chart.yaml files
- * @param {Object} fs - Node.js fs/promises module
- * @param {Object} core - GitHub Actions Core API for logging
- * @param {string} directory - Directory to search in
- * @returns {Promise<string[]>} - Array of directories containing Chart.yaml files
+ * Finds all charts in application and library paths
+ * 
+ * @param {Object} options - Options for finding charts
+ * @param {Object} options.fs - Node.js fs module for file operations
+ * @param {Object} options.core - GitHub Actions Core API for logging
+ * @returns {Promise<string[]>} - Array of chart directories
  */
-async function _findChartYamlFiles(fs, core, directory) {
-  const chartDirs = [];
-  async function searchDir(dir) {
+async function _findAllCharts({
+  fs,
+  core
+}) {
+  const charts = {
+    application: [],
+    library: []
+  };
+  const paths = [
+    { dir: CONFIG.chart.type.application, type: 'application' },
+    { dir: CONFIG.chart.type.library, type: 'library' }
+  ];
+  await Promise.all(paths.map(async ({ dir, type }) => {
     try {
       const entries = await fs.readdir(dir, { withFileTypes: true });
       for (const entry of entries) {
-        const fullPath = path.join(dir, entry.name);
-        switch (true) {
-          case entry.isDirectory(): await searchDir(fullPath); break;
-          case entry.name === 'Chart.yaml': chartDirs.push(dir); break;
-          default: break;
+        if (entry.isDirectory()) {
+          const chartDir = path.join(dir, entry.name);
+          const chartYamlPath = path.join(chartDir, 'Chart.yaml');
+          if (await _fileExists(fs, chartYamlPath)) {
+            charts[type].push(chartDir);
+          }
         }
       }
     } catch (error) {
       core.warning(`Error reading directory ${dir}: ${error.message}`);
     }
-  }
-  await searchDir(directory);
-  return chartDirs;
+  }));
+  return [...charts.application, ...charts.library];
 }
 
 /**
@@ -428,13 +442,13 @@ async function _packageCharts({
   fs,
   github,
   context,
-  dirPath,
-  outputDir
+  outputDir,
+  contextName = 'all' // Added for logging context
 }) {
   try {
-    const chartDirs = await _findChartYamlFiles(fs, core, dirPath);
+    const chartDirs = await _findAllCharts({ fs, core });
     if (!chartDirs.length) {
-      core.info(`No charts found in ${dirPath}`);
+      core.info(`No charts found`);
       return;
     }
     const chartLockFiles = [];
@@ -462,9 +476,9 @@ async function _packageCharts({
       core.info(`Committing ${chartLockFiles.length} updated Chart.lock files`);
       await _commitLockFiles({ exec, core, github, context, fs, lockFiles: chartLockFiles });
     }
-    core.info(`Successfully packaged ${chartDirs.length} charts from ${dirPath} directory`);
+    core.info(`Successfully packaged ${chartDirs.length} charts for context: ${contextName}`);
   } catch (error) {
-    const errorMsg = `Failed to package charts in ${dirPath} directory: ${error.message}`;
+    const errorMsg = `Failed to package charts: ${error.message}`;
     core.setFailed(errorMsg);
     throw new Error(errorMsg);
   }
@@ -476,7 +490,6 @@ async function _packageCharts({
  * @returns {Object} - Handlebars instance with registered helpers
  */
 function _registerHandlebarsHelpers(repoUrl) {
-  const Handlebars = require('handlebars');
   Handlebars.registerHelper('eq', function (a, b) {
     return a === b;
   });
@@ -602,10 +615,10 @@ async function processChartRelease({
     core.info(`Successfully created ${packagesPath} directory`);
     const appDirPath = CONFIG.chart.type.application;
     core.info(`Packaging ${appDirPath} charts...`);
-    await _packageCharts({ exec, core, fs, github, context, dirPath: appDirPath, outputDir: packagesPath });
+    await _packageCharts({ exec, core, fs, github, context, outputDir: packagesPath, contextName: appDirPath });
     const libDirPath = CONFIG.chart.type.library;
     core.info(`Packaging ${libDirPath} charts...`);
-    await _packageCharts({ exec, core, fs, github, context, dirPath: libDirPath, outputDir: packagesPath });
+    await _packageCharts({ exec, core, fs, github, context, outputDir: packagesPath, contextName: libDirPath });
     core.info('Creating GitHub releases for charts...');
     await _createChartReleases({ github, context, core, fs, packagesPath });
     core.info('Generating Helm repository index...');
@@ -650,15 +663,9 @@ async function updateChartLockFiles({
     core.info(`Switching to PR branch ${headRef}`);
     await runGit(['switch', headRef]);
     await runGit(['pull', 'origin', headRef]);
-    const appDirPath = CONFIG.chart.type.application;
-    const libDirPath = CONFIG.chart.type.library;
     const chartLockFiles = [];
     core.info('Finding charts with dependency changes...');
-    const [appChartDirs, libChartDirs] = await Promise.all([
-      _findChartYamlFiles(fs, core, appDirPath),
-      _findChartYamlFiles(fs, core, libDirPath)
-    ]);
-    const allChartDirs = [...appChartDirs, ...libChartDirs];
+    const allChartDirs = await _findAllCharts({ fs, core });
     core.info(`Found ${allChartDirs.length} charts to process`);
     for (const chartDir of allChartDirs) {
       const lockFilePath = path.join(chartDir, 'Chart.lock');
@@ -690,6 +697,7 @@ async function updateChartLockFiles({
     throw new Error(errorMsg);
   }
 }
+
 /**
  * Setup the build environment for generating the static site
  * 
@@ -700,7 +708,7 @@ async function updateChartLockFiles({
  */
 async function setupBuildEnvironment({ core, fs }) {
   try {
-    core.info(`Setting up build environment for ${CONFIG.deployment} deployment`)
+    core.info(`Setting up build environment for ${CONFIG.deployment} deployment`);
     core.info(`Copying ${CONFIG.filesystem.configPath} to ${CONFIG.filesystem.configHome}`);
     await fs.copyFile(CONFIG.filesystem.configPath, CONFIG.filesystem.configHome);
     try {
@@ -742,7 +750,7 @@ async function setupBuildEnvironment({ core, fs }) {
     throw new Error(errorMsg);
   }
   try {
-    const readmePath = CONFIG.filesystem.readmePath
+    const readmePath = CONFIG.filesystem.readmePath;
     if (await _fileExists(fs, readmePath)) {
       core.info(`Removing ${readmePath} from root to prevent conflicts with index.html`);
       await fs.unlink(readmePath);
@@ -752,8 +760,59 @@ async function setupBuildEnvironment({ core, fs }) {
     core.setFailed(errorMsg);
     throw new Error(errorMsg);
   }
-  core.setOutput('deployment', CONFIG.deployment)
+  core.setOutput('deployment', CONFIG.deployment);
   core.info(`Jekyll preparation complete for ${CONFIG.deployment} environment`);
+}
+
+/**
+ * Updates issue templates with current chart options
+ * 
+ * @param {Object} options - Options for updating issue templates
+ * @param {Object} options.github - GitHub API client
+ * @param {Object} options.context - GitHub Actions context
+ * @param {Object} options.core - GitHub Actions Core API for logging
+ * @param {Object} options.fs - Node.js fs module for file operations
+ * @returns {Promise<void>}
+ */
+async function updateIssueTemplates({
+  github,
+  context,
+  core,
+  fs
+}) {
+  try {
+    const bugReportPath = CONFIG.filesystem.bugReportPath;
+    const featureRequestPath = CONFIG.filesystem.featureRequestPath;
+    const templatePaths = [bugReportPath, featureRequestPath];
+    const allChartDirs = await _findAllCharts({ fs, core });
+    const appCharts = allChartDirs.filter(dir => dir.startsWith(CONFIG.chart.type.application));
+    const libCharts = allChartDirs.filter(dir => dir.startsWith(CONFIG.chart.type.library));
+    const appChartOptions = appCharts.map(dir => `${path.basename(dir)} (${CONFIG.chart.type.application})`).sort();
+    const libChartOptions = libCharts.map(dir => `${path.basename(dir)} (${CONFIG.chart.type.library})`).sort();
+    const chartOptions = [...appChartOptions, ...libChartOptions, 'None'];
+    const optionsText = chartOptions.map(option => `        - ${option}`).join('\n');
+    const optionsRegex = /(id:\s+chart[\s\S]+options:\n)[\s\S]*?(\s+default:\s+0)/;
+    const replacementText = `$1${optionsText}\n$2`;
+    for (const templatePath of templatePaths) {
+      try {
+        let content = await fs.readFile(templatePath, 'utf8');
+        if (content.includes('id: chart')) {
+          content = content.replace(optionsRegex, replacementText);
+          await fs.writeFile(templatePath, content, 'utf8');
+          core.info(`Updated chart options in ${templatePath}`);
+        } else {
+          core.warning(`Could not find chart dropdown in ${templatePath}`);
+        }
+      } catch (error) {
+        core.warning(`Failed to update ${templatePath}: ${error.message}`);
+      }
+    }
+    core.info(`Successfully updated templates with ${chartOptions.length - 1} chart options`);
+  } catch (error) {
+    const errorMsg = `Failed to update issue templates: ${error.message}`;
+    core.setFailed(errorMsg);
+    throw new Error(errorMsg);
+  }
 }
 
 module.exports = {
@@ -761,5 +820,6 @@ module.exports = {
   generateChartIndex,
   processChartRelease,
   setupBuildEnvironment,
-  updateChartLockFiles
+  updateChartLockFiles,
+  updateIssueTemplates
 };

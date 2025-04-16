@@ -43,7 +43,6 @@ Provides utilities for automating chart documentation updates.
 
 **Configuration:**
 - `CONFIG.helmDocs` - Configuration for helm-docs installation
-- `CONFIG.git` - Configuration for Git operations during documentation updates
 
 ### git-config.js
 
@@ -85,9 +84,10 @@ Provides centralized configuration and functions for Helm chart releases and Git
 
 **Internal Functions:**
 - `_buildChartRelease` - Builds a GitHub release for a single chart and uploads the chart package as an asset
+- `_commitLockFiles` - Helper function to commit updated lock files to PRs
 - `_createChartReleases` - Creates GitHub releases for packaged charts and uploads the chart packages as release assets
 - `_fileExists` - Helper function to check if a file exists
-- `_findChartYamlFiles` - Recursively finds directories containing Chart.yaml files
+- `_findAllCharts` - Recursively finds chart directories in application and library paths
 - `_generateChartRelease` - Generates release content using the template file
 - `_generateHelmIndex` - Generates the Helm repository index file
 - `_packageCharts` - Packages all charts in a specified directory
@@ -97,6 +97,8 @@ Provides centralized configuration and functions for Helm chart releases and Git
 - `generateChartIndex` - Generates the chart index page from the index.yaml file
 - `processChartRelease` - Handles the complete Helm chart release process
 - `setupBuildEnvironment` - Sets up the build environment for generating the static site
+- `updateChartLockFiles` - Updates Chart.lock files for charts in a pull request
+- `updateIssueTemplates` - Updates issue templates with current chart options
 
 ## Function Parameters
 
