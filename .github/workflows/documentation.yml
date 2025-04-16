@@ -10,11 +10,6 @@ on:
       - library/*/README.md.gotmpl
       - library/*/values.yaml
   workflow_dispatch:
-  workflow_run:
-    workflows:
-      - Chart
-    types:
-      - completed
 
 concurrency:
   cancel-in-progress: true
@@ -39,7 +34,6 @@ jobs:
       - name: Configure repository
         uses: actions/github-script@v7
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const { configureGit } = require('./.github/scripts/git-config.js');
             await configureGit({ github, context, core, exec });
@@ -54,8 +48,6 @@ jobs:
       - name: Update documentation
         uses: actions/github-script@v7
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const fs = require('fs/promises');
             const { updateDocumentation } = require('./.github/scripts/documentation.js');
             await updateDocumentation({ github, context, core, exec, fs });

@@ -9,6 +9,8 @@
  * @module git-signed-commit
  */
 
+const fs = require('fs/promises');
+
 /**
  * Create a signed commit using GitHub's GraphQL API
  * 
@@ -83,10 +85,9 @@ async function createSignedCommit({
  * Helper function to prepare file additions and deletions from git staged changes
  * 
  * @param {Function} runGit - Function to run git commands
- * @param {Object} fs - Node.js fs/promises module
  * @returns {Object} - Object containing additions and deletions arrays
  */
-async function getGitStagedChanges(runGit, fs) {
+async function getGitStagedChanges(runGit) {
   const additions = await Promise.all(
     (await runGit(['diff', '--name-only', '--staged', '--diff-filter=ACMR']))
       .split('\n')

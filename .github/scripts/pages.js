@@ -14,6 +14,7 @@
 
 const crypto = require('crypto');
 const path = require('path');
+const fs = require('fs/promises');
 const Handlebars = require('handlebars');
 const yaml = require('js-yaml');
 const githubApi = require('./github-api');
@@ -61,7 +62,6 @@ const CONFIG = {
  * @param {Object} options.github - GitHub API client
  * @param {Object} options.context - GitHub Actions context for repository info
  * @param {Object} options.core - GitHub Actions Core API for logging and output
- * @param {Object} options.fs - Node.js fs module for file operations
  * @param {string} options.chartName - Name of the chart
  * @param {string} options.chartVersion - Version of the chart
  * @param {string} options.chartType - Type of chart (application/library)
@@ -75,7 +75,6 @@ async function _buildChartRelease({
   github,
   context,
   core,
-  fs,
   chartName,
   chartVersion,
   chartType,
@@ -102,7 +101,6 @@ async function _buildChartRelease({
       return;
     }
     const releaseBody = await _generateChartRelease({
-      fs,
       github,
       core,
       context,
@@ -149,7 +147,6 @@ async function _buildChartRelease({
  * @param {Object} options.core - GitHub Actions Core API for logging
  * @param {Object} options.github - GitHub API client
  * @param {Object} options.context - GitHub Actions context
- * @param {Object} options.fs - Node.js fs module for file operations
  * @param {string[]} options.lockFiles - List of lock files to commit
  * @returns {Promise<void>}
  */
@@ -158,7 +155,6 @@ async function _commitLockFiles({
   core,
   github,
   context,
-  fs,
   lockFiles
 }) {
   try {
@@ -174,7 +170,7 @@ async function _commitLockFiles({
     if (lockFiles.length > 0) {
       await runGit(['add', ...lockFiles]);
     }
-    const { additions, deletions } = await gitSignedCommit.getGitStagedChanges(runGit, fs);
+    const { additions, deletions } = await gitSignedCommit.getGitStagedChanges(runGit);
     if (additions.length > 0 || deletions.length > 0) {
       const currentHead = await runGit(['rev-parse', 'HEAD']);
       await gitSignedCommit.createSignedCommit({
@@ -204,7 +200,6 @@ async function _commitLockFiles({
  * @param {Object} options.github - GitHub API client
  * @param {Object} options.context - GitHub Actions context for repository info
  * @param {Object} options.core - GitHub Actions Core API for logging and output
- * @param {Object} options.fs - Node.js fs module for file operations
  * @param {string} [options.packagesPath=CONFIG.filesystem.packagesPath] - Directory with chart packages
  * @returns {Promise<void>}
  */
@@ -212,7 +207,6 @@ async function _createChartReleases({
   github,
   context,
   core,
-  fs,
   packagesPath = CONFIG.filesystem.packagesPath
 }) {
   try {
@@ -229,7 +223,7 @@ async function _createChartReleases({
         let chartType = 'application';
         const appChartDir = path.join(CONFIG.chart.type.application, chartName);
         const libraryChartDir = path.join(CONFIG.chart.type.library, chartName);
-        if (await _fileExists(fs, libraryChartDir)) {
+        if (await _fileExists(libraryChartDir)) {
           chartType = 'library';
         }
         let chartMetadata = {};
@@ -242,12 +236,11 @@ async function _createChartReleases({
           core.warning(`Failed to load chart metadata: ${error.message}`);
         }
         const iconPath = path.join(chartType === 'library' ? libraryChartDir : appChartDir, CONFIG.chart.icon);
-        const iconExists = await _fileExists(fs, iconPath);
+        const iconExists = await _fileExists(iconPath);
         await _buildChartRelease({
           github,
           context,
           core,
-          fs,
           chartName,
           chartVersion,
           chartType,
@@ -275,11 +268,10 @@ async function _createChartReleases({
 
 /**
  * Helper function to check if a file exists
- * @param {Object} fs - Node.js fs/promises module
  * @param {string} filePath - Path to check
  * @returns {Promise<boolean>} - True if file exists, false otherwise
  */
-async function _fileExists(fs, filePath) {
+async function _fileExists(filePath) {
   return fs.access(filePath).then(() => true).catch(() => false);
 }
 
@@ -287,12 +279,10 @@ async function _fileExists(fs, filePath) {
  * Finds all charts in application and library paths
  * 
  * @param {Object} options - Options for finding charts
- * @param {Object} options.fs - Node.js fs module for file operations
  * @param {Object} options.core - GitHub Actions Core API for logging
  * @returns {Promise<string[]>} - Array of chart directories
  */
 async function _findAllCharts({
-  fs,
   core
 }) {
   const charts = {
@@ -310,7 +300,7 @@ async function _findAllCharts({
         if (entry.isDirectory()) {
           const chartDir = path.join(dir, entry.name);
           const chartYamlPath = path.join(chartDir, 'Chart.yaml');
-          if (await _fileExists(fs, chartYamlPath)) {
+          if (await _fileExists(chartYamlPath)) {
             charts[type].push(chartDir);
           }
         }
@@ -326,7 +316,6 @@ async function _findAllCharts({
  * Generates release content using the template file
  * 
  * @param {Object} options - Options for generating the release content
- * @param {Object} options.fs - Node.js fs module for file operations
  * @param {Object} options.core - GitHub Actions Core API for logging
  * @param {Object} options.context - GitHub Actions context
  * @param {string} options.chartName - Name of the chart
@@ -338,7 +327,6 @@ async function _findAllCharts({
  * @returns {Promise<string>} - Generated release content
  */
 async function _generateChartRelease({
-  fs,
   github,
   core,
   context,
@@ -396,7 +384,6 @@ async function _generateChartRelease({
  * @param {Object} options - Options for generating the index
  * @param {Object} options.exec - GitHub Actions exec helpers
  * @param {Object} options.core - GitHub Actions Core API for logging
- * @param {Object} options.fs - Node.js fs module for file operations
  * @param {string} options.packagesPath - Directory with packaged charts
  * @param {string} options.indexPath - Output path for the index file
  * @param {string} options.repoUrl - URL of the Helm repository
@@ -405,7 +392,6 @@ async function _generateChartRelease({
 async function _generateHelmIndex({
   exec,
   core,
-  fs,
   packagesPath,
   indexPath,
   repoUrl
@@ -429,7 +415,6 @@ async function _generateHelmIndex({
  * @param {Object} options - Options for packaging charts
  * @param {Object} options.exec - GitHub Actions exec helpers
  * @param {Object} options.core - GitHub Actions Core API for logging
- * @param {Object} options.fs - Node.js fs module for file operations
  * @param {Object} options.github - GitHub API client
  * @param {Object} options.context - GitHub Actions context
  * @param {string} options.dirPath - Directory containing charts
@@ -439,14 +424,13 @@ async function _generateHelmIndex({
 async function _packageCharts({
   exec,
   core,
-  fs,
   github,
   context,
   outputDir,
   contextName = 'all' // Added for logging context
 }) {
   try {
-    const chartDirs = await _findAllCharts({ fs, core });
+    const chartDirs = await _findAllCharts({ core });
     if (!chartDirs.length) {
       core.info(`No charts found`);
       return;
@@ -455,13 +439,13 @@ async function _packageCharts({
     for (const chartDir of chartDirs) {
       const lockFilePath = path.join(chartDir, 'Chart.lock');
       let originalLockHash = null;
-      if (await _fileExists(fs, lockFilePath)) {
+      if (await _fileExists(lockFilePath)) {
         const originalContent = await fs.readFile(lockFilePath);
         originalLockHash = crypto.createHash('sha256').update(originalContent).digest('hex');
       }
       core.info(`Updating dependencies for ${chartDir} chart...`);
       await exec.exec('helm', ['dependency', 'update', chartDir]);
-      if (await _fileExists(fs, lockFilePath)) {
+      if (await _fileExists(lockFilePath)) {
         const newContent = await fs.readFile(lockFilePath);
         const newHash = crypto.createHash('sha256').update(newContent).digest('hex');
         if (originalLockHash !== newHash) {
@@ -474,7 +458,7 @@ async function _packageCharts({
     }
     if (chartLockFiles.length > 0) {
       core.info(`Committing ${chartLockFiles.length} updated Chart.lock files`);
-      await _commitLockFiles({ exec, core, github, context, fs, lockFiles: chartLockFiles });
+      await _commitLockFiles({ exec, core, github, context, lockFiles: chartLockFiles });
     }
     core.info(`Successfully packaged ${chartDirs.length} charts for context: ${contextName}`);
   } catch (error) {
@@ -505,7 +489,6 @@ function _registerHandlebarsHelpers(repoUrl) {
  * @param {Object} options - Options for chart index generation
  * @param {Object} options.context - GitHub Actions context for repository info
  * @param {Object} options.core - GitHub Actions Core API for logging and output
- * @param {Object} options.fs - Node.js fs/promises module for file operations
  * @param {string} [options.indexPath=CONFIG.filesystem.indexPath] - Path to the index.yaml file
  * @param {string} [options.indexMdPath=CONFIG.filesystem.indexMdPath] - Path where to write the generated index.md
  * @param {string} [options.indexTemplate=CONFIG.chart.indexTemplate] - Path to the Handlebars template
@@ -514,7 +497,6 @@ function _registerHandlebarsHelpers(repoUrl) {
 async function generateChartIndex({
   context,
   core,
-  fs,
   indexPath = CONFIG.filesystem.indexPath,
   indexMdPath = CONFIG.filesystem.indexMdPath,
   indexTemplate = CONFIG.chart.indexTemplate
@@ -597,7 +579,6 @@ async function generateChartIndex({
  * @param {Object} options.github - GitHub API client
  * @param {Object} options.context - GitHub Actions context for repository info
  * @param {Object} options.core - GitHub Actions Core API for logging and output
- * @param {Object} options.fs - Node.js fs module for file operations
  * @param {Object} options.exec - GitHub Actions exec helpers for running commands
  * @returns {Promise<void>}
  */
@@ -605,7 +586,6 @@ async function processChartRelease({
   github,
   context,
   core,
-  fs,
   exec
 }) {
   try {
@@ -615,15 +595,15 @@ async function processChartRelease({
     core.info(`Successfully created ${packagesPath} directory`);
     const appDirPath = CONFIG.chart.type.application;
     core.info(`Packaging ${appDirPath} charts...`);
-    await _packageCharts({ exec, core, fs, github, context, outputDir: packagesPath, contextName: appDirPath });
+    await _packageCharts({ exec, core, github, context, outputDir: packagesPath, contextName: appDirPath });
     const libDirPath = CONFIG.chart.type.library;
     core.info(`Packaging ${libDirPath} charts...`);
-    await _packageCharts({ exec, core, fs, github, context, outputDir: packagesPath, contextName: libDirPath });
+    await _packageCharts({ exec, core, github, context, outputDir: packagesPath, contextName: libDirPath });
     core.info('Creating GitHub releases for charts...');
-    await _createChartReleases({ github, context, core, fs, packagesPath });
+    await _createChartReleases({ github, context, core, packagesPath });
     core.info('Generating Helm repository index...');
     const repoUrl = CONFIG.chart.repoUrl;
-    await _generateHelmIndex({ exec, core, fs, packagesPath, indexPath, repoUrl });
+    await _generateHelmIndex({ exec, core, packagesPath, indexPath, repoUrl });
     core.info('Chart release process completed successfully');
   } catch (error) {
     const errorMsg = `Chart release process failed: ${error.message}`;
@@ -641,15 +621,13 @@ async function processChartRelease({
  * @param {Object} options.context - GitHub Actions context for repository info
  * @param {Object} options.core - GitHub Actions Core API for logging and output
  * @param {Object} options.exec - GitHub Actions exec helpers for running commands
- * @param {Object} options.fs - Node.js fs module for file operations
  * @returns {Promise<void>}
  */
 async function updateChartLockFiles({
   github,
   context,
   core,
-  exec,
-  fs
+  exec
 }) {
   try {
     const runGit = async (args) => (await exec.getExecOutput('git', args)).stdout.trim();
@@ -663,18 +641,18 @@ async function updateChartLockFiles({
     await runGit(['switch', headRef]);
     const chartLockFiles = [];
     core.info('Finding charts with dependency changes...');
-    const allChartDirs = await _findAllCharts({ fs, core });
+    const allChartDirs = await _findAllCharts({ core });
     core.info(`Found ${allChartDirs.length} charts to process`);
     for (const chartDir of allChartDirs) {
       const lockFilePath = path.join(chartDir, 'Chart.lock');
       let originalLockHash = null;
-      if (await _fileExists(fs, lockFilePath)) {
+      if (await _fileExists(lockFilePath)) {
         const originalContent = await fs.readFile(lockFilePath);
         originalLockHash = crypto.createHash('sha256').update(originalContent).digest('hex');
       }
       core.info(`Updating dependencies for ${chartDir} chart...`);
       await exec.exec('helm', ['dependency', 'update', chartDir]);
-      if (await _fileExists(fs, lockFilePath)) {
+      if (await _fileExists(lockFilePath)) {
         const newContent = await fs.readFile(lockFilePath);
         const newHash = crypto.createHash('sha256').update(newContent).digest('hex');
         if (originalLockHash !== newHash) {
@@ -685,7 +663,7 @@ async function updateChartLockFiles({
     }
     if (chartLockFiles.length > 0) {
       core.info(`Committing ${chartLockFiles.length} updated Chart.lock files`);
-      await _commitLockFiles({ exec, core, github, context, fs, lockFiles: chartLockFiles });
+      await _commitLockFiles({ exec, core, github, context, lockFiles: chartLockFiles });
     } else {
       core.info('No Chart.lock files to update');
     }
@@ -701,10 +679,9 @@ async function updateChartLockFiles({
  * 
  * @param {Object} options - Options for build environment setup
  * @param {Object} options.core - GitHub Actions Core API for logging and output
- * @param {Object} options.fs - Node.js fs/promises module for file operations
  * @returns {Promise<void>}
  */
-async function setupBuildEnvironment({ core, fs }) {
+async function setupBuildEnvironment({ core }) {
   try {
     core.info(`Setting up build environment for ${CONFIG.deployment} deployment`);
     core.info(`Copying ${CONFIG.filesystem.configPath} to ${CONFIG.filesystem.configHome}`);
@@ -730,8 +707,8 @@ async function setupBuildEnvironment({ core, fs }) {
     const indexMdHome = CONFIG.filesystem.indexMdHome;
     const indexMdPath = CONFIG.filesystem.indexMdPath;
     const [indexMdHomeExists, indexMdPathExists] = await Promise.all([
-      _fileExists(fs, indexMdHome),
-      _fileExists(fs, indexMdPath)
+      _fileExists(indexMdHome),
+      _fileExists(indexMdPath)
     ]);
     if (indexMdHomeExists) {
       core.info(`Using existing index.md at ${indexMdHome}`);
@@ -749,7 +726,7 @@ async function setupBuildEnvironment({ core, fs }) {
   }
   try {
     const readmePath = CONFIG.filesystem.readmePath;
-    if (await _fileExists(fs, readmePath)) {
+    if (await _fileExists(readmePath)) {
       core.info(`Removing ${readmePath} from root to prevent conflicts with index.html`);
       await fs.unlink(readmePath);
     }
@@ -766,23 +743,17 @@ async function setupBuildEnvironment({ core, fs }) {
  * Updates issue templates with current chart options
  * 
  * @param {Object} options - Options for updating issue templates
- * @param {Object} options.github - GitHub API client
- * @param {Object} options.context - GitHub Actions context
  * @param {Object} options.core - GitHub Actions Core API for logging
- * @param {Object} options.fs - Node.js fs module for file operations
  * @returns {Promise<void>}
  */
 async function updateIssueTemplates({
-  github,
-  context,
-  core,
-  fs
+  core
 }) {
   try {
     const bugReportPath = CONFIG.filesystem.bugReportPath;
     const featureRequestPath = CONFIG.filesystem.featureRequestPath;
     const templatePaths = [bugReportPath, featureRequestPath];
-    const allChartDirs = await _findAllCharts({ fs, core });
+    const allChartDirs = await _findAllCharts({ core });
     const appCharts = allChartDirs.filter(dir => dir.startsWith(CONFIG.chart.type.application));
     const libCharts = allChartDirs.filter(dir => dir.startsWith(CONFIG.chart.type.library));
     const appChartOptions = appCharts.map(dir => `${path.basename(dir)} (${CONFIG.chart.type.application})`).sort();

@@ -15,7 +15,7 @@
  * in workflows. Returns the runGit function that can be used for additional Git operations.
  * 
  * @param {Object} options - Destructured GitHub Actions context and utilities
- * @param {Object} options.github - GitHub API client
+ * @param {Object} options.github - GitHub API client (unused but kept for workflow compatibility)
  * @param {Object} options.context - Workflow context
  * @param {Object} options.core - GitHub Actions Core
  * @param {Object} options.exec - GitHub Actions Exec

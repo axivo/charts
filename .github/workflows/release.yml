@@ -59,26 +59,23 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            const fs = require('fs/promises');
             const { processChartRelease } = require('./.github/scripts/pages.js');
-            await processChartRelease({ github, context, core, fs, exec });
+            await processChartRelease({ github, context, core, exec });
 
       - name: Generate chart index page
         uses: actions/github-script@v7
         with:
           script: |
-            const fs = require('fs/promises');
             const { generateChartIndex } = require('./.github/scripts/pages.js');
-            await generateChartIndex({ context, core, fs });
+            await generateChartIndex({ context, core });
 
       - name: Setup build environment
         id: setup
         uses: actions/github-script@v7
         with:
           script: |
-            const fs = require('fs/promises');
             const { setupBuildEnvironment } = require('./.github/scripts/pages.js');
-            await setupBuildEnvironment({ core, fs });
+            await setupBuildEnvironment({ core });
 
       - name: Build website
         uses: actions/jekyll-build-pages@v1

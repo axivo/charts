@@ -61,15 +61,13 @@ async function installHelmDocs({
  * @param {Object} options.context - GitHub Actions context for repository info
  * @param {Object} options.core - GitHub Actions Core API for logging and output
  * @param {Object} options.exec - GitHub Actions exec helpers for running commands
- * @param {Object} options.fs - Node.js fs/promises module for file operations
  * @returns {Promise<void>}
  */
 async function updateDocumentation({
   github,
   context,
   core,
-  exec,
-  fs
+  exec
 }) {
   try {
     const runGit = async (args) => (await exec.getExecOutput('git', args)).stdout.trim();
@@ -92,7 +90,7 @@ async function updateDocumentation({
       return;
     }
     core.info(`Successfully updated ${files.length} documentation files`);
-    const { additions, deletions } = await gitSignedCommit.getGitStagedChanges(runGit, fs);
+    const { additions, deletions } = await gitSignedCommit.getGitStagedChanges(runGit);
     if (additions.length > 0 || deletions.length > 0) {
       const currentHead = await runGit(['rev-parse', 'HEAD']);
       await gitSignedCommit.createSignedCommit({
