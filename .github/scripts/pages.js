@@ -604,66 +604,6 @@ async function processChartReleases({
 }
 
 /**
- * Updates dependency lock files for charts in a pull request
- * This should run after documentation updates are complete
- * 
- * @param {Object} params - Function parameters
- * @param {Object} params.github - GitHub API client
- * @param {Object} params.context - GitHub Actions context for repository info
- * @param {Object} params.core - GitHub Actions Core API for logging and output
- * @param {Object} params.exec - GitHub Actions exec helpers for running commands
- * @returns {Promise<void>}
- */
-async function updateLockFiles({
-  github,
-  context,
-  core,
-  exec
-}) {
-  try {
-    const runGit = async (args) => (await exec.getExecOutput('git', args)).stdout.trim();
-    const headRef = process.env.GITHUB_HEAD_REF;
-    core.info(`Getting the latest changes for ${headRef} branch...`);
-    await runGit(['fetch', 'origin', headRef]);
-    await runGit(['switch', headRef]);
-    await runGit(['pull', 'origin', headRef]);
-    const lockFiles = [];
-    core.info('Finding charts with dependency changes...');
-    const charts = await _findCharts({ core });
-    const allChartDirs = [...charts.application, ...charts.library];
-    core.info(`Found ${allChartDirs.length} charts to process`);
-    for (const chartDir of allChartDirs) {
-      const lockFilePath = path.join(chartDir, 'Chart.lock');
-      let originalLockHash = null;
-      if (await _fileExists(lockFilePath)) {
-        const originalContent = await fs.readFile(lockFilePath);
-        originalLockHash = crypto.createHash('sha256').update(originalContent).digest('hex');
-      }
-      core.info(`Updating dependencies for ${chartDir} chart...`);
-      await exec.exec('helm', ['dependency', 'update', chartDir]);
-      if (await _fileExists(lockFilePath)) {
-        const newContent = await fs.readFile(lockFilePath);
-        const newHash = crypto.createHash('sha256').update(newContent).digest('hex');
-        if (originalLockHash !== newHash) {
-          lockFiles.push(lockFilePath);
-          core.info(`Chart.lock updated for ${chartDir}`);
-        }
-      }
-    }
-    if (lockFiles.length > 0) {
-      core.info(`Committing ${lockFiles.length} updated dependency lock files...`);
-      await _commitLockFiles({ exec, core, github, context, lockFiles });
-    } else {
-      core.info('No dependency lock files to update');
-    }
-  } catch (error) {
-    const errorMsg = `Failed to update dependency lock files: ${error.message}`;
-    core.setFailed(errorMsg);
-    throw new Error(errorMsg);
-  }
-}
-
-/**
  * Setup the build environment for generating the static site
  * 
  * @param {Object} params - Function parameters
@@ -778,11 +718,71 @@ async function updateIssueTemplates({
   }
 }
 
+/**
+ * Updates dependency lock files for charts in a pull request
+ * This should run after documentation updates are complete
+ * 
+ * @param {Object} params - Function parameters
+ * @param {Object} params.github - GitHub API client
+ * @param {Object} params.context - GitHub Actions context for repository info
+ * @param {Object} params.core - GitHub Actions Core API for logging and output
+ * @param {Object} params.exec - GitHub Actions exec helpers for running commands
+ * @returns {Promise<void>}
+ */
+async function updateLockFiles({
+  github,
+  context,
+  core,
+  exec
+}) {
+  try {
+    const runGit = async (args) => (await exec.getExecOutput('git', args)).stdout.trim();
+    const headRef = process.env.GITHUB_HEAD_REF;
+    core.info(`Getting the latest changes for ${headRef} branch...`);
+    await runGit(['fetch', 'origin', headRef]);
+    await runGit(['switch', headRef]);
+    await runGit(['pull', 'origin', headRef]);
+    const lockFiles = [];
+    core.info('Finding charts with dependency changes...');
+    const charts = await _findCharts({ core });
+    const allChartDirs = [...charts.application, ...charts.library];
+    core.info(`Found ${allChartDirs.length} charts to process`);
+    for (const chartDir of allChartDirs) {
+      const lockFilePath = path.join(chartDir, 'Chart.lock');
+      let originalLockHash = null;
+      if (await _fileExists(lockFilePath)) {
+        const originalContent = await fs.readFile(lockFilePath);
+        originalLockHash = crypto.createHash('sha256').update(originalContent).digest('hex');
+      }
+      core.info(`Updating dependencies for ${chartDir} chart...`);
+      await exec.exec('helm', ['dependency', 'update', chartDir]);
+      if (await _fileExists(lockFilePath)) {
+        const newContent = await fs.readFile(lockFilePath);
+        const newHash = crypto.createHash('sha256').update(newContent).digest('hex');
+        if (originalLockHash !== newHash) {
+          lockFiles.push(lockFilePath);
+          core.info(`Chart.lock updated for ${chartDir}`);
+        }
+      }
+    }
+    if (lockFiles.length > 0) {
+      core.info(`Committing ${lockFiles.length} updated dependency lock files...`);
+      await _commitLockFiles({ exec, core, github, context, lockFiles });
+    } else {
+      core.info('No dependency lock files to update');
+    }
+  } catch (error) {
+    const errorMsg = `Failed to update dependency lock files: ${error.message}`;
+    core.setFailed(errorMsg);
+    throw new Error(errorMsg);
+  }
+}
+
 module.exports = {
   CONFIG,
   generateChartsIndex,
   processChartReleases,
   setupBuildEnvironment,
-  updateLockFiles,
-  updateIssueTemplates
+  updateIssueTemplates,
+  updateLockFiles
 };
