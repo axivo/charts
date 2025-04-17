@@ -719,10 +719,10 @@ async function updateIssueTemplates({
     const libCharts = charts.library;
     const appChartOptions = appCharts.map(dir => `${path.basename(dir)} (application)`).sort();
     const libChartOptions = libCharts.map(dir => `${path.basename(dir)} (library)`).sort();
-    const chartOptions = [...appChartOptions, ...libChartOptions, 'None'];
+    const chartOptions = [...appChartOptions, ...libChartOptions];
     const optionsText = chartOptions.map(option => `        - ${option}`).join('\n');
     const optionsRegex = /(id:\s+chart[\s\S]+options:[\s+\n])[\s\S]+?(\s+default:\s+0)/;
-    const replacementText = `$1${optionsText}\n$2`;
+    const replacementText = `$1${optionsText}$2`;
     const updatedTemplates = [];
     for (const templatePath of templatePaths) {
       try {
@@ -739,7 +739,7 @@ async function updateIssueTemplates({
         utils.handleError(error, core, `update template ${templatePath}`, false);
       }
     }
-    core.info(`Successfully updated templates with ${chartOptions.length - 1} chart options`);
+    core.info(`Successfully updated templates with ${chartOptions.length} chart options`);
     return updatedTemplates;
   } catch (error) {
     utils.handleError(error, core, 'update issue templates');
