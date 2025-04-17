@@ -133,7 +133,7 @@ Most functions in these modules accept a destructured object with the following 
 
 ## Deployment Types
 
-The scripts support two deployment types controlled by the `CONFIG.deployment` setting in `charts.js`:
+The scripts support two deployment types controlled by the `CONFIG.deployment` setting in `chart.js`:
 
 - `production`: Builds charts and deploys to GitHub Pages. This is the default mode used when running on the main repository.
 - `staging`: Builds charts locally on the current branch without deploying to GitHub Pages. This mode is useful for testing changes before applying them to production.
@@ -142,7 +142,7 @@ The deployment type is made available as an output from the `setupBuildEnvironme
 
 ## Script Overview
 
-### `charts.js`
+### `chart.js`
 
 Provides centralized configuration and functions for Helm chart releases and GitHub Pages.
 
@@ -158,8 +158,8 @@ Provides centralized configuration and functions for Helm chart releases and Git
 
 #### Exported Functions
 
-- `generateChartsIndex` - Generates the chart index page from the index.yaml file
-- `processChartReleases` - Handles the complete Helm chart release process
+- `generateIndex` - Generates the chart index page from the index.yaml file
+- `processReleases` - Handles the complete Helm chart release process
 - `setupBuildEnvironment` - Sets up the build environment for generating the static site
 - `updateLockFiles` - Updates Chart.lock files for charts in a pull request
 - `updateIssueTemplates` - Updates issue templates with current chart options
