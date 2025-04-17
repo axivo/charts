@@ -228,7 +228,7 @@ async function _createChartReleases({
           core.warning(`Failed to load chart metadata: ${error.message}`);
         }
         const iconPath = path.join(chartDir, CONFIG.chart.icon);
-        const iconExists = await _fileExists(iconPath);
+        const iconExists = await utils.fileExists(iconPath);
         await _buildChartRelease({
           github,
           context,

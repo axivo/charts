@@ -52,7 +52,7 @@ jobs:
         with:
           script: |
             const { installHelmDocs } = require('./.github/scripts/documentation.js');
-            await installHelmDocs({ core, exec });
+            await installHelmDocs({ core, exec, version: '1.14.1' });
 
       - name: Update documentation
         uses: actions/github-script@v7
@@ -69,9 +69,9 @@ jobs:
             const { updateLockFiles } = require('./.github/scripts/pages.js');
             await updateLockFiles({ github, context, core, exec });
 
-      - name: Report workflow warnings
+      - name: Report workflow issues
         uses: actions/github-script@v7
         with:
           script: |
-            const { reportWorkflowWarnings } = require('./.github/scripts/utils.js');
-            await reportWorkflowWarnings({ github, context, core });
+            const { reportWorkflowIssue } = require('./.github/scripts/utils.js');
+            await reportWorkflowIssue({ github, context, core });

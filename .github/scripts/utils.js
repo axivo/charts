@@ -17,9 +17,69 @@ const Handlebars = require('handlebars');
  */
 const CONFIG = {
   issue: {
-    labels: ['bug', 'workflow'],
+    labels: {
+      bug: {
+        color: 'd73a4a',
+        description: "Something isn't working"
+      },
+      workflow: {
+        color: 'b60205',
+        description: 'Workflow execution related issue'
+      }
+    },
     template: '.github/pages/issue.md.hbs',
-    title: 'workflow: Warnings Detected'
+    title: 'workflow: Issues Detected'
+  }
+}
+
+/**
+ * Adds a label to a repository if it doesn't exist
+ * 
+ * @param {Object} params - Function parameters
+ * @param {Object} params.github - GitHub API client
+ * @param {Object} params.context - GitHub Actions context for repository info
+ * @param {Object} params.core - GitHub Actions Core API for logging
+ * @param {string} params.labelName - Name of the label to add
+ * @param {string} [params.color] - Color of the label in hex format (with or without # prefix)
+ * @param {string} [params.description] - Description of the label
+ * @returns {Promise<boolean>} - True if label was created, false if it already existed
+ */
+async function addLabel({
+  github,
+  context,
+  core,
+  labelName,
+  color,
+  description
+}) {
+  if (!labelName) handleError(new Error('Label name is required'), core, 'add label');
+  const labelConfig = CONFIG.issue.labels[labelName] || {};
+  const labelColor = color || labelConfig.color || 'ededed';
+  const labelDescription = description || labelConfig.description || '';
+  try {
+    core.info(`Checking if label '${labelName}' exists...`);
+    await github.rest.issues.getLabel({
+      owner: context.repo.owner,
+      repo: context.repo.repo,
+      name: labelName
+    });
+    core.info(`Label '${labelName}' already exists`);
+    return false;
+  } catch (error) {
+    if (error.status === 404) {
+      core.info(`Creating label '${labelName}'...`);
+      await github.rest.issues.createLabel({
+        owner: context.repo.owner,
+        repo: context.repo.repo,
+        name: labelName,
+        color: labelColor,
+        description: labelDescription
+      });
+      core.info(`Successfully created label '${labelName}'`);
+      return true;
+    }
+    handleError(error, core, `check or create label '${labelName}'`, false);
+    return false;
   }
 }
 
@@ -70,7 +130,7 @@ function registerHandlebarsHelpers(repoUrl) {
 }
 
 /**
- * Reports warnings detected during workflow execution by creating a GitHub issue
+ * Reports workflow issues by creating a GitHub issue
  * 
  * @param {Object} params - Function parameters
  * @param {Object} params.github - GitHub API client
@@ -78,13 +138,13 @@ function registerHandlebarsHelpers(repoUrl) {
  * @param {Object} params.core - GitHub Actions Core API for logging
  * @returns {Promise<void>}
  */
-async function reportWorkflowWarnings({
+async function reportWorkflowIssue({
   github,
   context,
   core
 }) {
   try {
-    core.info('Reporting workflow warnings...');
+    core.info('Creating workflow issue...');
     const repoUrl = context.payload.repository.html_url;
     const isPullRequest = Boolean(context.payload.pull_request);
     const branchName = isPullRequest
@@ -103,22 +163,27 @@ async function reportWorkflowWarnings({
       Branch: branchName,
       RepoURL: repoUrl
     });
+    const labelNames = Object.keys(CONFIG.issue.labels);
+    await Promise.all(labelNames.map(label => 
+      addLabel({ github, context, core, labelName: label })
+    ));
     await github.rest.issues.create({
       owner: context.repo.owner,
       repo: context.repo.repo,
       title: CONFIG.issue.title,
       body: issueBody,
-      labels: CONFIG.issue.labels
+      labels: labelNames
     });
-    core.info('Successfully reported workflow warnings');
+    core.info('Successfully created workflow issue');
   } catch (error) {
-    handleError(error, core, 'report workflow warnings', false);
+    handleError(error, core, 'create workflow issue', false);
   }
 }
 
 module.exports = {
+  addLabel,
   fileExists,
   handleError,
-  registerHandlebarsHelpers,
-  reportWorkflowWarnings
+  reportWorkflowIssue,
+  registerHandlebarsHelpers
 };

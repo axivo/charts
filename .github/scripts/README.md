@@ -152,7 +152,7 @@ Provides utilities for automating chart documentation updates.
 
 #### Exported Functions
 
-- `setupHelmDocs` - Installs the helm-docs package for generating Helm chart documentation
+- `installHelmDocs` - Installs the helm-docs package for generating Helm chart documentation
 - `updateDocumentation` - Updates documentation in a pull request by generating docs and committing changes
 
 #### Configuration
@@ -208,12 +208,10 @@ Provides centralized configuration and functions for Helm chart releases and Git
 - `_buildChartRelease` - Builds a GitHub release for a single chart and uploads the chart package as an asset
 - `_commitLockFiles` - Helper function to commit updated lock files to PRs
 - `_createChartReleases` - Creates GitHub releases for packaged charts and uploads the chart packages as release assets
-- `_fileExists` - Helper function to check if a file exists
 - `_findAllCharts` - Recursively finds chart directories in application and library paths
 - `_generateChartRelease` - Generates release content using the template file
 - `_generateHelmIndex` - Generates the Helm repository index file
 - `_packageCharts` - Packages all charts in a specified directory
-- `_registerHandlebarsHelpers` - Registers common Handlebars helpers
 
 #### Exported Functions
 
@@ -233,10 +231,11 @@ Provides utility functions for GitHub Actions workflows.
 
 #### Exported Functions
 
+- `addLabel` - Adds a label to a repository if it doesn't exist
 - `fileExists` - Helper function to check if a file exists
 - `handleError` - Handles errors in a standardized way with configurable severity
 - `registerHandlebarsHelpers` - Registers common Handlebars helpers for templates
-- `reportWorkflowWarnings` - Reports warnings detected during workflow execution by creating a GitHub issue
+- `reportWorkflowIssue` - Reports workflow issues by creating a GitHub issue
 
 ## Maintenance
 

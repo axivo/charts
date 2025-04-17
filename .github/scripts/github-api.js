@@ -18,7 +18,16 @@ const utils = require('./utils');
  */
 const CONFIG = {
   release: {
-    labels: ['bug', 'feature']
+    labels: {
+      bug: {
+        color: 'd73a4a',
+        description: "Something isn't working"
+      },
+      feature: {
+        color: '4169e1',
+        description: 'Additions of new functionality'
+      }
+    }
   }
 };
 
@@ -211,6 +220,9 @@ async function getReleaseIssues({
   const chartPath = `${chartType}/${chartName}`;
   try {
     core.info(`Fetching issues for ${chartPath} chart...`);
+    await Promise.all(Object.entries(CONFIG.release.labels).map(([labelName, labelInfo]) => 
+      utils.addLabel({ github, context, core, labelName, color: labelInfo.color, description: labelInfo.description })
+    ));
     const lastReleaseDate = await _getLastReleaseDate({
       github,
       context,
@@ -252,7 +264,7 @@ async function getReleaseIssues({
       const chartDropdownRegex = /### Related Chart\s*\n\s*([^\n]+)/;
       const dropdownMatch = issue.bodyText.match(chartDropdownRegex);
       const isChartRelated = dropdownMatch && dropdownMatch[1].trim() === `${chartName} (${chartType})`;
-      const isLabelRelated = issue.labels.nodes.some(label => CONFIG.release.labels.includes(label.name));
+      const isLabelRelated = issue.labels.nodes.some(label => Object.keys(CONFIG.release.labels).includes(label.name));
       return isChartRelated && isLabelRelated
     });
     core.info(`Found ${relevantIssues.length} relevant issues for ${chartPath} chart`);

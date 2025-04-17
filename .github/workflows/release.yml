@@ -101,5 +101,5 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            const { reportWorkflowWarnings } = require('./.github/scripts/utils.js');
-            await reportWorkflowWarnings({ github, context, core });
+            const { reportWorkflowIssue } = require('./.github/scripts/utils.js');
+            await reportWorkflowIssue({ github, context, core });
