@@ -20,26 +20,25 @@ const utils = require('./utils');
 const CONFIG = {
   helmDocs: {
     baseUrl: 'https://github.com/norwoodj/helm-docs/releases/download',
-    version: '1.14.1'
+    version: '1.14.2'
   }
 };
 
 /**
  * Installs the helm-docs package for generating Helm chart documentation
  * 
- * @param {Object} options - Options for installing helm-docs
- * @param {Object} options.core - GitHub Actions Core API for logging and output
- * @param {Object} options.exec - GitHub Actions exec helpers for running commands
- * @param {string} [options.version=CONFIG.helmDocs.version] - Version of helm-docs to install
+ * @param {Object} params - Function parameters
+ * @param {Object} params.core - GitHub Actions Core API for logging and output
+ * @param {Object} params.exec - GitHub Actions exec helpers for running commands
  * @returns {Promise<void>}
  */
 async function installHelmDocs({
   core,
-  exec,
-  version = CONFIG.helmDocs.version
+  exec
 }) {
   try {
     const tmpDir = os.tmpdir();
+    const version = CONFIG.helmDocs.version;
     const packageFile = `helm-docs_${version}_Linux_x86_64.deb`;
     const packagePath = [tmpDir, packageFile].join('/');
     const packageUrl = [CONFIG.helmDocs.baseUrl, `v${version}`, packageFile].join('/');
