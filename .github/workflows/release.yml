@@ -58,14 +58,14 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            const { processChartReleases } = require('./.github/scripts/pages.js');
+            const { processChartReleases } = require('./.github/scripts/charts.js');
             await processChartReleases({ github, context, core, exec });
 
       - name: Generate charts index
         uses: actions/github-script@v7
         with:
           script: |
-            const { generateChartsIndex } = require('./.github/scripts/pages.js');
+            const { generateChartsIndex } = require('./.github/scripts/charts.js');
             await generateChartsIndex({ context, core });
 
       - name: Setup build environment
@@ -73,7 +73,7 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            const { setupBuildEnvironment } = require('./.github/scripts/pages.js');
+            const { setupBuildEnvironment } = require('./.github/scripts/charts.js');
             await setupBuildEnvironment({ core });
 
       - name: Build pages

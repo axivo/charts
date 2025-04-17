@@ -9,7 +9,7 @@
  * - Finalizing GitHub Pages deployment
  * - Packaging and releasing Helm charts
  * 
- * @module pages
+ * @module charts
  */
 
 const crypto = require('crypto');

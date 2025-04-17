@@ -133,7 +133,7 @@ Most functions in these modules accept a destructured object with the following 
 
 ## Deployment Types
 
-The scripts support two deployment types controlled by the `CONFIG.deployment` setting in `pages.js`:
+The scripts support two deployment types controlled by the `CONFIG.deployment` setting in `charts.js`:
 
 - `production`: Builds charts and deploys to GitHub Pages. This is the default mode used when running on the main repository.
 - `staging`: Builds charts locally on the current branch without deploying to GitHub Pages. This mode is useful for testing changes before applying them to production.
@@ -141,6 +141,28 @@ The scripts support two deployment types controlled by the `CONFIG.deployment` s
 The deployment type is made available as an output from the `setupBuildEnvironment` function, which can be accessed in workflows as `steps.setup.outputs.deployment`. This allows conditional execution of deployment steps based on the deployment environment.
 
 ## Script Overview
+
+### `charts.js`
+
+Provides centralized configuration and functions for Helm chart releases and GitHub Pages.
+
+#### Internal Functions
+
+- `_buildChartRelease` - Builds a GitHub release for a single chart and uploads the chart package as an asset
+- `_commitLockFiles` - Helper function to commit updated lock files to PRs
+- `_createChartReleases` - Creates GitHub releases for packaged charts and uploads the chart packages as release assets
+- `_findAllCharts` - Recursively finds chart directories in application and library paths
+- `_generateChartRelease` - Generates release content using the template file
+- `_generateHelmIndex` - Generates the Helm repository index file
+- `_packageCharts` - Packages all charts in a specified directory
+
+#### Exported Functions
+
+- `generateChartsIndex` - Generates the chart index page from the index.yaml file
+- `processChartReleases` - Handles the complete Helm chart release process
+- `setupBuildEnvironment` - Sets up the build environment for generating the static site
+- `updateLockFiles` - Updates Chart.lock files for charts in a pull request
+- `updateIssueTemplates` - Updates issue templates with current chart options
 
 ### `documentation.js`
 
@@ -198,28 +220,6 @@ Provides centralized functions for interacting with the GitHub API.
 - `getReleaseByTag` - Checks if a GitHub release with the specified tag exists
 - `getReleaseIssues` - Fetches issues related to a specific chart since the last release
 - `uploadReleaseAsset` - Uploads an asset to a GitHub release
-
-### `pages.js`
-
-Provides centralized configuration and functions for Helm chart releases and GitHub Pages.
-
-#### Internal Functions
-
-- `_buildChartRelease` - Builds a GitHub release for a single chart and uploads the chart package as an asset
-- `_commitLockFiles` - Helper function to commit updated lock files to PRs
-- `_createChartReleases` - Creates GitHub releases for packaged charts and uploads the chart packages as release assets
-- `_findAllCharts` - Recursively finds chart directories in application and library paths
-- `_generateChartRelease` - Generates release content using the template file
-- `_generateHelmIndex` - Generates the Helm repository index file
-- `_packageCharts` - Packages all charts in a specified directory
-
-#### Exported Functions
-
-- `generateChartsIndex` - Generates the chart index page from the index.yaml file
-- `processChartReleases` - Handles the complete Helm chart release process
-- `setupBuildEnvironment` - Sets up the build environment for generating the static site
-- `updateLockFiles` - Updates Chart.lock files for charts in a pull request
-- `updateIssueTemplates` - Updates issue templates with current chart options
 
 ### `utils.js`
 
