@@ -20,10 +20,10 @@
       "depNameTemplate": "norwoodj/helm-docs",
       "extractVersionTemplate": "^v(?<version>.+)$",
       "fileMatch": [
-        ".github/workflows/chart.yml"
+        ".github/scripts/documentation.js"
       ],
       "matchStrings": [
-        "run:\\s+?go[\\s\\S]+@v(?<currentValue>.+)"
+        "helmDocs:[\\s\\S]+?version:\\s+'(?<currentValue>.+)'"
       ]
     },
     {
@@ -48,7 +48,7 @@
         ".github/workflows/release.yml"
       ],
       "matchStrings": [
-        "with:[\\s\\S]+?node-version:\\s+\"(?<currentValue>.+)\""
+        "with:[\\s\\S]+?node-version:\\s+(?<currentValue>.+)"
       ],
       "versioningTemplate": "node"
     }

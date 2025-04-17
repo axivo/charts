@@ -9,8 +9,49 @@
  * @module documentation
  */
 
+const os = require('os');
 const gitSignedCommit = require('./git-signed-commit');
 const utils = require('./utils');
+
+/**
+ * Configuration constants for Documentation module
+ * Contains settings for helm-docs install and other Git-related parameters
+ */
+const CONFIG = {
+  helmDocs: {
+    baseUrl: 'https://github.com/norwoodj/helm-docs/releases/download',
+    version: '1.14.2'
+  }
+};
+
+/**
+ * Installs the helm-docs package for generating Helm chart documentation
+ * 
+ * @param {Object} options - Options for installing helm-docs
+ * @param {Object} options.core - GitHub Actions Core API for logging and output
+ * @param {Object} options.exec - GitHub Actions exec helpers for running commands
+ * @param {string} [options.version=CONFIG.helmDocs.version] - Version of helm-docs to install
+ * @returns {Promise<void>}
+ */
+async function installHelmDocs({
+  core,
+  exec,
+  version = CONFIG.helmDocs.version
+}) {
+  try {
+    const tmpDir = os.tmpdir();
+    const packageFile = `helm-docs_${version}_Linux_x86_64.deb`;
+    const packagePath = `${tmpDir}/${packageFile}`;
+    const packageUrl = `${CONFIG.helmDocs.baseUrl}/v${version}/${packageFile}`;
+    core.info(`Installing helm-docs v${version}...`);
+    const runSudo = async (args) => (await exec.getExecOutput('sudo', args)).stdout.trim();
+    await runSudo(['wget', '-qP', tmpDir, '-t', '10', '-T', '60', packageUrl]);
+    await runSudo(['apt-get', '-y', 'install', packagePath]);
+    core.info('Successfully installed helm-docs');
+  } catch (error) {
+    utils.handleError(error, core, 'install helm-docs');
+  }
+}
 
 /**
  * Updates documentation in a pull request by generating docs and committing changes
@@ -67,5 +108,6 @@ async function updateDocumentation({
 }
 
 module.exports = {
+  installHelmDocs,
   updateDocumentation
 };
