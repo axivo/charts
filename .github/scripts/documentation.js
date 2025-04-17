@@ -20,7 +20,7 @@ const utils = require('./utils');
 const CONFIG = {
   helmDocs: {
     baseUrl: 'https://github.com/norwoodj/helm-docs/releases/download',
-    version: '1.14.2'
+    version: '1.14.1'
   }
 };
 
@@ -41,8 +41,8 @@ async function installHelmDocs({
   try {
     const tmpDir = os.tmpdir();
     const packageFile = `helm-docs_${version}_Linux_x86_64.deb`;
-    const packagePath = `${tmpDir}/${packageFile}`;
-    const packageUrl = `${CONFIG.helmDocs.baseUrl}/v${version}/${packageFile}`;
+    const packagePath = [tmpDir, packageFile].join('/');
+    const packageUrl = [CONFIG.helmDocs.baseUrl, `v${version}`, packageFile].join('/');
     core.info(`Installing helm-docs v${version}...`);
     const runSudo = async (args) => (await exec.getExecOutput('sudo', args)).stdout.trim();
     await runSudo(['wget', '-qP', tmpDir, '-t', '10', '-T', '60', packageUrl]);
