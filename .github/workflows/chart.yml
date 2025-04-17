@@ -62,12 +62,12 @@ jobs:
             const { updateDocumentation } = require('./.github/scripts/documentation.js');
             await updateDocumentation({ github, context, core, exec });
 
-      - name: Update dependency lock files
+      - name: Perform repository updates
         uses: actions/github-script@v7
         with:
           script: |
-            const { updateLockFiles } = require('./.github/scripts/chart.js');
-            await updateLockFiles({ github, context, core, exec });
+            const { performUpdates } = require('./.github/scripts/chart.js');
+            await performUpdates({ github, context, core, exec });
 
       - name: Report workflow issues
         uses: actions/github-script@v7

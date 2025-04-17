@@ -144,6 +144,16 @@ async function reportWorkflowIssue({
   core
 }) {
   try {
+    const { data: workflowRun } = await github.rest.actions.getWorkflowRun({
+      owner: context.repo.owner,
+      repo: context.repo.repo,
+      run_id: context.runId
+    });
+    const hasWarnings = ['cancelled', 'failure'].includes(workflowRun.conclusion);
+    if (!hasWarnings) {
+      core.info('No failures or warnings detected, skipping issue creation');
+      return;
+    }
     core.info('Creating workflow issue...');
     const repoUrl = context.payload.repository.html_url;
     const isPullRequest = Boolean(context.payload.pull_request);

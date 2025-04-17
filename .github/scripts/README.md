@@ -140,18 +140,24 @@ The scripts support two deployment types controlled by the `CONFIG.deployment` s
 
 The deployment type is made available as an output from the `setupBuildEnvironment` function, which can be accessed in workflows as `steps.setup.outputs.deployment`. This allows conditional execution of deployment steps based on the deployment environment.
 
-## Script Overview
+## Scripts Overview
 
 ### `chart.js`
 
-Provides centralized configuration and functions for Helm chart releases and GitHub Pages.
+Provides functions for Helm chart management, releases and GitHub Pages generation.
+
+#### Configuration
+
+- `CONFIG.chart` - Chart-specific settings like templates and repository URL
+- `CONFIG.deployment` - Deployment type (production/staging)
+- `CONFIG.filesystem` - File paths for templates, charts, and output directories
 
 #### Internal Functions
 
 - `_buildChartRelease` - Builds a GitHub release for a single chart and uploads the chart package as an asset
 - `_commitLockFiles` - Helper function to commit updated lock files to PRs
 - `_createChartReleases` - Creates GitHub releases for packaged charts and uploads the chart packages as release assets
-- `_findAllCharts` - Recursively finds chart directories in application and library paths
+- `_findCharts` - Finds deployed charts in application and library paths
 - `_generateChartRelease` - Generates release content using the template file
 - `_generateHelmIndex` - Generates the Helm repository index file
 - `_packageCharts` - Packages all charts in a specified directory
@@ -159,35 +165,28 @@ Provides centralized configuration and functions for Helm chart releases and Git
 #### Exported Functions
 
 - `generateIndex` - Generates the chart index page from the index.yaml file
+- `performUpdates` - Performs repository updates including lock files and issue templates
 - `processReleases` - Handles the complete Helm chart release process
 - `setupBuildEnvironment` - Sets up the build environment for generating the static site
-- `updateLockFiles` - Updates Chart.lock files for charts in a pull request
 - `updateIssueTemplates` - Updates issue templates with current chart options
+- `updateLockFiles` - Updates Chart.lock files for charts in a pull request
 
 ### `documentation.js`
 
 Provides utilities for automating chart documentation updates.
 
-#### Internal Functions
+#### Configuration
 
-- None
+- `CONFIG.helmDocs` - Configuration for helm-docs installation
 
 #### Exported Functions
 
 - `installHelmDocs` - Installs the helm-docs package for generating Helm chart documentation
 - `updateDocumentation` - Updates documentation in a pull request by generating docs and committing changes
 
-#### Configuration
-
-- `CONFIG.helmDocs` - Configuration for helm-docs installation
-
 ### `git-config.js`
 
 Configures Git with GitHub Actions bot identity for making commits in workflows.
-
-#### Internal Functions
-
-- None
 
 #### Exported Function
 
@@ -197,10 +196,6 @@ Configures Git with GitHub Actions bot identity for making commits in workflows.
 
 Creates verified commits using GitHub's GraphQL API.
 
-#### Internal Functions
-
-- None
-
 #### Exported Functions
 
 - `createSignedCommit` - Creates a signed commit with the provided changes using GitHub's GraphQL API
@@ -209,6 +204,10 @@ Creates verified commits using GitHub's GraphQL API.
 ### `github-api.js`
 
 Provides centralized functions for interacting with the GitHub API.
+
+#### Configuration
+
+- `CONFIG.release.labels` - Configuration for issue labels used in releases
 
 #### Internal Functions
 
@@ -225,9 +224,9 @@ Provides centralized functions for interacting with the GitHub API.
 
 Provides utility functions for GitHub Actions workflows.
 
-#### Internal Functions
+#### Configuration
 
-- None
+- `CONFIG.issue` - Configuration for issues created by the workflow
 
 #### Exported Functions
 

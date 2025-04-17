@@ -220,9 +220,6 @@ async function getReleaseIssues({
   const chartPath = `${chartType}/${chartName}`;
   try {
     core.info(`Fetching issues for ${chartPath} chart...`);
-    await Promise.all(Object.entries(CONFIG.release.labels).map(([labelName, labelInfo]) => 
-      utils.addLabel({ github, context, core, labelName, color: labelInfo.color, description: labelInfo.description })
-    ));
     const lastReleaseDate = await _getLastReleaseDate({
       github,
       context,

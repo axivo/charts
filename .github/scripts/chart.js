@@ -1,11 +1,12 @@
 /**
  * GitHub Pages and Chart Release Utilities
  * 
- * This module provides centralized configuration and functions for Helm chart releases and GitHub Pages:
+ * This module provides functions for Helm chart management, releases and GitHub Pages generation:
  * - Centralized configuration constants
- * - Setting GitHub Actions outputs for workflow steps
- * - Generating chart index pages from Helm chart releases
+ * - Issue template updates with chart options
+ * - Repository maintenance and updates
  * - Preparing the build environment for Jekyll
+ * - Chart lock file management
  * - Finalizing GitHub Pages deployment
  * - Packaging and releasing Helm charts
  * 
@@ -257,7 +258,7 @@ async function _createChartReleases({
 }
 
 /**
- * Finds charts in application and library paths
+ * Finds deployed charts in application and library paths
  * 
  * @param {Object} params - Function parameters
  * @param {Object} params.core - GitHub Actions Core API for logging
@@ -542,6 +543,52 @@ async function generateIndex({
 }
 
 /**
+ * Performs all required updates for a pull request
+ * 
+ * Handles multiple repository maintenance tasks:
+ * - Updates dependency lock files
+ * - Updates issue templates with current chart options
+ * 
+ * @param {Object} params - Function parameters
+ * @param {Object} params.github - GitHub API client
+ * @param {Object} params.context - GitHub Actions context for repository info
+ * @param {Object} params.core - GitHub Actions Core API for logging and output
+ * @param {Object} params.exec - GitHub Actions exec helpers for running commands
+ * @returns {Promise<void>}
+ */
+async function performUpdates({
+  github,
+  context,
+  core,
+  exec
+}) {
+  try {
+    await updateLockFiles({ github, context, core, exec });
+    const runGit = async (args) => (await exec.getExecOutput('git', args)).stdout.trim();
+    const headRef = process.env.GITHUB_HEAD_REF;
+    const templateFiles = await updateIssueTemplates({ core });
+    if (templateFiles.length > 0) {
+      core.info(`Committing ${templateFiles.length} template files...`);
+      await runGit(['add', ...templateFiles]);
+      const { additions, deletions } = await gitSignedCommit.getGitStagedChanges(runGit);
+      if (additions.length > 0 || deletions.length > 0) {
+        const currentHead = await runGit(['rev-parse', 'HEAD']);
+        await gitSignedCommit.createSignedCommit({
+          github, context, core,
+          branchName: headRef,
+          expectedHeadOid: currentHead,
+          additions, deletions,
+          commitMessage: 'chore(github-action): update issue templates'
+        });
+        core.info('Successfully committed issue template updates');
+      }
+    }
+  } catch (error) {
+    utils.handleError(error, core, 'perform repository updates');
+  }
+}
+
+/**
  * Handles the complete Helm chart releases process:
  * 1. Packages application and library charts
  * 2. Creates GitHub releases
@@ -564,6 +611,9 @@ async function processReleases({
     const indexPath = CONFIG.filesystem.indexPath;
     const packagesPath = CONFIG.filesystem.packagesPath;
     core.info(`Creating ${packagesPath} directory...`);
+    core.info('Validating required labels...');
+    const releaseLabels = Object.entries(githubApi.CONFIG.release.labels);
+    await Promise.all(releaseLabels.map(([name, info]) => utils.addLabel({ github, context, core, labelName: name, color: info.color, description: info.description })));
     await fs.mkdir(packagesPath, { recursive: true });
     core.info(`Successfully created ${packagesPath} directory`);
     core.info('Packaging all charts...');
@@ -641,9 +691,11 @@ async function setupBuildEnvironment({ core }) {
 /**
  * Updates issue templates with current chart options
  * 
+ * Updates dropdown options in issue templates based on current charts in the repository
+ * 
  * @param {Object} params - Function parameters
  * @param {Object} params.core - GitHub Actions Core API for logging
- * @returns {Promise<void>}
+ * @returns {Promise<string[]>} - Array of updated template file paths
  */
 async function updateIssueTemplates({
   core
@@ -657,7 +709,7 @@ async function updateIssueTemplates({
     const allChartDirs = [...charts.application, ...charts.library];
     if (allChartDirs.length === 0) {
       core.info('No charts found, skipping issue template updates');
-      return;
+      return [];
     }
     const appCharts = charts.application;
     const libCharts = charts.library;
@@ -665,8 +717,9 @@ async function updateIssueTemplates({
     const libChartOptions = libCharts.map(dir => `${path.basename(dir)} (library)`).sort();
     const chartOptions = [...appChartOptions, ...libChartOptions, 'None'];
     const optionsText = chartOptions.map(option => `        - ${option}`).join('\n');
-    const optionsRegex = /(id:\s+chart[\s\S]+options:(?:\s*\n))[\s\S]*?(\s+default:\s+0)/;
+    const optionsRegex = /(id:\s+chart[\s\S]+options:[\s+\n])[\s\S]+?(\s+default:\s+0)/;
     const replacementText = `$1${optionsText}\n$2`;
+    const updatedTemplates = [];
     for (const templatePath of templatePaths) {
       try {
         let content = await fs.readFile(templatePath, 'utf8');
@@ -674,6 +727,7 @@ async function updateIssueTemplates({
           content = content.replace(optionsRegex, replacementText);
           await fs.writeFile(templatePath, content, 'utf8');
           core.info(`Updated chart options in ${templatePath}`);
+          updatedTemplates.push(templatePath);
         } else {
           utils.handleError(new Error(`Could not find chart dropdown`), core, `process template ${templatePath}`, false);
         }
@@ -682,8 +736,10 @@ async function updateIssueTemplates({
       }
     }
     core.info(`Successfully updated templates with ${chartOptions.length - 1} chart options`);
+    return updatedTemplates;
   } catch (error) {
     utils.handleError(error, core, 'update issue templates');
+    return [];
   }
 }
 
@@ -748,6 +804,7 @@ async function updateLockFiles({
 module.exports = {
   CONFIG,
   generateIndex,
+  performUpdates,
   processReleases,
   setupBuildEnvironment,
   updateIssueTemplates,
