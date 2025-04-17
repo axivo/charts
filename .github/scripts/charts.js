@@ -665,7 +665,7 @@ async function updateIssueTemplates({
     const libChartOptions = libCharts.map(dir => `${path.basename(dir)} (library)`).sort();
     const chartOptions = [...appChartOptions, ...libChartOptions, 'None'];
     const optionsText = chartOptions.map(option => `        - ${option}`).join('\n');
-    const optionsRegex = /(id:\s+chart[\s\S]+options:\n)[\s\S]*?(\s+default:\s+0)/;
+    const optionsRegex = /(id:\s+chart[\s\S]+options:(?:\s*\n))[\s\S]*?(\s+default:\s+0)/;
     const replacementText = `$1${optionsText}\n$2`;
     for (const templatePath of templatePaths) {
       try {
