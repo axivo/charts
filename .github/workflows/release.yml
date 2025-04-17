@@ -5,7 +5,7 @@ on:
     branches:
       - main
     paths:
-      - .github/pages/*
+      - .github/templates/*
       - application/**
       - library/**
   workflow_dispatch:
@@ -58,22 +58,22 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            const { processChartReleases } = require('./.github/scripts/charts.js');
-            await processChartReleases({ github, context, core, exec });
+            const { processReleases } = require('./.github/scripts/chart.js');
+            await processReleases({ github, context, core, exec });
 
       - name: Generate charts index
         uses: actions/github-script@v7
         with:
           script: |
-            const { generateChartsIndex } = require('./.github/scripts/charts.js');
-            await generateChartsIndex({ context, core });
+            const { generateIndex } = require('./.github/scripts/chart.js');
+            await generateIndex({ context, core });
 
       - name: Setup build environment
         id: setup
         uses: actions/github-script@v7
         with:
           script: |
-            const { setupBuildEnvironment } = require('./.github/scripts/charts.js');
+            const { setupBuildEnvironment } = require('./.github/scripts/chart.js');
             await setupBuildEnvironment({ core });
 
       - name: Build pages

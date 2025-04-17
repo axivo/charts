@@ -66,7 +66,7 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            const { updateLockFiles } = require('./.github/scripts/charts.js');
+            const { updateLockFiles } = require('./.github/scripts/chart.js');
             await updateLockFiles({ github, context, core, exec });
 
       - name: Report workflow issues

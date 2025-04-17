@@ -27,7 +27,7 @@ const CONFIG = {
         description: 'Workflow execution related issue'
       }
     },
-    template: '.github/pages/issue.md.hbs',
+    template: '.github/templates/issue.md.hbs',
     title: 'workflow: Issues Detected'
   }
 }
@@ -164,7 +164,7 @@ async function reportWorkflowIssue({
       RepoURL: repoUrl
     });
     const labelNames = Object.keys(CONFIG.issue.labels);
-    await Promise.all(labelNames.map(label => 
+    await Promise.all(labelNames.map(label =>
       addLabel({ github, context, core, labelName: label })
     ));
     await github.rest.issues.create({

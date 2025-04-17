@@ -40,7 +40,7 @@
   "editor.formatOnSave": true,
   "editor.formatOnSaveIgnore": [
     "**/*.hbs",
-    "**/.github/pages/index.md.hbs"
+    "**/.github/templates/index.md.hbs"
   ],
   "editor.rulers": [
     120

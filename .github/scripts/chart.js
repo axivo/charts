@@ -9,7 +9,7 @@
  * - Finalizing GitHub Pages deployment
  * - Packaging and releasing Helm charts
  * 
- * @module charts
+ * @module chart
  */
 
 const crypto = require('crypto');
@@ -21,15 +21,15 @@ const gitSignedCommit = require('./git-signed-commit');
 const utils = require('./utils');
 
 /**
- * Configuration constants for GitHub Pages module
+ * Configuration constants for Chart Functions module
  * Contains paths, templates, and settings used throughout the chart release process
  */
 const CONFIG = {
   chart: {
     icon: 'icon.png',
-    indexTemplate: '.github/pages/index.md.hbs',
+    indexTemplate: '.github/templates/index.md.hbs',
     packagesWithIndex: 'true',
-    releaseTemplate: '.github/pages/release.md.hbs',
+    releaseTemplate: '.github/templates/release.md.hbs',
     releaseTitle: '{{ .Name }}-v{{ .Version }}',
     repoUrl: 'https://axivo.github.io/charts/',
     skipExisting: true
@@ -42,7 +42,7 @@ const CONFIG = {
       library: 'library'
     },
     configHome: './_config.yml',
-    configPath: '.github/pages/config.yml',
+    configPath: '.github/templates/config.yml',
     distPath: './_dist',
     featureRequestPath: '.github/ISSUE_TEMPLATE/feature_request.yml',
     headCustomPath: './_includes/head-custom.html',
@@ -461,7 +461,7 @@ async function _packageCharts({
  * @param {string} [params.indexTemplate=CONFIG.chart.indexTemplate] - Path to the Handlebars template
  * @returns {Promise<boolean>} - True if successful, false if skipped
  */
-async function generateChartsIndex({
+async function generateIndex({
   context,
   core,
   indexPath = CONFIG.filesystem.indexPath,
@@ -554,7 +554,7 @@ async function generateChartsIndex({
  * @param {Object} params.exec - GitHub Actions exec helpers for running commands
  * @returns {Promise<void>}
  */
-async function processChartReleases({
+async function processReleases({
   github,
   context,
   core,
@@ -747,8 +747,8 @@ async function updateLockFiles({
 
 module.exports = {
   CONFIG,
-  generateChartsIndex,
-  processChartReleases,
+  generateIndex,
+  processReleases,
   setupBuildEnvironment,
   updateIssueTemplates,
   updateLockFiles
