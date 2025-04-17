@@ -143,17 +143,22 @@ async function reportWorkflowIssue({
   context,
   core
 }) {
+  let hasWarnings = false;
   try {
-    const { data: workflowRun } = await github.rest.actions.getWorkflowRun({
+    const { data: logs } = await github.rest.actions.downloadWorkflowRunLogs({
       owner: context.repo.owner,
       repo: context.repo.repo,
       run_id: context.runId
     });
-    const hasWarnings = ['cancelled', 'failure'].includes(workflowRun.conclusion);
-    if (!hasWarnings) {
-      core.info('No failures or warnings detected, skipping issue creation');
-      return;
-    }
+    hasWarnings = ['##[error]', '##[warning]'].some(marker => logs.includes(marker));
+  } catch (logError) {
+    hasWarnings = true;
+  }
+  if (!hasWarnings) {
+    core.info('No failures or warnings detected, skipping issue creation');
+    return;
+  }
+  try {
     core.info('Creating workflow issue...');
     const repoUrl = context.payload.repository.html_url;
     const isPullRequest = Boolean(context.payload.pull_request);

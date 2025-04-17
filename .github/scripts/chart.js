@@ -165,7 +165,7 @@ async function _commitLockFiles({
       await runGit(['add', ...lockFiles]);
     }
     const { additions, deletions } = await gitSignedCommit.getGitStagedChanges(runGit);
-    if (additions.length > 0 || deletions.length > 0) {
+    if (additions.length + deletions.length > 0) {
       const currentHead = await runGit(['rev-parse', 'HEAD']);
       await gitSignedCommit.createSignedCommit({
         github,
@@ -566,12 +566,15 @@ async function performUpdates({
     await updateLockFiles({ github, context, core, exec });
     const runGit = async (args) => (await exec.getExecOutput('git', args)).stdout.trim();
     const headRef = process.env.GITHUB_HEAD_REF;
+    core.info('Fetching the latest branch state...');
+    await runGit(['fetch', 'origin', headRef]);
+    await runGit(['pull', 'origin', headRef]);
     const templateFiles = await updateIssueTemplates({ core });
     if (templateFiles.length > 0) {
       core.info(`Committing ${templateFiles.length} template files...`);
       await runGit(['add', ...templateFiles]);
       const { additions, deletions } = await gitSignedCommit.getGitStagedChanges(runGit);
-      if (additions.length > 0 || deletions.length > 0) {
+      if (additions.length + deletions.length > 0) {
         const currentHead = await runGit(['rev-parse', 'HEAD']);
         await gitSignedCommit.createSignedCommit({
           github, context, core,
@@ -581,6 +584,7 @@ async function performUpdates({
           commitMessage: 'chore(github-action): update issue templates'
         });
         core.info('Successfully committed issue template updates');
+        await runGit(['fetch', 'origin', headRef]);
       }
     }
   } catch (error) {

@@ -69,7 +69,7 @@ jobs:
             const { performUpdates } = require('./.github/scripts/chart.js');
             await performUpdates({ github, context, core, exec });
 
-      - name: Report workflow issues
+      - name: Report workflow issue
         uses: actions/github-script@v7
         with:
           script: |
