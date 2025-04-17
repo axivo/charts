@@ -97,3 +97,10 @@ jobs:
         id: deployment
         if: steps.setup.outputs.deployment == 'production'
         uses: actions/deploy-pages@v4
+
+      - name: Check for warnings
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { createWarningStatusCheck } = require('./.github/scripts/utils.js');
+            await createWarningStatusCheck({ github, context, core });

@@ -10,6 +10,8 @@
  * @module github-api
  */
 
+const utils = require('./utils');
+
 /**
  * Configuration constants for GitHub API module
  * Contains settings for release issue labels filtering and other API-related parameters
@@ -60,13 +62,13 @@ async function _getLastReleaseDate({
       release.tagName.startsWith(`${chartName}-v`)
     ).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
     if (chartReleases.length > 0) {
+      core.info(`Found last release date for ${chartName} chart: ${chartReleases[0].createdAt}`);
       return chartReleases[0].createdAt;
     }
+    core.info(`No previous releases found for ${chartName} chart`);
     return null;
   } catch (error) {
-    const errorMsg = `Failed to get last release date for ${chartName}: ${error.message}`;
-    core.setFailed(errorMsg);
-    throw new Error(errorMsg);
+    utils.handleError(error, core, `get last release date for ${chartName}`);
   }
 }
 
@@ -119,9 +121,7 @@ async function createRelease({
     core.info(`Successfully created ${name} release with ${releaseData.id} id`);
     return releaseData;
   } catch (error) {
-    const errorMsg = `Failed to create release: ${error.message}`;
-    core.setFailed(errorMsg);
-    throw new Error(errorMsg);
+    utils.handleError(error, core, 'create release');
   }
 }
 
@@ -167,7 +167,7 @@ async function getReleaseByTag({
     };
     const result = await github.graphql(query, variables);
     if (result.repository.release) {
-      core.info(`Found existing release with tag ${tagName}`);
+      core.info(`Found existing release with tag ${tagName}...`);
       return {
         id: result.repository.release.databaseId,
         name: result.repository.release.name,
@@ -184,9 +184,7 @@ async function getReleaseByTag({
     if (error.errors && error.errors.some(e => e.type === 'NOT_FOUND')) {
       return null;
     }
-    const errorMsg = `Error checking for release with tag ${tagName}: ${error.message}`;
-    core.setFailed(errorMsg);
-    throw new Error(errorMsg);
+    utils.handleError(error, core, `check for release with tag ${tagName}`);
   }
 }
 
@@ -267,9 +265,7 @@ async function getReleaseIssues({
     }));
     return issues;
   } catch (error) {
-    const errorMsg = `Failed to fetch issues for ${chartPath} chart: ${error.message}`;
-    core.setFailed(errorMsg);
-    throw new Error(errorMsg);
+    utils.handleError(error, core, `fetch issues for ${chartPath} chart`);
   }
 }
 
@@ -305,9 +301,7 @@ async function uploadReleaseAsset({
     core.info(`Successfully uploaded ${assetName} asset`);
     return asset.data;
   } catch (error) {
-    const errorMsg = `Failed to upload release asset: ${error.message}`;
-    core.setFailed(errorMsg);
-    throw new Error(errorMsg);
+    utils.handleError(error, core, 'upload release asset');
   }
 }
 

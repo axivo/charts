@@ -100,6 +100,19 @@ Provides centralized configuration and functions for Helm chart releases and Git
 - `updateLockFiles` - Updates Chart.lock files for charts in a pull request
 - `updateIssueTemplates` - Updates issue templates with current chart options
 
+### utils.js
+
+Provides utility functions for GitHub Actions workflows.
+
+**Internal Functions:**
+- None
+
+**Exported Functions:**
+- `createWarningStatusCheck` - Creates a status check for warnings detected during workflow execution
+- `fileExists` - Helper function to check if a file exists
+- `handleError` - Handles errors in a standardized way with configurable severity
+- `registerHandlebarsHelpers` - Registers common Handlebars helpers for templates
+
 ## Function Parameters
 
 Most functions in these modules accept a destructured object with the following common parameters:
@@ -111,10 +124,28 @@ Most functions in these modules accept a destructured object with the following 
 
 ## Error Handling
 
-All functions implement error handling with:
-- Descriptive error messages
-- Proper logging via `core.warning` or `core.setFailed`
-- GraphQL error detail extraction for better debugging
+All functions should use the standardized error handling utility `utils.handleError` which provides:
+- Consistent error message formatting
+- Integration with GitHub Actions Core API for logging
+- Configurable fatal vs. non-fatal error handling
+- Better error propagation
+
+Example usage:
+```javascript
+try {
+  // function implementation
+} catch (error) {
+  utils.handleError(error, core, 'operation description', false); // false = non-fatal (warning)
+}
+```
+
+For fatal errors (default behavior), the utility will:
+- Log the error using `core.setFailed`
+- Throw a new error with a standardized message
+
+For non-fatal errors (when `fatal = false`), the utility will:
+- Log the error using `core.warning`
+- Allow execution to continue
 
 ## Maintenance
 

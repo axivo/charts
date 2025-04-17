@@ -10,6 +10,7 @@
  */
 
 const gitSignedCommit = require('./git-signed-commit');
+const utils = require('./utils');
 
 /**
  * Updates documentation in a pull request by generating docs and committing changes
@@ -61,9 +62,7 @@ async function updateDocumentation({
       core.info('No documentation changes to commit');
     }
   } catch (error) {
-    const errorMsg = `Failed to update documentation: ${error.message}`;
-    core.setFailed(errorMsg);
-    throw new Error(errorMsg);
+    utils.handleError(error, core, 'update documentation');
   }
 }
 

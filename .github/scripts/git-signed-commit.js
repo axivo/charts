@@ -10,6 +10,7 @@
  */
 
 const fs = require('fs/promises');
+const utils = require('./utils');
 
 /**
  * Create a signed commit using GitHub's GraphQL API
@@ -36,6 +37,7 @@ async function createSignedCommit({
   commitMessage
 }) {
   try {
+    core.info('Creating signed commit...');
     if (!branchName) {
       throw new Error('branchName is required');
     }
@@ -75,9 +77,7 @@ async function createSignedCommit({
     core.info(`Signed commit created with OID: ${commitOid}`);
     return commitOid;
   } catch (error) {
-    const errorMsg = `Failed to create signed commit: ${error.message}`;
-    core.setFailed(errorMsg);
-    throw new Error(errorMsg);
+    utils.handleError(error, core, 'create signed commit');
   }
 }
 

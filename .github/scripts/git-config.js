@@ -8,6 +8,8 @@
  * @module git-config
  */
 
+const utils = require('./utils');
+
 /**
  * Configure Git for GitHub Actions
  * 
@@ -24,6 +26,7 @@
 async function configureGit({ github, context, core, exec }) {
   const runGit = async (args) => (await exec.getExecOutput('git', args)).stdout.trim();
   try {
+    core.info('Configuring Git repository...');
     await Promise.all([
       runGit(['config', 'user.name', 'github-actions[bot]']),
       runGit(['config', 'user.email', '41898282+github-actions[bot]@users.noreply.github.com'])
@@ -31,9 +34,7 @@ async function configureGit({ github, context, core, exec }) {
     core.info('Git configured with GitHub Actions bot identity');
     return runGit;
   } catch (error) {
-    const errorMsg = `Failed to configure Git: ${error.message}`;
-    core.setFailed(errorMsg);
-    throw new Error(errorMsg);
+    utils.handleError(error, core, 'configure Git');
   }
 }
 

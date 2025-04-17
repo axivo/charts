@@ -15,10 +15,10 @@
 const crypto = require('crypto');
 const path = require('path');
 const fs = require('fs/promises');
-const Handlebars = require('handlebars');
 const yaml = require('js-yaml');
 const githubApi = require('./github-api');
 const gitSignedCommit = require('./git-signed-commit');
+const utils = require('./utils');
 
 /**
  * Configuration constants for GitHub Pages module
@@ -89,7 +89,7 @@ async function _buildChartRelease({
         .replace('{{ .Name }}', chartName)
         .replace('{{ .Version }}', chartVersion)
       : `${chartName}-v${chartVersion}`;
-    core.info(`Processing release for ${tagName}`);
+    core.info(`Processing release for ${tagName}...`);
     const existingRelease = await githubApi.getReleaseByTag({
       github,
       context,
@@ -134,9 +134,7 @@ async function _buildChartRelease({
     });
     core.info(`Successfully created release for ${tagName}`);
   } catch (error) {
-    const errorMsg = `Failed to create release for ${chartName} v${chartVersion}: ${error.message}`;
-    core.setFailed(errorMsg);
-    throw new Error(errorMsg);
+    utils.handleError(error, core, `create release for ${chartName} v${chartVersion}`);
   }
 }
 
@@ -159,6 +157,7 @@ async function _commitLockFiles({
   lockFiles
 }) {
   try {
+    core.info('Committing dependency lock files...');
     const runGit = async (args) => (await exec.getExecOutput('git', args)).stdout.trim();
     const headRef = process.env.GITHUB_HEAD_REF;
     if (lockFiles.length > 0) {
@@ -182,8 +181,7 @@ async function _commitLockFiles({
       core.info('No dependency lock file changes to commit');
     }
   } catch (error) {
-    const errorMsg = `Failed to commit dependency lock files: ${error.message}`;
-    core.warning(errorMsg);
+    utils.handleError(error, core, 'commit dependency lock files', false);
   }
 }
 
@@ -204,6 +202,7 @@ async function _createChartReleases({
   packagesPath = CONFIG.filesystem.packagesPath
 }) {
   try {
+    core.info('Creating GitHub releases for charts...');
     const files = await fs.readdir(packagesPath);
     const packages = files.filter(file => file.endsWith('.tgz'));
     core.info(`Found ${packages.length} chart packages to release`);
@@ -216,7 +215,7 @@ async function _createChartReleases({
       try {
         const appChartDir = path.join(CONFIG.filesystem.chart.application, chartName);
         const libChartDir = path.join(CONFIG.filesystem.chart.library, chartName);
-        const libChartExists = await _fileExists(libChartDir);
+        const libChartExists = await utils.fileExists(libChartDir);
         const chartType = libChartExists ? 'library' : 'application';
         const chartDir = chartType === CONFIG.filesystem.chart.library ? libChartDir : appChartDir;
         let chartMetadata = {};
@@ -253,20 +252,8 @@ async function _createChartReleases({
       }
     }
   } catch (error) {
-    const errorMsg = `Failed to create chart releases: ${error.message}`;
-    core.setFailed(errorMsg);
-    throw new Error(errorMsg);
+    utils.handleError(error, core, 'create chart releases');
   }
-}
-
-/**
- * Helper function to check if a file exists
- * 
- * @param {string} filePath - Path to check
- * @returns {Promise<boolean>} - True if file exists, false otherwise
- */
-async function _fileExists(filePath) {
-  return fs.access(filePath).then(() => true).catch(() => false);
 }
 
 /**
@@ -279,6 +266,7 @@ async function _fileExists(filePath) {
 async function _findCharts({
   core
 }) {
+  core.info('Finding chart directories...');
   const charts = {
     application: [],
     library: []
@@ -294,15 +282,16 @@ async function _findCharts({
         if (entry.isDirectory()) {
           const chartDir = path.join(dir, entry.name);
           const chartYamlPath = path.join(chartDir, 'Chart.yaml');
-          if (await _fileExists(chartYamlPath)) {
+          if (await utils.fileExists(chartYamlPath)) {
             charts[type].push(chartDir);
           }
         }
       }
     } catch (error) {
-      core.warning(`Error reading directory ${dir}: ${error.message}`);
+      utils.handleError(error, core, `read directory ${dir}`, false);
     }
   }));
+  core.info(`Found ${charts.application.length} application charts and ${charts.library.length} library charts`);
   return charts;
 }
 
@@ -332,18 +321,19 @@ async function _generateChartRelease({
   releaseTemplate = CONFIG.chart.releaseTemplate
 }) {
   try {
+    core.info(`Generating release content for ${chartName} chart...`);
     await fs.mkdir(CONFIG.filesystem.distPath, { recursive: true });
     try {
       await fs.access(releaseTemplate);
       core.info(`Release template found at: ${releaseTemplate}`);
     } catch (accessError) {
-      core.warning(`Template file not found at ${releaseTemplate}: ${accessError.message}`);
+      utils.handleError(accessError, core, `find template file at ${releaseTemplate}`, false);
       return `Release of ${chartName} chart version ${chartVersion}`;
     }
     const repoUrl = context.payload.repository.html_url;
     const templateContent = await fs.readFile(releaseTemplate, 'utf8');
     core.info(`Loaded release template from ${releaseTemplate}`);
-    const Handlebars = _registerHandlebarsHelpers(repoUrl);
+    const Handlebars = utils.registerHandlebarsHelpers(repoUrl);
     const template = Handlebars.compile(templateContent);
     const chartSources = chartMetadata.sources || [];
     const issues = await githubApi.getReleaseIssues({ github, context, core, chartType, chartName });
@@ -367,7 +357,7 @@ async function _generateChartRelease({
     };
     return template(templateContext);
   } catch (error) {
-    core.warning(`Failed to generate release content: ${error.message}`);
+    utils.handleError(error, core, 'generate release content', false);
     return `Release of ${chartName} chart with ${chartVersion} version`;
   }
 }
@@ -391,15 +381,14 @@ async function _generateHelmIndex({
   repoUrl
 }) {
   try {
+    core.info('Generating Helm repository index...');
     const indexDir = path.dirname(indexPath);
     await fs.mkdir(indexDir, { recursive: true });
     await exec.exec('helm', ['repo', 'index', packagesPath, '--url', repoUrl]);
     await fs.copyFile(path.join(packagesPath, CONFIG.filesystem.indexRegistry), indexPath);
     core.info(`Successfully generated Helm repository index at ${indexPath}`);
   } catch (error) {
-    const errorMsg = `Failed to generate Helm repository index: ${error.message}`;
-    core.setFailed(errorMsg);
-    throw new Error(errorMsg);
+    utils.handleError(error, core, 'generate Helm repository index');
   }
 }
 
@@ -434,13 +423,13 @@ async function _packageCharts({
     for (const chartDir of chartDirs) {
       const lockFilePath = path.join(chartDir, 'Chart.lock');
       let originalLockHash = null;
-      if (await _fileExists(lockFilePath)) {
+      if (await utils.fileExists(lockFilePath)) {
         const originalContent = await fs.readFile(lockFilePath);
         originalLockHash = crypto.createHash('sha256').update(originalContent).digest('hex');
       }
       core.info(`Updating dependency lock file for ${chartDir} chart...`);
       await exec.exec('helm', ['dependency', 'update', chartDir]);
-      if (await _fileExists(lockFilePath)) {
+      if (await utils.fileExists(lockFilePath)) {
         const newContent = await fs.readFile(lockFilePath);
         const newHash = crypto.createHash('sha256').update(newContent).digest('hex');
         if (originalLockHash !== newHash) {
@@ -457,26 +446,8 @@ async function _packageCharts({
     }
     core.info(`Successfully packaged ${chartDirs.length} charts`);
   } catch (error) {
-    const errorMsg = `Failed to package charts: ${error.message}`;
-    core.setFailed(errorMsg);
-    throw new Error(errorMsg);
+    utils.handleError(error, core, 'package charts');
   }
-}
-
-/**
- * Registers common Handlebars helpers
- * 
- * @param {string} repoUrl - Repository URL
- * @returns {Object} - Handlebars instance with registered helpers
- */
-function _registerHandlebarsHelpers(repoUrl) {
-  Handlebars.registerHelper('eq', function (a, b) {
-    return a === b;
-  });
-  Handlebars.registerHelper('RepoRawURL', function () {
-    return String(repoUrl).replace('github.com', 'raw.githubusercontent.com');
-  });
-  return Handlebars;
 }
 
 /**
@@ -498,13 +469,13 @@ async function generateChartsIndex({
   indexTemplate = CONFIG.chart.indexTemplate
 }) {
   try {
-    core.info(`Reading index YAML from ${indexPath}`);
+    core.info(`Reading index YAML from ${indexPath}...`);
     let indexContent;
     try {
       indexContent = await fs.readFile(indexPath, 'utf8');
       core.info(`Successfully read index.yaml, size: ${indexContent.length} bytes`);
     } catch (readError) {
-      core.warning(`Failed to read index.yaml: ${readError.message}`);
+      utils.handleError(readError, core, 'read index.yaml', false);
       core.warning('Creating an empty chart index...');
       const emptyIndex = {
         apiVersion: 'v1',
@@ -519,19 +490,19 @@ async function generateChartsIndex({
     }
     const index = yaml.load(indexContent);
     if (!index || !index.entries) {
-      core.warning('Invalid or empty index.yaml file, creating an empty index.md file...');
+      core.info('Creating an empty index.md file...');
       await fs.mkdir(path.dirname(indexMdPath), { recursive: true });
       await fs.writeFile(indexMdPath, '', 'utf8');
       await fs.writeFile(CONFIG.filesystem.indexMdHome, '', 'utf8');
       core.info(`Created empty index.md files`);
       return true;
     }
-    core.info(`Reading template from ${indexTemplate}`);
+    core.info(`Reading template from ${indexTemplate}...`);
     const template = await fs.readFile(indexTemplate, 'utf8');
     core.info(`Template loaded, size: ${template.length} bytes`);
     const repoUrl = context.payload.repository.html_url;
     const defaultBranchName = context.payload.repository.default_branch;
-    const Handlebars = _registerHandlebarsHelpers(repoUrl);
+    const Handlebars = utils.registerHandlebarsHelpers(repoUrl);
     const charts = Object.entries(index.entries)
       .sort(([source], [target]) => source.localeCompare(target))
       .map(([name, versions]) => {
@@ -553,7 +524,7 @@ async function generateChartsIndex({
     });
     core.info(`Generated content length: ${newContent.length} bytes`);
     await fs.mkdir(path.dirname(indexMdPath), { recursive: true });
-    core.info(`Writing index.md to root directory and ${indexMdPath}`);
+    core.info(`Writing index.md to root directory and ${indexMdPath}...`);
     await fs.writeFile(CONFIG.filesystem.indexMdHome, newContent, 'utf8');
     await fs.writeFile(indexMdPath, newContent, 'utf8');
     core.info('Successfully generated index.md');
@@ -562,13 +533,11 @@ async function generateChartsIndex({
       await updateIssueTemplates({ core });
       core.info('Successfully updated issue templates with chart options');
     } catch (templateError) {
-      core.warning(`Failed to update issue templates: ${templateError.message}`);
+      utils.handleError(templateError, core, 'update issue templates', false);
     }
     return true;
   } catch (error) {
-    const errorMsg = `Failed to generate index.md: ${error.message}`;
-    core.setFailed(errorMsg);
-    throw new Error(errorMsg);
+    utils.handleError(error, core, 'generate index.md');
   }
 }
 
@@ -606,9 +575,7 @@ async function processChartReleases({
     await _generateHelmIndex({ exec, core, packagesPath, indexPath, repoUrl });
     core.info('Successfully completed the chart releases process');
   } catch (error) {
-    const errorMsg = `Chart releases process failed: ${error.message}`;
-    core.setFailed(errorMsg);
-    throw new Error(errorMsg);
+    utils.handleError(error, core, 'process chart releases');
   }
 }
 
@@ -622,7 +589,7 @@ async function processChartReleases({
 async function setupBuildEnvironment({ core }) {
   try {
     core.info(`Setting up build environment for ${CONFIG.deployment} deployment`);
-    core.info(`Copying ${CONFIG.filesystem.configPath} to ${CONFIG.filesystem.configHome}`);
+    core.info(`Copying ${CONFIG.filesystem.configPath} to ${CONFIG.filesystem.configHome}...`);
     await fs.copyFile(CONFIG.filesystem.configPath, CONFIG.filesystem.configHome);
     try {
       const configContent = await fs.readFile(CONFIG.filesystem.configPath, 'utf8');
@@ -634,44 +601,38 @@ async function setupBuildEnvironment({ core }) {
         core.info(`Created ${CONFIG.filesystem.headCustomPath} with custom head content`);
       }
     } catch (headError) {
-      core.warning(`Failed to process custom head content: ${headError.message}`);
+      utils.handleError(headError, core, 'process custom head content', false);
     }
   } catch (error) {
-    const errorMsg = `Failed to copy Jekyll config: ${error.message}`;
-    core.setFailed(errorMsg);
-    throw new Error(errorMsg);
+    utils.handleError(error, core, 'copy Jekyll config');
   }
   try {
     const indexMdHome = CONFIG.filesystem.indexMdHome;
     const indexMdPath = CONFIG.filesystem.indexMdPath;
     const [indexMdHomeExists, indexMdPathExists] = await Promise.all([
-      _fileExists(indexMdHome),
-      _fileExists(indexMdPath)
+      utils.fileExists(indexMdHome),
+      utils.fileExists(indexMdPath)
     ]);
     if (indexMdHomeExists) {
-      core.info(`Using existing index.md at ${indexMdHome}`);
+      core.info(`Using existing index.md at ${indexMdHome}...`);
     } else if (indexMdPathExists) {
-      core.info(`Copying ${indexMdPath} to ${indexMdHome}`);
+      core.info(`Copying ${indexMdPath} to ${indexMdHome}...`);
       await fs.copyFile(indexMdPath, indexMdHome);
     } else {
-      core.info(`No index.md found at ${indexMdPath} or ${indexMdHome}, creating empty file`);
+      core.info(`No index.md found at ${indexMdPath} or ${indexMdHome}, creating empty file...`);
       await fs.writeFile(indexMdHome, '', 'utf8');
     }
   } catch (error) {
-    const errorMsg = `Failed to process index.md: ${error.message}`;
-    core.setFailed(errorMsg);
-    throw new Error(errorMsg);
+    utils.handleError(error, core, 'process index.md');
   }
   try {
     const readmePath = CONFIG.filesystem.readmePath;
-    if (await _fileExists(readmePath)) {
-      core.info(`Removing ${readmePath} from root to prevent conflicts with index.html`);
+    if (await utils.fileExists(readmePath)) {
+      core.info(`Removing ${readmePath} from root to prevent conflicts with index.html...`);
       await fs.unlink(readmePath);
     }
   } catch (error) {
-    const errorMsg = `Failed to remove README.md: ${error.message}`;
-    core.setFailed(errorMsg);
-    throw new Error(errorMsg);
+    utils.handleError(error, core, 'remove README.md');
   }
   core.setOutput('deployment', CONFIG.deployment);
   core.info(`Jekyll preparation complete for ${CONFIG.deployment} environment`);
@@ -688,6 +649,7 @@ async function updateIssueTemplates({
   core
 }) {
   try {
+    core.info('Updating issue templates with chart options...');
     const bugReportPath = CONFIG.filesystem.bugReportPath;
     const featureRequestPath = CONFIG.filesystem.featureRequestPath;
     const templatePaths = [bugReportPath, featureRequestPath];
@@ -713,17 +675,15 @@ async function updateIssueTemplates({
           await fs.writeFile(templatePath, content, 'utf8');
           core.info(`Updated chart options in ${templatePath}`);
         } else {
-          core.warning(`Could not find chart dropdown in ${templatePath}`);
+          utils.handleError(new Error(`Could not find chart dropdown`), core, `process template ${templatePath}`, false);
         }
       } catch (error) {
-        core.warning(`Failed to update ${templatePath}: ${error.message}`);
+        utils.handleError(error, core, `update template ${templatePath}`, false);
       }
     }
     core.info(`Successfully updated templates with ${chartOptions.length - 1} chart options`);
   } catch (error) {
-    const errorMsg = `Failed to update issue templates: ${error.message}`;
-    core.setFailed(errorMsg);
-    throw new Error(errorMsg);
+    utils.handleError(error, core, 'update issue templates');
   }
 }
 
@@ -759,13 +719,13 @@ async function updateLockFiles({
     for (const chartDir of allChartDirs) {
       const lockFilePath = path.join(chartDir, 'Chart.lock');
       let originalLockHash = null;
-      if (await _fileExists(lockFilePath)) {
+      if (await utils.fileExists(lockFilePath)) {
         const originalContent = await fs.readFile(lockFilePath);
         originalLockHash = crypto.createHash('sha256').update(originalContent).digest('hex');
       }
       core.info(`Updating dependency lock file for ${chartDir} chart...`);
       await exec.exec('helm', ['dependency', 'update', chartDir]);
-      if (await _fileExists(lockFilePath)) {
+      if (await utils.fileExists(lockFilePath)) {
         const newContent = await fs.readFile(lockFilePath);
         const newHash = crypto.createHash('sha256').update(newContent).digest('hex');
         if (originalLockHash !== newHash) {
@@ -781,9 +741,7 @@ async function updateLockFiles({
       core.info('No dependency lock files to update');
     }
   } catch (error) {
-    const errorMsg = `Failed to update dependency lock files: ${error.message}`;
-    core.setFailed(errorMsg);
-    throw new Error(errorMsg);
+    utils.handleError(error, core, 'update dependency lock files');
   }
 }
 
