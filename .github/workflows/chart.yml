@@ -30,6 +30,7 @@ jobs:
       - name: Setup go
         uses: actions/setup-go@v5
         with:
+          cache: false
           go-version: stable
 
       - name: Setup helm
