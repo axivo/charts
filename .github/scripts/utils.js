@@ -2,7 +2,7 @@
  * Utility Functions for GitHub Actions Workflows
  * 
  * This module provides utility functions for GitHub Actions workflows:
- * - Status check creation
+ * - Issue creation for warnings
  * - Warning detection and reporting
  * 
  * @module utils
@@ -13,42 +13,13 @@ const Handlebars = require('handlebars');
 
 /**
  * Configuration constants for Utility Functions module
- * Contains settings for GitHub status checks, API interactions and other customizable parameters
+ * Contains settings for GitHub issues, API interactions and other customizable parameters
  */
 const CONFIG = {
-  commit: {
-    context: 'workflow-warnings'
-  }
-}
-
-/**
- * Creates a status check for warnings detected during workflow execution
- * 
- * @param {Object} params - Function parameters
- * @param {Object} params.github - GitHub API client
- * @param {Object} params.context - GitHub Actions context for repository info
- * @param {Object} params.core - GitHub Actions Core API for logging
- * @returns {Promise<void>}
- */
-async function createWarningStatusCheck({
-  github,
-  context,
-  core
-}) {
-  try {
-    core.info('Creating warning status check...');
-    const ref = context.payload.after || context.sha;
-    await github.rest.repos.createCommitStatus({
-      owner: context.repo.owner,
-      repo: context.repo.repo,
-      sha: ref,
-      state: 'success',
-      description: 'Warnings detected in workflow execution',
-      context: CONFIG.commit.context
-    });
-    core.info('Successfully created warning status check');
-  } catch (error) {
-    handleError(error, core, 'create warning status check', false);
+  issue: {
+    labels: ['bug', 'workflow'],
+    template: '.github/pages/issue.md.hbs',
+    title: 'workflow: Warnings Detected'
   }
 }
 
@@ -98,9 +69,56 @@ function registerHandlebarsHelpers(repoUrl) {
   return Handlebars;
 }
 
+/**
+ * Reports warnings detected during workflow execution by creating a GitHub issue
+ * 
+ * @param {Object} params - Function parameters
+ * @param {Object} params.github - GitHub API client
+ * @param {Object} params.context - GitHub Actions context for repository info
+ * @param {Object} params.core - GitHub Actions Core API for logging
+ * @returns {Promise<void>}
+ */
+async function reportWorkflowWarnings({
+  github,
+  context,
+  core
+}) {
+  try {
+    core.info('Reporting workflow warnings...');
+    const repoUrl = context.payload.repository.html_url;
+    const isPullRequest = Boolean(context.payload.pull_request);
+    const branchName = isPullRequest
+      ? context.payload.pull_request.head.ref
+      : context.payload.repository.default_branch;
+    const commitSha = isPullRequest
+      ? context.payload.pull_request.head.sha
+      : context.payload.after;
+    const templateContent = await fs.readFile(CONFIG.issue.template, 'utf8');
+    const handlebars = registerHandlebarsHelpers(repoUrl);
+    const template = handlebars.compile(templateContent);
+    const issueBody = template({
+      Workflow: context.workflow,
+      RunID: context.runId,
+      Sha: commitSha,
+      Branch: branchName,
+      RepoURL: repoUrl
+    });
+    await github.rest.issues.create({
+      owner: context.repo.owner,
+      repo: context.repo.repo,
+      title: CONFIG.issue.title,
+      body: issueBody,
+      labels: CONFIG.issue.labels
+    });
+    core.info('Successfully reported workflow warnings');
+  } catch (error) {
+    handleError(error, core, 'report workflow warnings', false);
+  }
+}
+
 module.exports = {
-  createWarningStatusCheck,
   fileExists,
   handleError,
-  registerHandlebarsHelpers
+  registerHandlebarsHelpers,
+  reportWorkflowWarnings
 };

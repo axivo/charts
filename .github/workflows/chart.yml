@@ -30,7 +30,6 @@ jobs:
       - name: Setup go
         uses: actions/setup-go@v5
         with:
-          cache: false
           go-version: stable
 
       - name: Setup helm
@@ -70,3 +69,10 @@ jobs:
           script: |
             const { updateLockFiles } = require('./.github/scripts/pages.js');
             await updateLockFiles({ github, context, core, exec });
+
+      - name: Report workflow warnings
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { reportWorkflowWarnings } = require('./.github/scripts/utils.js');
+            await reportWorkflowWarnings({ github, context, core });
