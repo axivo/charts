@@ -5,9 +5,7 @@ on:
     branches:
       - main
     paths:
-      - .github/pages/config.yml
-      - .github/pages/index.md.hbs
-      - .github/pages/release.md.hbs
+      - .github/pages/*
       - application/**
       - library/**
   workflow_dispatch:
