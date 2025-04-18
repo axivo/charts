@@ -1,3 +1,25 @@
+### Variable Naming Conventions
+
+When creating variables from CONFIG properties, follow these conventions:
+
+1. **Use the category name as a prefix**:
+   - For values from `CONFIG.release.frontpage`, use `frontpage` as the prefix
+   - Example: `const frontpageRoot = CONFIG.release.frontpage.root;`
+
+2. **Use the property name as the suffix**:
+   - Maintain the property name in the variable
+   - Example: `root` property becomes part of `frontpageRoot`
+
+3. **For directory paths that will be used for mkdir operations**:
+   - Use `Dir` suffix instead of full paths
+   - Example: `const headDir = path.dirname(CONFIG.release.head.custom);`
+
+4. **For boolean variables that check existence**:
+   - Use the property name with `Exists` suffix, or simply `exists` if generic
+   - Example: `const rootExists = await utils.fileExists(frontpageRoot);`
+
+Following these naming conventions ensures code clarity and maintainability as the migration progresses.
+
 ### Handling Shared Internal Functions
 
 For functions that are used by both chart.js and release.js (like `_findCharts`), we'll follow this approach:

@@ -54,16 +54,16 @@ const CONFIG = {
      */
     configuration: {
       /**
-       * Path where the Jekyll configuration will be generated
-       * @type {string}
-       */
-      home: './_config.yml',
-
-      /**
        * Path to the Jekyll configuration file template
        * @type {string}
        */
-      path: '.github/templates/config.yml'
+      file: '.github/templates/config.yml',
+
+      /**
+       * Path to the Jekyll configuration file in the root directory
+       * @type {string}
+       */
+      root: './_config.yml'
     },
 
     /**
@@ -75,7 +75,7 @@ const CONFIG = {
        * Path to the custom head include file for Jekyll
        * @type {string}
        */
-      path: './_includes/head-custom.html'
+      custom: './_includes/head-custom.html'
     },
 
     /**
@@ -84,16 +84,16 @@ const CONFIG = {
      */
     frontpage: {
       /**
-       * Path to the index.md file in the root directory
-       * @type {string}
-       */
-      home: './index.md',
-
-      /**
        * Path to the generated index.md file in the dist directory
        * @type {string}
        */
-      path: './_dist/index.md'
+      dist: './_dist/index.md',
+
+      /**
+       * Path to the index.md file in the root directory
+       * @type {string}
+       */
+      root: './index.md'
     }
   }
 };
@@ -114,16 +114,16 @@ const CONFIG = {
 async function setupBuildEnvironment({ core }) {
   try {
     core.info(`Setting up build environment for ${CONFIG.release.deployment} deployment`);
-    core.info(`Copying ${CONFIG.release.configuration.path} to ${CONFIG.release.configuration.home}...`);
-    await fs.copyFile(CONFIG.release.configuration.path, CONFIG.release.configuration.home);
+    core.info(`Copying ${CONFIG.release.configuration.file} to ${CONFIG.release.configuration.root}...`);
+    await fs.copyFile(CONFIG.release.configuration.file, CONFIG.release.configuration.root);
     try {
-      const configContent = await fs.readFile(CONFIG.release.configuration.path, 'utf8');
+      const configContent = await fs.readFile(CONFIG.release.configuration.file, 'utf8');
       const config = yaml.load(configContent);
       if (config.head) {
-        const headCustomPath = path.dirname(CONFIG.release.head.path);
-        await fs.mkdir(headCustomPath, { recursive: true });
-        await fs.writeFile(CONFIG.release.head.path, config.head, 'utf8');
-        core.info(`Created ${CONFIG.release.head.path} with custom head content`);
+        const headDir = path.dirname(CONFIG.release.head.custom);
+        await fs.mkdir(headDir, { recursive: true });
+        await fs.writeFile(CONFIG.release.head.custom, config.head, 'utf8');
+        core.info(`Created ${CONFIG.release.head.custom} with custom head content`);
       }
     } catch (headError) {
       utils.handleError(headError, core, 'process custom head content', false);
@@ -132,20 +132,20 @@ async function setupBuildEnvironment({ core }) {
     utils.handleError(error, core, 'copy Jekyll config');
   }
   try {
-    const indexMdHome = CONFIG.release.frontpage.home;
-    const indexMdPath = CONFIG.release.frontpage.path;
-    const [indexMdHomeExists, indexMdPathExists] = await Promise.all([
-      utils.fileExists(indexMdHome),
-      utils.fileExists(indexMdPath)
+    const frontpageRoot = CONFIG.release.frontpage.root;
+    const frontpageDist = CONFIG.release.frontpage.dist;
+    const [rootExists, distExists] = await Promise.all([
+      utils.fileExists(frontpageRoot),
+      utils.fileExists(frontpageDist)
     ]);
-    if (indexMdHomeExists) {
-      core.info(`Using existing index.md at ${indexMdHome}...`);
-    } else if (indexMdPathExists) {
-      core.info(`Copying ${indexMdPath} to ${indexMdHome}...`);
-      await fs.copyFile(indexMdPath, indexMdHome);
+    if (rootExists) {
+      core.info(`Using existing index.md at ${frontpageRoot}...`);
+    } else if (distExists) {
+      core.info(`Copying ${frontpageDist} to ${frontpageRoot}...`);
+      await fs.copyFile(frontpageDist, frontpageRoot);
     } else {
-      core.info(`No index.md found at ${indexMdPath} or ${indexMdHome}, creating empty file...`);
-      await fs.writeFile(indexMdHome, '', 'utf8');
+      core.info(`No index.md found at ${frontpageDist} or ${frontpageRoot}, creating empty file...`);
+      await fs.writeFile(frontpageRoot, '', 'utf8');
     }
   } catch (error) {
     utils.handleError(error, core, 'process index.md');
