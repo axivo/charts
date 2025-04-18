@@ -40,7 +40,11 @@ const CONFIG = {
   release: {
     /**
      * Deployment environment type
+     * Controls how the build and deployment process behaves
+     * 
      * @type {string}
+     * @example 'production' - Builds charts and deploys to GitHub Pages
+     * @example 'staging' - Builds charts locally for testing without deploying
      */
     deployment: 'production',
 
