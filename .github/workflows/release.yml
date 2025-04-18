@@ -68,12 +68,12 @@ jobs:
             const { generateIndex } = require('./.github/scripts/chart.js');
             await generateIndex({ context, core });
 
-      - name: Setup pages build environment
+      - name: Setup release build environment
         id: setup
         uses: actions/github-script@v7
         with:
           script: |
-            const { setupBuildEnvironment } = require('./.github/scripts/chart.js');
+            const { setupBuildEnvironment } = require('./.github/scripts/release.js');
             await setupBuildEnvironment({ core });
 
       - name: Build pages

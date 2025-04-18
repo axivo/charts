@@ -315,6 +315,7 @@ async function uploadReleaseAsset({
 }
 
 module.exports = {
+  CONFIG,
   createRelease,
   getReleaseByTag,
   getReleaseIssues,
