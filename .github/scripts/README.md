@@ -163,13 +163,12 @@ Provides functions for Helm chart management, releases and GitHub Pages generati
 #### Internal Functions
 
 - `_buildChartRelease` - Builds a GitHub release for a single chart and uploads the chart package as an asset
-- `_commitAppFiles` - Updates and commits application files with latest chart versions
-- `_commitLockFiles` - Helper function to commit updated lock files to PRs
 - `_createChartReleases` - Creates GitHub releases for packaged charts and uploads the chart packages as release assets
 - `_findCharts` - Finds deployed charts in application and library paths
 - `_generateChartRelease` - Generates release content using the template file
 - `_generateHelmIndex` - Generates the Helm repository index file
 - `_packageCharts` - Packages all charts in a specified directory and updates application references
+- `_performCommit` - Generic function to commit changes to files with appropriate messages
 
 #### Exported Functions
 

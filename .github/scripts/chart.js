@@ -140,134 +140,44 @@ async function _buildChartRelease({
 }
 
 /**
- * Updates and commits application files with latest chart versions
+ * Performs a Git commit for the specified files
  * 
  * @param {Object} params - Function parameters
  * @param {Object} params.exec - GitHub Actions exec helpers
  * @param {Object} params.core - GitHub Actions Core API for logging
  * @param {Object} params.github - GitHub API client
  * @param {Object} params.context - GitHub Actions context
- * @param {Object} params.charts - Charts object from _findCharts
+ * @param {Array<string>} params.files - Array of files to commit
+ * @param {string} params.fileType - Type of files being committed (for log messages)
  * @returns {Promise<void>}
  */
-async function _commitAppFiles({
-  exec,
-  core,
+async function _performCommit({
   github,
   context,
-  charts
-}) {
-  try {
-    core.info('Updating application files with latest chart versions...');
-    const appFiles = [];
-    for (const chartDir of charts.application) {
-      const chartName = path.basename(chartDir);
-      const appYamlPath = path.join(chartDir, 'application.yaml');
-      if (!await utils.fileExists(appYamlPath)) continue;
-      try {
-        const appConfig = yaml.load(await fs.readFile(appYamlPath, 'utf8'));
-        if (!appConfig.spec?.source) continue;
-        const chartMetadata = yaml.load(await fs.readFile(path.join(chartDir, 'Chart.yaml'), 'utf8'));
-        const tagName = CONFIG.chart.releaseTitle
-          .replace('{{ .Name }}', chartName)
-          .replace('{{ .Version }}', chartMetadata.version);
-        if (appConfig.spec.source.targetRevision === tagName) continue;
-        appConfig.spec.source.targetRevision = tagName;
-        await fs.writeFile(appYamlPath, yaml.dump(appConfig, { lineWidth: -1 }), 'utf8');
-        core.info(`Updated targetRevision to ${tagName} in ${appYamlPath}`);
-        appFiles.push(appYamlPath);
-      } catch (error) {
-        utils.handleError(error, core, `update application file for ${chartName}`, false);
-      }
-    }
-    if (appFiles.length > 0) {
-      const runGit = async (args) => (await exec.getExecOutput('git', args)).stdout.trim();
-      const headRef = process.env.GITHUB_HEAD_REF;
-      core.info(`Committing ${appFiles.length} application files...`);
-      await runGit(['add', ...appFiles]);
-      const { additions, deletions } = await gitSignedCommit.getGitStagedChanges(runGit);
-      if (additions.length + deletions.length > 0) {
-        const currentHead = await runGit(['rev-parse', 'HEAD']);
-        await gitSignedCommit.createSignedCommit({
-          github, context, core,
-          branchName: headRef,
-          expectedHeadOid: currentHead,
-          additions, deletions,
-          commitMessage: 'chore(github-action): update target revision references'
-        });
-        core.info('Successfully committed application file updates');
-      } else {
-        core.info('No application file changes to commit');
-      }
-    }
-  } catch (error) {
-    utils.handleError(error, core, 'update and commit application files', false);
-  }
-}
-
-/**
- * Updates and commits dependency lock files
- * 
- * @param {Object} params - Function parameters
- * @param {Object} params.exec - GitHub Actions exec helpers
- * @param {Object} params.core - GitHub Actions Core API for logging
- * @param {Object} params.github - GitHub API client
- * @param {Object} params.context - GitHub Actions context
- * @param {Object} params.charts - Charts object from _findCharts
- * @returns {Promise<void>}
- */
-async function _commitLockFiles({
-  exec,
   core,
-  github,
-  context,
-  charts
+  exec,
+  files,
+  fileType
 }) {
   try {
-    core.info('Updating dependency lock files...');
-    const lockFiles = [];
-    const runHelm = async (args) => (await exec.getExecOutput('helm', args)).stdout.trim();
-    const chartDirs = [...charts.application, ...charts.library];
-    for (const chartDir of chartDirs) {
-      const lockFilePath = path.join(chartDir, 'Chart.lock');
-      let originalLockHash = null;
-      if (await utils.fileExists(lockFilePath)) {
-        const originalContent = await fs.readFile(lockFilePath);
-        originalLockHash = crypto.createHash('sha256').update(originalContent).digest('hex');
-      }
-      core.info(`Updating dependency lock file for ${chartDir} chart...`);
-      await runHelm(['dependency', 'update', chartDir]);
-      if (await utils.fileExists(lockFilePath)) {
-        const newContent = await fs.readFile(lockFilePath);
-        const newHash = crypto.createHash('sha256').update(newContent).digest('hex');
-        if (originalLockHash !== newHash) {
-          lockFiles.push(lockFilePath);
-          core.info(`Successfully updated dependency lock file for ${chartDir} chart`);
-        }
-      }
-    }
-    if (lockFiles.length > 0) {
-      const runGit = async (args) => (await exec.getExecOutput('git', args)).stdout.trim();
-      const headRef = process.env.GITHUB_HEAD_REF;
-      core.info(`Committing ${lockFiles.length} dependency lock files...`);
-      await runGit(['add', ...lockFiles]);
-      const { additions, deletions } = await gitSignedCommit.getGitStagedChanges(runGit);
-      if (additions.length + deletions.length > 0) {
-        const currentHead = await runGit(['rev-parse', 'HEAD']);
-        await gitSignedCommit.createSignedCommit({
-          github, context, core,
-          branchName: headRef,
-          expectedHeadOid: currentHead,
-          additions, deletions,
-          commitMessage: 'chore(github-action): update dependency lock files'
-        });
-        core.info('Successfully committed dependency lock files update');
-      } else {
-        core.info('No dependency lock file changes to commit');
-      }
+    const runGit = async (args) => (await exec.getExecOutput('git', args)).stdout.trim();
+    const headRef = process.env.GITHUB_HEAD_REF;
+    core.info(`Committing ${files.length} ${fileType}...`);
+    await runGit(['add', ...files]);
+    const { additions, deletions } = await gitSignedCommit.getGitStagedChanges(runGit);
+    if (additions.length + deletions.length > 0) {
+      const currentHead = await runGit(['rev-parse', 'HEAD']);
+      await gitSignedCommit.createSignedCommit({
+        github, context, core,
+        branchName: headRef,
+        expectedHeadOid: currentHead,
+        additions, deletions,
+        commitMessage: `chore(github-action): update ${fileType}`
+      });
+      core.info(`Successfully committed ${fileType}`);
     }
   } catch (error) {
-    utils.handleError(error, core, 'commit dependency lock files', false);
+    utils.handleError(error, core, `commit ${fileType}`, false);
   }
 }
 
@@ -484,16 +394,12 @@ async function _generateHelmIndex({
  * @param {Object} params - Function parameters
  * @param {Object} params.exec - GitHub Actions exec helpers
  * @param {Object} params.core - GitHub Actions Core API for logging
- * @param {Object} params.github - GitHub API client
- * @param {Object} params.context - GitHub Actions context
  * @param {string} params.outputDir - Directory to store packaged charts
  * @returns {Promise<void>}
  */
 async function _packageCharts({
   exec,
   core,
-  github,
-  context,
   outputDir
 }) {
   try {
@@ -505,16 +411,62 @@ async function _packageCharts({
       core.info(`No charts found`);
       return;
     }
-    const runHelm = async (args) => (await exec.getExecOutput('helm', args)).stdout.trim();
     for (const chartDir of chartDirs) {
       core.info(`Packaging ${chartDir} chart...`);
-      await runHelm(['package', chartDir, '--destination', outputDir]);
+      await exec.exec('helm', ['package', chartDir, '--destination', outputDir]);
     }
-    await _commitAppFiles({ exec, core, github, context, charts });
-    await _commitLockFiles({ exec, core, github, context, charts });
     core.info(`Successfully packaged ${chartDirs.length} charts`);
   } catch (error) {
     utils.handleError(error, core, 'package charts');
+  }
+}
+
+/**
+ * Updates application files content with latest chart versions
+ * 
+ * @param {Object} params - Function parameters
+ * @param {Object} params.github - GitHub API client
+ * @param {Object} params.context - GitHub Actions context
+ * @param {Object} params.core - GitHub Actions Core API for logging
+ * @param {Object} params.exec - GitHub Actions exec helpers
+ * @returns {Promise<string[]>} - Array of updated application file paths
+ */
+async function _updateAppFiles({
+  github,
+  context,
+  core,
+  exec,
+  charts
+}) {
+  try {
+    core.info('Updating application files with chart versions...');
+    const appFiles = [];
+    for (const chartDir of charts.application) {
+      const chartName = path.basename(chartDir);
+      const appYamlPath = path.join(chartDir, 'application.yaml');
+      if (!await utils.fileExists(appYamlPath)) continue;
+      try {
+        const appConfig = yaml.load(await fs.readFile(appYamlPath, 'utf8'));
+        if (!appConfig.spec?.source) continue;
+        const chartMetadata = yaml.load(await fs.readFile(path.join(chartDir, 'Chart.yaml'), 'utf8'));
+        const tagName = CONFIG.chart.releaseTitle
+          .replace('{{ .Name }}', chartName)
+          .replace('{{ .Version }}', chartMetadata.version);
+        if (appConfig.spec.source.targetRevision === tagName) continue;
+        appConfig.spec.source.targetRevision = tagName;
+        await fs.writeFile(appYamlPath, yaml.dump(appConfig, { lineWidth: -1 }), 'utf8');
+        core.info(`Updated ${tagName} target revision in ${appYamlPath}`);
+        appFiles.push(appYamlPath);
+      } catch (error) {
+        utils.handleError(error, core, `update application file for ${chartName}`, false);
+      }
+    }
+    if (appFiles.length > 0) {
+      core.info(`Successfully updated ${appFiles.length} application files`);
+      await _performCommit({ github, context, core, exec, files: appFiles, fileType: 'application files' });
+    }
+  } catch (error) {
+    utils.handleError(error, core, 'update application files', false);
   }
 }
 
@@ -528,18 +480,22 @@ async function _packageCharts({
  * @returns {Promise<string[]>} - Array of updated template file paths
  */
 async function _updateIssueTemplates({
-  core
+  github,
+  context,
+  core,
+  exec,
+  charts
 }) {
   try {
     core.info('Updating issue templates with chart options...');
+    const templateFiles = [];
     const bugReportPath = CONFIG.filesystem.bugReportPath;
     const featureRequestPath = CONFIG.filesystem.featureRequestPath;
     const templatePaths = [bugReportPath, featureRequestPath];
-    const charts = await _findCharts({ core });
     const allChartDirs = [...charts.application, ...charts.library];
-    if (allChartDirs.length === 0) {
-      core.info('No charts found, skipping issue template updates');
-      return [];
+    if (!allChartDirs.length) {
+      core.info('No charts found, skipping issue templates update');
+      return templateFiles;
     }
     const appCharts = charts.application;
     const libCharts = charts.library;
@@ -548,7 +504,6 @@ async function _updateIssueTemplates({
     const chartOptions = [...appChartOptions, ...libChartOptions];
     const indentationRegex = /(\s+)-.+\(.+\)/;
     const optionsRegex = /(id:\s+chart[\s\S]+options:[\s+\n])(\s+)[\s\S]+(\s+default:\s+0)/;
-    const updatedTemplates = [];
     for (const templatePath of templatePaths) {
       try {
         let content = await fs.readFile(templatePath, 'utf8');
@@ -557,22 +512,21 @@ async function _updateIssueTemplates({
         }
         const indentation = content.match(indentationRegex)[1];
         const optionsText = chartOptions.map(option => `${indentation}- ${option}`).join('');
-        const replacementText = `$1${optionsText}$2`;
+        const replacementText = `$1${optionsText}$3`;
         content = content.replace(optionsRegex, replacementText);
         await fs.writeFile(templatePath, content, 'utf8');
         core.info(`Updated chart options in ${templatePath} issue template`);
-        updatedTemplates.push(templatePath);
+        templateFiles.push(templatePath);
       } catch (error) {
         utils.handleError(error, core, `update ${templatePath} issue template`, false);
       }
     }
-    if (chartOptions.length > 0) {
+    if (templateFiles.length > 0) {
       core.info(`Successfully updated issue templates with ${chartOptions.length} chart options`);
+      await _performCommit({ github, context, core, exec, files: templateFiles, fileType: 'issue templates' });
     }
-    return updatedTemplates;
   } catch (error) {
     utils.handleError(error, core, 'update issue templates');
-    return [];
   }
 }
 
@@ -591,26 +545,42 @@ async function _updateLockFiles({
   github,
   context,
   core,
-  exec
+  exec,
+  charts
 }) {
   try {
-    const runGit = async (args) => (await exec.getExecOutput('git', args)).stdout.trim();
-    const headRef = process.env.GITHUB_HEAD_REF;
-    core.info(`Getting the latest changes for ${headRef} branch...`);
-    await runGit(['fetch', 'origin', headRef]);
-    await runGit(['switch', headRef]);
-    await runGit(['pull', 'origin', headRef]);
-    core.info('Finding charts with dependency changes...');
-    const charts = await _findCharts({ core });
-    core.info(`Found ${charts.application.length + charts.library.length} charts to process`);
-    await _commitLockFiles({ exec, core, github, context, charts });
+    core.info('Updating dependency lock files with latest chart versions...');
+    const lockFiles = [];
+    const chartDirs = [...charts.application, ...charts.library];
+    for (const chartDir of chartDirs) {
+      const lockFilePath = path.join(chartDir, 'Chart.lock');
+      let originalLockHash = null;
+      if (await utils.fileExists(lockFilePath)) {
+        const originalContent = await fs.readFile(lockFilePath);
+        originalLockHash = crypto.createHash('sha256').update(originalContent).digest('hex');
+      }
+      core.info(`Updating dependency lock file for ${chartDir} chart...`);
+      await exec.exec('helm', ['dependency', 'update', chartDir]);
+      if (await utils.fileExists(lockFilePath)) {
+        const newContent = await fs.readFile(lockFilePath);
+        const newHash = crypto.createHash('sha256').update(newContent).digest('hex');
+        if (originalLockHash !== newHash) {
+          lockFiles.push(lockFilePath);
+          core.info(`Successfully updated dependency lock file for ${chartDir} chart`);
+        }
+      }
+    }
+    if (lockFiles.length > 0) {
+      core.info(`Successfully updated ${lockFiles.length} dependency lock files`);
+      await _performCommit({ github, context, core, exec, files: lockFiles, fileType: 'dependency lock files' });
+    }
   } catch (error) {
     utils.handleError(error, core, 'update dependency lock files');
   }
 }
 
 /**
- * Generates the charts index page from index.yaml file
+ * Generates charts index page from index.yaml file
  * 
  * @param {Object} params - Function parameters
  * @param {Object} params.context - GitHub Actions context for repository info
@@ -632,10 +602,9 @@ async function generateIndex({
     let indexContent;
     try {
       indexContent = await fs.readFile(indexPath, 'utf8');
-      core.info(`Successfully read index.yaml, size: ${indexContent.length} bytes`);
+      core.info(`Successfully read chart index with ${indexContent.length} bytes`);
     } catch (readError) {
-      utils.handleError(readError, core, 'read index.yaml', false);
-      core.warning('Creating an empty chart index...');
+      utils.handleError(readError, core, 'read chart index', false);
       const emptyIndex = {
         apiVersion: 'v1',
         entries: {},
@@ -645,20 +614,20 @@ async function generateIndex({
       const distDir = path.dirname(indexPath);
       await fs.mkdir(distDir, { recursive: true });
       await fs.writeFile(indexPath, indexContent, 'utf8');
-      core.info(`Created empty index.yaml at ${indexPath}`);
+      core.info(`Successfully created empty chart index at ${indexPath}`);
     }
     const index = yaml.load(indexContent);
     if (!index || !index.entries) {
-      core.info('Creating an empty index.md file...');
+      core.info('Creating empty index page...');
       await fs.mkdir(path.dirname(indexMdPath), { recursive: true });
       await fs.writeFile(indexMdPath, '', 'utf8');
       await fs.writeFile(CONFIG.filesystem.indexMdHome, '', 'utf8');
-      core.info(`Created empty index.md files`);
+      core.info('Successfully created empty index page');
       return true;
     }
     core.info(`Reading template from ${indexTemplate}...`);
     const template = await fs.readFile(indexTemplate, 'utf8');
-    core.info(`Template loaded, size: ${template.length} bytes`);
+    core.info(`Successfully read template with ${template.length} bytes`);
     const repoUrl = context.payload.repository.html_url;
     const defaultBranchName = context.payload.repository.default_branch;
     const Handlebars = utils.registerHandlebarsHelpers(repoUrl);
@@ -681,22 +650,15 @@ async function generateIndex({
       RepoURL: repoUrl,
       Branch: defaultBranchName
     });
-    core.info(`Generated content length: ${newContent.length} bytes`);
+    core.info(`Successfully generated content with ${newContent.length} bytes`);
     await fs.mkdir(path.dirname(indexMdPath), { recursive: true });
-    core.info(`Writing index.md to root directory and ${indexMdPath}...`);
+    core.info(`Creating index page into root directory and ${indexMdPath}...`);
     await fs.writeFile(CONFIG.filesystem.indexMdHome, newContent, 'utf8');
     await fs.writeFile(indexMdPath, newContent, 'utf8');
-    core.info('Successfully generated index.md');
-    try {
-      core.info('Updating issue templates...');
-      await _updateIssueTemplates({ core });
-      core.info('Successfully updated issue templates with chart options');
-    } catch (templateError) {
-      utils.handleError(templateError, core, 'update issue templates', false);
-    }
+    core.info('Successfully created index page');
     return true;
   } catch (error) {
-    utils.handleError(error, core, 'generate index.md');
+    utils.handleError(error, core, 'create index page');
   }
 }
 
@@ -705,6 +667,7 @@ async function generateIndex({
  * 
  * Handles multiple repository maintenance tasks:
  * - Updates dependency lock files
+ * - Updates application files with latest chart versions
  * - Updates issue templates with current chart options
  * 
  * @param {Object} params - Function parameters
@@ -721,30 +684,10 @@ async function performUpdates({
   exec
 }) {
   try {
-    await _updateLockFiles({ github, context, core, exec });
-    const runGit = async (args) => (await exec.getExecOutput('git', args)).stdout.trim();
-    const headRef = process.env.GITHUB_HEAD_REF;
-    core.info('Fetching the latest branch state...');
-    await runGit(['fetch', 'origin', headRef]);
-    await runGit(['pull', 'origin', headRef]);
-    const templateFiles = await _updateIssueTemplates({ core });
-    if (templateFiles.length > 0) {
-      core.info(`Committing ${templateFiles.length} template files...`);
-      await runGit(['add', ...templateFiles]);
-      const { additions, deletions } = await gitSignedCommit.getGitStagedChanges(runGit);
-      if (additions.length + deletions.length > 0) {
-        const currentHead = await runGit(['rev-parse', 'HEAD']);
-        await gitSignedCommit.createSignedCommit({
-          github, context, core,
-          branchName: headRef,
-          expectedHeadOid: currentHead,
-          additions, deletions,
-          commitMessage: 'chore(github-action): update issue templates'
-        });
-        core.info('Successfully committed issue template updates');
-        await runGit(['fetch', 'origin', headRef]);
-      }
-    }
+    const charts = await _findCharts({ core });
+    await _updateAppFiles({ github, context, core, exec, charts });
+    await _updateLockFiles({ github, context, core, exec, charts });
+    await _updateIssueTemplates({ github, context, core, exec, charts });
   } catch (error) {
     utils.handleError(error, core, 'perform repository updates');
   }
@@ -780,7 +723,7 @@ async function processReleases({
     await fs.mkdir(packagesPath, { recursive: true });
     core.info(`Successfully created ${packagesPath} directory`);
     core.info('Packaging all charts...');
-    await _packageCharts({ exec, core, github, context, outputDir: packagesPath });
+    await _packageCharts({ exec, core, outputDir: packagesPath });
     core.info('Creating all chart releases...');
     await _createChartReleases({ github, context, core, packagesPath });
     core.info('Generating Helm repository index...');
