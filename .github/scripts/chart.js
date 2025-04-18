@@ -720,14 +720,17 @@ async function updateIssueTemplates({
     const appChartOptions = appCharts.map(dir => `${path.basename(dir)} (application)`).sort();
     const libChartOptions = libCharts.map(dir => `${path.basename(dir)} (library)`).sort();
     const chartOptions = [...appChartOptions, ...libChartOptions];
-    const optionsText = chartOptions.map(option => `        - ${option}`).join('\n');
+    const indentationRegex = /(\s+)-.+\(.+\)/;
     const optionsRegex = /(id:\s+chart[\s\S]+options:[\s+\n])[\s\S]+?(\s+default:\s+0)/;
-    const replacementText = `$1${optionsText}$2`;
     const updatedTemplates = [];
     for (const templatePath of templatePaths) {
       try {
         let content = await fs.readFile(templatePath, 'utf8');
         if (content.includes('id: chart')) {
+          const indentationMatch = content.match(indentationRegex);
+          const indentation = indentationMatch[1];
+          const optionsText = chartOptions.map(option => `${indentation}- ${option}`).join('\n');
+          const replacementText = `$1${optionsText}$2`;
           content = content.replace(optionsRegex, replacementText);
           await fs.writeFile(templatePath, content, 'utf8');
           core.info(`Updated chart options in ${templatePath}`);
