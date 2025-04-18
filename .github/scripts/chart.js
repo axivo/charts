@@ -519,6 +519,97 @@ async function _packageCharts({
 }
 
 /**
+ * Updates issue templates with current chart options
+ * 
+ * Updates dropdown options in issue templates based on current charts in the repository
+ * 
+ * @param {Object} params - Function parameters
+ * @param {Object} params.core - GitHub Actions Core API for logging
+ * @returns {Promise<string[]>} - Array of updated template file paths
+ */
+async function _updateIssueTemplates({
+  core
+}) {
+  try {
+    core.info('Updating issue templates with chart options...');
+    const bugReportPath = CONFIG.filesystem.bugReportPath;
+    const featureRequestPath = CONFIG.filesystem.featureRequestPath;
+    const templatePaths = [bugReportPath, featureRequestPath];
+    const charts = await _findCharts({ core });
+    const allChartDirs = [...charts.application, ...charts.library];
+    if (allChartDirs.length === 0) {
+      core.info('No charts found, skipping issue template updates');
+      return [];
+    }
+    const appCharts = charts.application;
+    const libCharts = charts.library;
+    const appChartOptions = appCharts.map(dir => `${path.basename(dir)} (application)`).sort();
+    const libChartOptions = libCharts.map(dir => `${path.basename(dir)} (library)`).sort();
+    const chartOptions = [...appChartOptions, ...libChartOptions];
+    const indentationRegex = /(\s+)-.+\(.+\)/;
+    const optionsRegex = /(id:\s+chart[\s\S]+options:[\s+\n])(\s+)[\s\S]+(\s+default:\s+0)/;
+    const updatedTemplates = [];
+    for (const templatePath of templatePaths) {
+      try {
+        let content = await fs.readFile(templatePath, 'utf8');
+        if (!content.includes('id: chart')) {
+          continue;
+        }
+        const indentation = content.match(indentationRegex)[1];
+        const optionsText = chartOptions.map(option => `${indentation}- ${option}`).join('');
+        const replacementText = `$1${optionsText}$2`;
+        content = content.replace(optionsRegex, replacementText);
+        await fs.writeFile(templatePath, content, 'utf8');
+        core.info(`Updated chart options in ${templatePath} issue template`);
+        updatedTemplates.push(templatePath);
+      } catch (error) {
+        utils.handleError(error, core, `update ${templatePath} issue template`, false);
+      }
+    }
+    if (chartOptions.length > 0) {
+      core.info(`Successfully updated issue templates with ${chartOptions.length} chart options`);
+    }
+    return updatedTemplates;
+  } catch (error) {
+    utils.handleError(error, core, 'update issue templates');
+    return [];
+  }
+}
+
+/**
+ * Updates dependency lock files for charts in a pull request
+ * This should run after documentation updates are complete
+ * 
+ * @param {Object} params - Function parameters
+ * @param {Object} params.github - GitHub API client
+ * @param {Object} params.context - GitHub Actions context for repository info
+ * @param {Object} params.core - GitHub Actions Core API for logging and output
+ * @param {Object} params.exec - GitHub Actions exec helpers for running commands
+ * @returns {Promise<void>}
+ */
+async function _updateLockFiles({
+  github,
+  context,
+  core,
+  exec
+}) {
+  try {
+    const runGit = async (args) => (await exec.getExecOutput('git', args)).stdout.trim();
+    const headRef = process.env.GITHUB_HEAD_REF;
+    core.info(`Getting the latest changes for ${headRef} branch...`);
+    await runGit(['fetch', 'origin', headRef]);
+    await runGit(['switch', headRef]);
+    await runGit(['pull', 'origin', headRef]);
+    core.info('Finding charts with dependency changes...');
+    const charts = await _findCharts({ core });
+    core.info(`Found ${charts.application.length + charts.library.length} charts to process`);
+    await _commitLockFiles({ exec, core, github, context, charts });
+  } catch (error) {
+    utils.handleError(error, core, 'update dependency lock files');
+  }
+}
+
+/**
  * Generates the charts index page from index.yaml file
  * 
  * @param {Object} params - Function parameters
@@ -598,7 +689,7 @@ async function generateIndex({
     core.info('Successfully generated index.md');
     try {
       core.info('Updating issue templates...');
-      await updateIssueTemplates({ core });
+      await _updateIssueTemplates({ core });
       core.info('Successfully updated issue templates with chart options');
     } catch (templateError) {
       utils.handleError(templateError, core, 'update issue templates', false);
@@ -630,13 +721,13 @@ async function performUpdates({
   exec
 }) {
   try {
-    await updateLockFiles({ github, context, core, exec });
+    await _updateLockFiles({ github, context, core, exec });
     const runGit = async (args) => (await exec.getExecOutput('git', args)).stdout.trim();
     const headRef = process.env.GITHUB_HEAD_REF;
     core.info('Fetching the latest branch state...');
     await runGit(['fetch', 'origin', headRef]);
     await runGit(['pull', 'origin', headRef]);
-    const templateFiles = await updateIssueTemplates({ core });
+    const templateFiles = await _updateIssueTemplates({ core });
     if (templateFiles.length > 0) {
       core.info(`Committing ${templateFiles.length} template files...`);
       await runGit(['add', ...templateFiles]);
@@ -760,103 +851,10 @@ async function setupBuildEnvironment({ core }) {
   core.info(`Jekyll preparation complete for ${CONFIG.deployment} environment`);
 }
 
-/**
- * Updates issue templates with current chart options
- * 
- * Updates dropdown options in issue templates based on current charts in the repository
- * 
- * @param {Object} params - Function parameters
- * @param {Object} params.core - GitHub Actions Core API for logging
- * @returns {Promise<string[]>} - Array of updated template file paths
- */
-async function updateIssueTemplates({
-  core
-}) {
-  try {
-    core.info('Updating issue templates with chart options...');
-    const bugReportPath = CONFIG.filesystem.bugReportPath;
-    const featureRequestPath = CONFIG.filesystem.featureRequestPath;
-    const templatePaths = [bugReportPath, featureRequestPath];
-    const charts = await _findCharts({ core });
-    const allChartDirs = [...charts.application, ...charts.library];
-    if (allChartDirs.length === 0) {
-      core.info('No charts found, skipping issue template updates');
-      return [];
-    }
-    const appCharts = charts.application;
-    const libCharts = charts.library;
-    const appChartOptions = appCharts.map(dir => `${path.basename(dir)} (application)`).sort();
-    const libChartOptions = libCharts.map(dir => `${path.basename(dir)} (library)`).sort();
-    const chartOptions = [...appChartOptions, ...libChartOptions];
-    const indentationRegex = /(\s+)-.+\(.+\)/;
-    const optionsRegex = /(id:\s+chart[\s\S]+options:[\s+\n])(\s+)[\s\S]+(\s+default:\s+0)/;
-    const updatedTemplates = [];
-    for (const templatePath of templatePaths) {
-      try {
-        let content = await fs.readFile(templatePath, 'utf8');
-        if (!content.includes('id: chart')) {
-          continue;
-        }
-        const indentation = content.match(indentationRegex)[1];
-        const optionsText = chartOptions.map(option => `${indentation}- ${option}`).join('');
-        const replacementText = `$1${optionsText}$2`;
-        content = content.replace(optionsRegex, replacementText);
-        await fs.writeFile(templatePath, content, 'utf8');
-        core.info(`Updated chart options in ${templatePath} issue template`);
-        updatedTemplates.push(templatePath);
-      } catch (error) {
-        utils.handleError(error, core, `update ${templatePath} issue template`, false);
-      }
-    }
-    if (chartOptions.length > 0) {
-      core.info(`Successfully updated issue templates with ${chartOptions.length} chart options`);
-    }
-    return updatedTemplates;
-  } catch (error) {
-    utils.handleError(error, core, 'update issue templates');
-    return [];
-  }
-}
-
-/**
- * Updates dependency lock files for charts in a pull request
- * This should run after documentation updates are complete
- * 
- * @param {Object} params - Function parameters
- * @param {Object} params.github - GitHub API client
- * @param {Object} params.context - GitHub Actions context for repository info
- * @param {Object} params.core - GitHub Actions Core API for logging and output
- * @param {Object} params.exec - GitHub Actions exec helpers for running commands
- * @returns {Promise<void>}
- */
-async function updateLockFiles({
-  github,
-  context,
-  core,
-  exec
-}) {
-  try {
-    const runGit = async (args) => (await exec.getExecOutput('git', args)).stdout.trim();
-    const headRef = process.env.GITHUB_HEAD_REF;
-    core.info(`Getting the latest changes for ${headRef} branch...`);
-    await runGit(['fetch', 'origin', headRef]);
-    await runGit(['switch', headRef]);
-    await runGit(['pull', 'origin', headRef]);
-    core.info('Finding charts with dependency changes...');
-    const charts = await _findCharts({ core });
-    core.info(`Found ${charts.application.length + charts.library.length} charts to process`);
-    await _commitLockFiles({ exec, core, github, context, charts });
-  } catch (error) {
-    utils.handleError(error, core, 'update dependency lock files');
-  }
-}
-
 module.exports = {
   CONFIG,
   generateIndex,
   performUpdates,
   processReleases,
-  setupBuildEnvironment,
-  updateIssueTemplates,
-  updateLockFiles
+  setupBuildEnvironment
 };
