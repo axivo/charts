@@ -23,7 +23,9 @@ body:
       description: If the bug is related to a specific chart, please select it from dropdown menu.
       options:
         - sealed-secrets (application)
-      default: 0
+        - ubuntu (application)
+        - common (library)
+        
   - type: textarea
     id: what-happened
     attributes:
