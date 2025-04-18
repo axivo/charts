@@ -162,6 +162,10 @@ async function _performCommit({
   try {
     const runGit = async (args) => (await exec.getExecOutput('git', args)).stdout.trim();
     const headRef = process.env.GITHUB_HEAD_REF;
+    core.info(`Getting the latest changes for ${headRef} branch...`);
+    await runGit(['fetch', 'origin', headRef]);
+    await runGit(['switch', headRef]);
+    await runGit(['pull', 'origin', headRef]);
     core.info(`Committing ${files.length} ${fileType}...`);
     await runGit(['add', ...files]);
     const { additions, deletions } = await gitSignedCommit.getGitStagedChanges(runGit);
