@@ -507,7 +507,7 @@ async function _updateIssueTemplates({
     const libChartOptions = libCharts.map(dir => `${path.basename(dir)} (library)`).sort();
     const chartOptions = [...appChartOptions, ...libChartOptions];
     const indentationRegex = /(\s+)-.+\(.+\)/;
-    const optionsRegex = /(id:\s+chart[\s\S]+options:)([\r\n]+\s+)[\s\S]+(\s+default:\s+0)/;
+    const optionsRegex = /(id:\s+chart[\s\S]+options:[\s\r\n]+)[\s\S]+?(\s+default:\s+0)/;
     for (const templatePath of templatePaths) {
       try {
         let content = await fs.readFile(templatePath, 'utf8');
