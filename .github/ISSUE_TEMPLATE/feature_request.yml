@@ -22,8 +22,10 @@ body:
       label: Related Chart
       description: If the feature is related to a specific chart, please select it from dropdown menu.
       options:
+
         - sealed-secrets (application)
-      default: 0
+        - ubuntu (application)
+        - common (library)        
   - type: textarea
     id: related-problem
     attributes:
