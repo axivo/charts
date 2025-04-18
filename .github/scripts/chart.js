@@ -213,7 +213,7 @@ async function _commitAppFiles({
  * @param {Object} params.core - GitHub Actions Core API for logging
  * @param {Object} params.github - GitHub API client
  * @param {Object} params.context - GitHub Actions context
- * @param {string[]} params.lockFiles - List of dependency lock files to commit
+ * @param {Object} params.charts - Charts object from _findCharts
  * @returns {Promise<void>}
  */
 async function _commitLockFiles({
@@ -221,31 +221,50 @@ async function _commitLockFiles({
   core,
   github,
   context,
-  lockFiles
+  charts
 }) {
   try {
-    core.info('Committing dependency lock files...');
-    const runGit = async (args) => (await exec.getExecOutput('git', args)).stdout.trim();
-    const headRef = process.env.GITHUB_HEAD_REF;
-    if (lockFiles.length > 0) {
-      await runGit(['add', ...lockFiles]);
+    core.info('Updating dependency lock files...');
+    const lockFiles = [];
+    const runHelm = async (args) => (await exec.getExecOutput('helm', args)).stdout.trim();
+    const chartDirs = [...charts.application, ...charts.library];
+    for (const chartDir of chartDirs) {
+      const lockFilePath = path.join(chartDir, 'Chart.lock');
+      let originalLockHash = null;
+      if (await utils.fileExists(lockFilePath)) {
+        const originalContent = await fs.readFile(lockFilePath);
+        originalLockHash = crypto.createHash('sha256').update(originalContent).digest('hex');
+      }
+      core.info(`Updating dependency lock file for ${chartDir} chart...`);
+      await runHelm(['dependency', 'update', chartDir]);
+      if (await utils.fileExists(lockFilePath)) {
+        const newContent = await fs.readFile(lockFilePath);
+        const newHash = crypto.createHash('sha256').update(newContent).digest('hex');
+        if (originalLockHash !== newHash) {
+          lockFiles.push(lockFilePath);
+          core.info(`Successfully updated dependency lock file for ${chartDir} chart`);
+        }
+      }
     }
-    const { additions, deletions } = await gitSignedCommit.getGitStagedChanges(runGit);
-    if (additions.length + deletions.length > 0) {
-      const currentHead = await runGit(['rev-parse', 'HEAD']);
-      await gitSignedCommit.createSignedCommit({
-        github,
-        context,
-        core,
-        branchName: headRef,
-        expectedHeadOid: currentHead,
-        additions,
-        deletions,
-        commitMessage: 'chore(github-action): update dependency lock files'
-      });
-      core.info('Successfully committed dependency lock files update');
-    } else {
-      core.info('No dependency lock file changes to commit');
+    if (lockFiles.length > 0) {
+      const runGit = async (args) => (await exec.getExecOutput('git', args)).stdout.trim();
+      const headRef = process.env.GITHUB_HEAD_REF;
+      core.info(`Committing ${lockFiles.length} dependency lock files...`);
+      await runGit(['add', ...lockFiles]);
+      const { additions, deletions } = await gitSignedCommit.getGitStagedChanges(runGit);
+      if (additions.length + deletions.length > 0) {
+        const currentHead = await runGit(['rev-parse', 'HEAD']);
+        await gitSignedCommit.createSignedCommit({
+          github, context, core,
+          branchName: headRef,
+          expectedHeadOid: currentHead,
+          additions, deletions,
+          commitMessage: 'chore(github-action): update dependency lock files'
+        });
+        core.info('Successfully committed dependency lock files update');
+      } else {
+        core.info('No dependency lock file changes to commit');
+      }
     }
   } catch (error) {
     utils.handleError(error, core, 'commit dependency lock files', false);
@@ -460,7 +479,7 @@ async function _generateHelmIndex({
 }
 
 /**
- * Packages all charts in a specified directory
+ * Packages all charts in a specified directory and updates references
  * 
  * @param {Object} params - Function parameters
  * @param {Object} params.exec - GitHub Actions exec helpers
@@ -486,33 +505,13 @@ async function _packageCharts({
       core.info(`No charts found`);
       return;
     }
-    const lockFiles = [];
     const runHelm = async (args) => (await exec.getExecOutput('helm', args)).stdout.trim();
     for (const chartDir of chartDirs) {
-      const lockFilePath = path.join(chartDir, 'Chart.lock');
-      let originalLockHash = null;
-      if (await utils.fileExists(lockFilePath)) {
-        const originalContent = await fs.readFile(lockFilePath);
-        originalLockHash = crypto.createHash('sha256').update(originalContent).digest('hex');
-      }
-      core.info(`Updating dependency lock file for ${chartDir} chart...`);
-      await runHelm(['dependency', 'update', chartDir]);
-      if (await utils.fileExists(lockFilePath)) {
-        const newContent = await fs.readFile(lockFilePath);
-        const newHash = crypto.createHash('sha256').update(newContent).digest('hex');
-        if (originalLockHash !== newHash) {
-          lockFiles.push(lockFilePath);
-          core.info(`Successfully updated dependency lock file for ${chartDir} chart`);
-        }
-      }
       core.info(`Packaging ${chartDir} chart...`);
       await runHelm(['package', chartDir, '--destination', outputDir]);
     }
-    if (lockFiles.length > 0) {
-      core.info(`Committing ${lockFiles.length} updated dependency lock files...`);
-      await _commitLockFiles({ exec, core, github, context, lockFiles });
-    }
     await _commitAppFiles({ exec, core, github, context, charts });
+    await _commitLockFiles({ exec, core, github, context, charts });
     core.info(`Successfully packaged ${chartDirs.length} charts`);
   } catch (error) {
     utils.handleError(error, core, 'package charts');
@@ -843,35 +842,10 @@ async function updateLockFiles({
     await runGit(['fetch', 'origin', headRef]);
     await runGit(['switch', headRef]);
     await runGit(['pull', 'origin', headRef]);
-    const lockFiles = [];
     core.info('Finding charts with dependency changes...');
     const charts = await _findCharts({ core });
-    const allChartDirs = [...charts.application, ...charts.library];
-    core.info(`Found ${allChartDirs.length} charts to process`);
-    for (const chartDir of allChartDirs) {
-      const lockFilePath = path.join(chartDir, 'Chart.lock');
-      let originalLockHash = null;
-      if (await utils.fileExists(lockFilePath)) {
-        const originalContent = await fs.readFile(lockFilePath);
-        originalLockHash = crypto.createHash('sha256').update(originalContent).digest('hex');
-      }
-      core.info(`Updating dependency lock file for ${chartDir} chart...`);
-      await exec.exec('helm', ['dependency', 'update', chartDir]);
-      if (await utils.fileExists(lockFilePath)) {
-        const newContent = await fs.readFile(lockFilePath);
-        const newHash = crypto.createHash('sha256').update(newContent).digest('hex');
-        if (originalLockHash !== newHash) {
-          lockFiles.push(lockFilePath);
-          core.info(`Successfully updated dependency lock file for ${chartDir}`);
-        }
-      }
-    }
-    if (lockFiles.length > 0) {
-      core.info(`Committing ${lockFiles.length} dependency lock files...`);
-      await _commitLockFiles({ exec, core, github, context, lockFiles });
-    } else {
-      core.info('No dependency lock files to update');
-    }
+    core.info(`Found ${charts.application.length + charts.library.length} charts to process`);
+    await _commitLockFiles({ exec, core, github, context, charts });
   } catch (error) {
     utils.handleError(error, core, 'update dependency lock files');
   }
