@@ -797,7 +797,7 @@ async function updateIssueTemplates({
         if (content.includes('id: chart')) {
           const indentationMatch = content.match(indentationRegex);
           const indentation = indentationMatch[1];
-          const optionsText = chartOptions.map(option => `${indentation}- ${option}`).join('\n');
+          const optionsText = chartOptions.map(option => `${indentation}- ${option}`).join('');
           const replacementText = `$1${optionsText}$2`;
           content = content.replace(optionsRegex, replacementText);
           await fs.writeFile(templatePath, content, 'utf8');
