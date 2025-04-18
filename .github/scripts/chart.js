@@ -387,7 +387,7 @@ async function _generateHelmIndex({
     await fs.mkdir(indexDir, { recursive: true });
     await exec.exec('helm', ['repo', 'index', packagesPath, '--url', repoUrl]);
     await fs.copyFile(path.join(packagesPath, CONFIG.filesystem.indexRegistry), indexPath);
-    core.info(`Successfully generated Helm repository index at ${indexPath}`);
+    core.info(`Successfully generated ${indexPath} repository index`);
   } catch (error) {
     utils.handleError(error, core, 'generate Helm repository index');
   }
@@ -421,6 +421,7 @@ async function _packageCharts({
       return;
     }
     const lockFiles = [];
+    const runHelm = async (args) => (await exec.getExecOutput('helm', args)).stdout.trim();
     for (const chartDir of chartDirs) {
       const lockFilePath = path.join(chartDir, 'Chart.lock');
       let originalLockHash = null;
@@ -429,17 +430,17 @@ async function _packageCharts({
         originalLockHash = crypto.createHash('sha256').update(originalContent).digest('hex');
       }
       core.info(`Updating dependency lock file for ${chartDir} chart...`);
-      await exec.exec('helm', ['dependency', 'update', chartDir]);
+      await runHelm(['dependency', 'update', chartDir]);
       if (await utils.fileExists(lockFilePath)) {
         const newContent = await fs.readFile(lockFilePath);
         const newHash = crypto.createHash('sha256').update(newContent).digest('hex');
         if (originalLockHash !== newHash) {
           lockFiles.push(lockFilePath);
-          core.info(`Dependecy lock file updated for ${chartDir}`);
+          core.info(`Successfully updated dependency lock file for ${chartDir} chart`);
         }
       }
       core.info(`Packaging ${chartDir} chart...`);
-      await exec.exec('helm', ['package', chartDir, '--destination', outputDir]);
+      await runHelm(['package', chartDir, '--destination', outputDir]);
     }
     if (lockFiles.length > 0) {
       core.info(`Committing ${lockFiles.length} updated dependency lock files...`);

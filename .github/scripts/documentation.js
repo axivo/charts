@@ -85,7 +85,7 @@ async function updateDocumentation({
       return;
     }
     const { additions, deletions } = await gitSignedCommit.getGitStagedChanges(runGit);
-    if (additions.length > 0 || deletions.length > 0) {
+    if (additions.length + deletions.length > 0) {
       const currentHead = await runGit(['rev-parse', 'HEAD']);
       await gitSignedCommit.createSignedCommit({
         github,
