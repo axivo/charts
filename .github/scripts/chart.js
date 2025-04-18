@@ -794,22 +794,23 @@ async function updateIssueTemplates({
     for (const templatePath of templatePaths) {
       try {
         let content = await fs.readFile(templatePath, 'utf8');
-        if (content.includes('id: chart')) {
-          const indentation = content.match(indentationRegex)[1];
-          const optionsText = chartOptions.map(option => `${indentation}- ${option}`).join('');
-          const replacementText = `$1${optionsText}$2`;
-          content = content.replace(optionsRegex, replacementText);
-          await fs.writeFile(templatePath, content, 'utf8');
-          core.info(`Updated chart options in ${templatePath}`);
-          updatedTemplates.push(templatePath);
-        } else {
-          utils.handleError(new Error(`Could not find chart dropdown`), core, `process template ${templatePath}`, false);
+        if (!content.includes('id: chart')) {
+          continue;
         }
+        const indentation = content.match(indentationRegex)[1];
+        const optionsText = chartOptions.map(option => `${indentation}- ${option}`).join('');
+        const replacementText = `$1${optionsText}$2`;
+        content = content.replace(optionsRegex, replacementText);
+        await fs.writeFile(templatePath, content, 'utf8');
+        core.info(`Updated chart options in ${templatePath} issue template`);
+        updatedTemplates.push(templatePath);
       } catch (error) {
-        utils.handleError(error, core, `update template ${templatePath}`, false);
+        utils.handleError(error, core, `update ${templatePath} issue template`, false);
       }
     }
-    core.info(`Successfully updated templates with ${chartOptions.length} chart options`);
+    if (chartOptions.length > 0) {
+      core.info(`Successfully updated issue templates with ${chartOptions.length} chart options`);
+    }
     return updatedTemplates;
   } catch (error) {
     utils.handleError(error, core, 'update issue templates');
