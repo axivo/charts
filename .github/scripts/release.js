@@ -54,16 +54,16 @@ const CONFIG = {
      */
     configuration: {
       /**
-       * Path to the Jekyll configuration file template
-       * @type {string}
-       */
-      path: '.github/templates/config.yml',
-
-      /**
        * Path where the Jekyll configuration will be generated
        * @type {string}
        */
       home: './_config.yml',
+
+      /**
+       * Path to the Jekyll configuration file template
+       * @type {string}
+       */
+      path: '.github/templates/config.yml'
     },
 
     /**
@@ -75,7 +75,7 @@ const CONFIG = {
        * Path to the custom head include file for Jekyll
        * @type {string}
        */
-      path: './_includes/head-custom.html',
+      path: './_includes/head-custom.html'
     },
 
     /**
@@ -93,7 +93,7 @@ const CONFIG = {
        * Path to the generated index.md file in the dist directory
        * @type {string}
        */
-      path: './_dist/index.md',
+      path: './_dist/index.md'
     }
   }
 };
