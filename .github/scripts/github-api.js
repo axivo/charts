@@ -82,6 +82,84 @@ async function _getLastReleaseDate({
 }
 
 /**
+ * Checks if a workflow run has any warnings or errors using GraphQL API
+ * 
+ * @param {Object} params - Function parameters
+ * @param {Object} params.github - GitHub API client
+ * @param {Object} params.context - GitHub Actions context for repository info
+ * @param {Object} params.core - GitHub Actions Core API for logging and output
+ * @param {number} params.runId - The workflow run ID to check
+ * @returns {Promise<boolean>} - True if the workflow run has warnings or errors, false otherwise
+ */
+async function checkWorkflowRunStatus({
+  github,
+  context,
+  core,
+  runId
+}) {
+  try {
+    core.info(`Checking workflow run ${runId} status...`);
+    const query = `
+      query($owner: String!, $repo: String!, $runId: Int!) {
+        repository(owner: $owner, name: $repo) {
+          workflowRun(id: $runId) {
+            conclusion
+            checkSuites(first: 20) {
+              nodes {
+                conclusion
+                checkRuns(first: 20) {
+                  nodes {
+                    conclusion
+                    annotations(first: 20) {
+                      nodes {
+                        annotationLevel
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    `;
+    const variables = {
+      owner: context.repo.owner,
+      repo: context.repo.repo,
+      runId: parseInt(runId, 10)
+    };
+    const result = await github.graphql(query, variables);
+    const workflowRun = result.repository?.workflowRun;
+    if (!workflowRun) {
+      core.info(`No workflow run found with ID ${runId}`);
+      return false;
+    }
+    if (workflowRun.conclusion === 'SUCCESS' || workflowRun.conclusion === null) {
+      return false;
+    }
+    if (workflowRun.conclusion === 'FAILURE' || workflowRun.conclusion === 'CANCELLED') {
+      core.info(`Workflow run concluded with ${workflowRun.conclusion}`);
+      return true;
+    }
+    const hasIssues = workflowRun.checkSuites.nodes.some(suite =>
+      suite.conclusion === 'FAILURE' ||
+      suite.checkRuns.nodes.some(run =>
+        run.conclusion === 'FAILURE' ||
+        run.annotations.nodes.some(annotation =>
+          annotation.annotationLevel === 'WARNING' ||
+          annotation.annotationLevel === 'FAILURE'
+        )
+      )
+    );
+    core.info(`Workflow run status check completed. Issues found: ${hasIssues}`);
+    return hasIssues;
+  } catch (error) {
+    utils.handleError(error, core, 'check workflow run status', false);
+    return false;
+  }
+}
+
+/**
  * Creates a new GitHub release
  * 
  * @param {Object} options - Function parameters
@@ -316,6 +394,7 @@ async function uploadReleaseAsset({
 
 module.exports = {
   CONFIG,
+  checkWorkflowRunStatus,
   createRelease,
   getReleaseByTag,
   getReleaseIssues,

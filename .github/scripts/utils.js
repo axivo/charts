@@ -10,6 +10,7 @@
 
 const fs = require('fs/promises');
 const Handlebars = require('handlebars');
+const githubApi = require('./github-api');
 
 /**
  * Configuration constants for Utility Functions module
@@ -143,18 +144,13 @@ async function reportWorkflowIssue({
   context,
   core
 }) {
-  let hasWarnings = false;
-  try {
-    const { data: logs } = await github.rest.actions.downloadWorkflowRunLogs({
-      owner: context.repo.owner,
-      repo: context.repo.repo,
-      run_id: context.runId
-    });
-    hasWarnings = ['##[error]', '##[warning]'].some(marker => logs.includes(marker));
-  } catch (logError) {
-    hasWarnings = true;
-  }
-  if (!hasWarnings) {
+  let hasIssues = await githubApi.checkWorkflowRunStatus({
+    github,
+    context,
+    core,
+    runId: context.runId
+  });
+  if (!hasIssues) {
     core.info('No failures or warnings detected, skipping issue creation');
     return;
   }
