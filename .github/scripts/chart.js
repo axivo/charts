@@ -140,7 +140,73 @@ async function _buildChartRelease({
 }
 
 /**
- * Helper function to commit updated dependency lock files
+ * Updates and commits application files with latest chart versions
+ * 
+ * @param {Object} params - Function parameters
+ * @param {Object} params.exec - GitHub Actions exec helpers
+ * @param {Object} params.core - GitHub Actions Core API for logging
+ * @param {Object} params.github - GitHub API client
+ * @param {Object} params.context - GitHub Actions context
+ * @param {Object} params.charts - Charts object from _findCharts
+ * @returns {Promise<void>}
+ */
+async function _commitAppFiles({
+  exec,
+  core,
+  github,
+  context,
+  charts
+}) {
+  try {
+    core.info('Updating application files with latest chart versions...');
+    const appFiles = [];
+    for (const chartDir of charts.application) {
+      const chartName = path.basename(chartDir);
+      const appYamlPath = path.join(chartDir, 'application.yaml');
+      if (!await utils.fileExists(appYamlPath)) continue;
+      try {
+        const appConfig = yaml.load(await fs.readFile(appYamlPath, 'utf8'));
+        if (!appConfig.spec?.source) continue;
+        const chartMetadata = yaml.load(await fs.readFile(path.join(chartDir, 'Chart.yaml'), 'utf8'));
+        const tagName = CONFIG.chart.releaseTitle
+          .replace('{{ .Name }}', chartName)
+          .replace('{{ .Version }}', chartMetadata.version);
+        if (appConfig.spec.source.targetRevision === tagName) continue;
+        appConfig.spec.source.targetRevision = tagName;
+        await fs.writeFile(appYamlPath, yaml.dump(appConfig, { lineWidth: -1 }), 'utf8');
+        core.info(`Updated targetRevision to ${tagName} in ${appYamlPath}`);
+        appFiles.push(appYamlPath);
+      } catch (error) {
+        utils.handleError(error, core, `update application file for ${chartName}`, false);
+      }
+    }
+    if (appFiles.length > 0) {
+      const runGit = async (args) => (await exec.getExecOutput('git', args)).stdout.trim();
+      const headRef = process.env.GITHUB_HEAD_REF;
+      core.info(`Committing ${appFiles.length} application files...`);
+      await runGit(['add', ...appFiles]);
+      const { additions, deletions } = await gitSignedCommit.getGitStagedChanges(runGit);
+      if (additions.length + deletions.length > 0) {
+        const currentHead = await runGit(['rev-parse', 'HEAD']);
+        await gitSignedCommit.createSignedCommit({
+          github, context, core,
+          branchName: headRef,
+          expectedHeadOid: currentHead,
+          additions, deletions,
+          commitMessage: 'chore(github-action): update target revision references'
+        });
+        core.info('Successfully committed application file updates');
+      } else {
+        core.info('No application file changes to commit');
+      }
+    }
+  } catch (error) {
+    utils.handleError(error, core, 'update and commit application files', false);
+  }
+}
+
+/**
+ * Updates and commits dependency lock files
  * 
  * @param {Object} params - Function parameters
  * @param {Object} params.exec - GitHub Actions exec helpers
@@ -446,6 +512,7 @@ async function _packageCharts({
       core.info(`Committing ${lockFiles.length} updated dependency lock files...`);
       await _commitLockFiles({ exec, core, github, context, lockFiles });
     }
+    await _commitAppFiles({ exec, core, github, context, charts });
     core.info(`Successfully packaged ${chartDirs.length} charts`);
   } catch (error) {
     utils.handleError(error, core, 'package charts');
@@ -618,7 +685,8 @@ async function processReleases({
     core.info(`Creating ${packagesPath} directory...`);
     core.info('Validating required labels...');
     const releaseLabels = Object.entries(githubApi.CONFIG.release.labels);
-    await Promise.all(releaseLabels.map(([name, info]) => utils.addLabel({ github, context, core, labelName: name, color: info.color, description: info.description })));
+    await Promise.all(releaseLabels.map(([name, info]) =>
+      utils.addLabel({ github, context, core, labelName: name, color: info.color, description: info.description })));
     await fs.mkdir(packagesPath, { recursive: true });
     core.info(`Successfully created ${packagesPath} directory`);
     core.info('Packaging all charts...');

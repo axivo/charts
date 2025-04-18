@@ -85,6 +85,14 @@ Separate template logic from application code for better maintainability:
 - Separate template content from application logic using external template files
 - Use standardized templates for programmatically creating GitHub issues or PRs
 
+### Target Revision Management
+
+Automatically manage application.yaml targetRevision references to ensure stability:
+
+- Application files reference specific chart version tags instead of HEAD
+- Chart version tags follow the format `{chartName}-v{chartVersion}`
+- Changes to application files are committed separately from lock files
+
 ### Context Awareness
 
 Handle different event contexts appropriately to ensure your code works in all scenarios:
@@ -155,12 +163,13 @@ Provides functions for Helm chart management, releases and GitHub Pages generati
 #### Internal Functions
 
 - `_buildChartRelease` - Builds a GitHub release for a single chart and uploads the chart package as an asset
+- `_commitAppFiles` - Updates and commits application files with latest chart versions
 - `_commitLockFiles` - Helper function to commit updated lock files to PRs
 - `_createChartReleases` - Creates GitHub releases for packaged charts and uploads the chart packages as release assets
 - `_findCharts` - Finds deployed charts in application and library paths
 - `_generateChartRelease` - Generates release content using the template file
 - `_generateHelmIndex` - Generates the Helm repository index file
-- `_packageCharts` - Packages all charts in a specified directory
+- `_packageCharts` - Packages all charts in a specified directory and updates application references
 
 #### Exported Functions
 
