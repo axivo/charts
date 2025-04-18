@@ -789,7 +789,7 @@ async function updateIssueTemplates({
     const libChartOptions = libCharts.map(dir => `${path.basename(dir)} (library)`).sort();
     const chartOptions = [...appChartOptions, ...libChartOptions];
     const indentationRegex = /(\s+)-.+\(.+\)/;
-    const optionsRegex = /(id:\s+chart[\s\S]+options:[\s+\n])[\s\S]+?(\s+default:\s+0)/;
+    const optionsRegex = /(id:\s+chart[\s\S]+options:[\s+\n])(\s+)[\s\S]+(\s+default:\s+0)/;
     const updatedTemplates = [];
     for (const templatePath of templatePaths) {
       try {
