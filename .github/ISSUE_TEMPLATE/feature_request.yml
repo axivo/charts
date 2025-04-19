@@ -22,7 +22,10 @@ body:
       label: Related Chart
       description: If the feature is related to a specific chart, please select it from dropdown menu.
       options:
+        - new chart (application)
+        - new chart (library)
         - sealed-secrets (application)
+        - ubuntu (application)
         - common (library)
       default: 0
   - type: textarea

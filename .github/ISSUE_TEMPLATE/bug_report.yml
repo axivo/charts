@@ -23,6 +23,7 @@ body:
       description: If the bug is related to a specific chart, please select it from dropdown menu.
       options:
         - sealed-secrets (application)
+        - ubuntu (application)
         - common (library)
       default: 0
   - type: textarea
