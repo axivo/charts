@@ -69,7 +69,7 @@ async function addLabel({
       return true;
     }
     handleError(error, core, `check or create '${labelName}' label`, false);
-    return false;
+    return true;
   }
 }
 

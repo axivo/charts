@@ -153,7 +153,7 @@ async function checkWorkflowRunStatus({
     return hasIssues;
   } catch (error) {
     utils.handleError(error, core, 'check workflow run status', false);
-    return false;
+    return true;
   }
 }
 
