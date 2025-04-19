@@ -240,10 +240,6 @@ async function reportWorkflowIssue({
       const results = await Promise.all(labelNames.map(async label => {
         return await addLabel({ github, context, core, labelName: label });
       }));
-      const labelsCreated = results.some(Boolean);
-      if (!labelsCreated && context.workflow === 'Chart') {
-        core.warning('Labels already exist, setting `createLabels: false` will optimize workflow performance.');
-      }
     }
     await github.rest.issues.create({
       owner: context.repo.owner,
