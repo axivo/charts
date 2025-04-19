@@ -320,6 +320,8 @@ async function _packageCharts({
     }
     for (const chartDir of chartDirs) {
       core.info(`Packaging ${chartDir} chart...`);
+      core.info(`Updating dependencies for ${chartDir} chart...`);
+      await exec.exec('helm', ['dependency', 'update', chartDir]);
       await exec.exec('helm', ['package', chartDir, '--destination', outputDir]);
     }
     core.info(`Successfully packaged ${chartDirs.length} charts`);
