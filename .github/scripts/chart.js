@@ -188,7 +188,7 @@ async function _updateIssueTemplates({
       }
     }
     if (templateFiles.length > 0) {
-      core.info(`Successfully updated issue templates with ${chartOptions.length} chart options`);
+      core.info(`Successfully updated issue templates with ${bugChartOptions.length} chart options`);
       await _performCommit({ github, context, core, exec, files: templateFiles, fileType: 'issue templates' });
     }
   } catch (error) {
