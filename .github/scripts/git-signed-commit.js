@@ -58,7 +58,7 @@ async function createSignedCommit({
     if (!commitMessage) {
       throw new Error('commitMessage is required');
     }
-    if (additions.length === 0 && deletions.length === 0) {
+    if (!(additions.length + deletions.length)) {
       core.info('No changes to commit');
       return null;
     }

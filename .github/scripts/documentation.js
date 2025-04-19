@@ -82,7 +82,7 @@ async function updateDocumentation({
     const files = (await runGit(['diff', '--staged', '--name-only']))
       .split('\n')
       .filter(Boolean);
-    if (files.length === 0) {
+    if (!files.length) {
       core.info('No file changes detected, documentation is up to date');
       return;
     }

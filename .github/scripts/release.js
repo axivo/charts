@@ -349,7 +349,6 @@ async function generateIndex({
     const frontpageDist = './_dist/index.md';
     const frontpageTemplate = config('release').frontpage.template;
     const frontpageRoot = './index.md';
-
     core.info(`Reading index YAML from ${repositoryIndexDist}...`);
     let indexContent;
     try {
