@@ -438,10 +438,6 @@ async function processReleases({
     const repositoryIndexDist = './_dist/index.yaml';
     const releasePackages = './.cr-release-packages';
     core.info(`Creating ${releasePackages} directory...`);
-    core.info('Validating required labels...');
-    const releaseLabels = Object.entries(config('release').labels);
-    await Promise.all(releaseLabels.map(([name, info]) =>
-      utils.addLabel({ github, context, core, labelName: name, color: info.color, description: info.description })));
     await fs.mkdir(releasePackages, { recursive: true });
     core.info(`Successfully created ${releasePackages} directory`);
     core.info('Packaging all charts...');

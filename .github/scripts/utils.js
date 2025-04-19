@@ -16,7 +16,6 @@
 const fs = require('fs/promises');
 const path = require('path');
 const Handlebars = require('handlebars');
-const api = require('./github-api');
 const config = require('./config');
 
 /**
@@ -154,6 +153,7 @@ async function reportWorkflowIssue({
   context,
   core
 }) {
+  const api = require('./github-api');
   let hasIssues = await api.checkWorkflowRunStatus({
     github,
     context,
@@ -184,10 +184,16 @@ async function reportWorkflowIssue({
       Branch: branchName,
       RepoURL: repoUrl
     });
-    const labelNames = Object.keys(config('issue').labels);
-    await Promise.all(labelNames.map(label =>
-      addLabel({ github, context, core, labelName: label })
-    ));
+    const labelNames = ['bug', 'workflow'];
+    if (config('issue').createLabels) {
+      const results = await Promise.all(labelNames.map(async label => {
+        return await addLabel({ github, context, core, labelName: label });
+      }));
+      const labelsCreated = results.some(Boolean);
+      if (!labelsCreated && context.workflow === 'Chart') {
+        core.warning('Labels already exist, setting `createLabels: false` will optimize workflow performance.');
+      }
+    }
     await github.rest.issues.create({
       owner: context.repo.owner,
       repo: context.repo.repo,

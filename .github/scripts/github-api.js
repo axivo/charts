@@ -342,12 +342,12 @@ async function getReleaseIssues({
     }
     const result = await github.graphql(query, variables);
     const allIssues = result.repository.issues.nodes;
+    const chartHeaderText = config('issue').header;
+    const chartDropdownRegex = new RegExp(`${chartHeaderText}\\s*\\n\\s*([^\\n]+)`);
     const relevantIssues = allIssues.filter(issue => {
-      const chartDropdownRegex = /### Related Chart\s*\n\s*([^\n]+)/;
       const dropdownMatch = issue.bodyText.match(chartDropdownRegex);
       const isChartRelated = dropdownMatch && dropdownMatch[1].trim() === `${chartName} (${chartType})`;
-      const isLabelRelated = issue.labels.nodes.some(label => Object.keys(config('release').labels).includes(label.name));
-      return isChartRelated && isLabelRelated
+      return isChartRelated;
     });
     core.info(`Found ${relevantIssues.length} relevant issues for ${chartPath} chart`);
     const issues = relevantIssues.map(issue => ({

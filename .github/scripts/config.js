@@ -12,30 +12,178 @@
  * @author AXIVO
  * @license BSD-3-Clause
  */
+
 const CONFIG = {
   /**
-  * Issue-specific configuration
-  * 
-  * @type {Object}
-  */
+   * Issue-specific configuration
+   * 
+   * @type {Object}
+   */
   issue: {
     /**
-     * Issue template paths
+     * Controls automatic label creation for repository
      * 
-     * Contains paths to different issue template files used in the repository
+     * When enabled, the system will automatically create missing labels defined
+     * in the labels configuration during workflow execution. When disabled,
+     * the system will only use existing labels without creating missing ones.
+     * 
+     * @type {boolean}
+     * @default false
+     * @see addLabel - Function in utils.js that checks this flag before creating labels
+     * @see reportWorkflowIssue - Function in utils.js that uses this setting when creating issues
+     */
+    createLabels: false,
+
+    /**
+     * Header text used to identify the chart selection section in issues
+     * 
+     * This configuration defines the exact heading text that precedes the chart selection
+     * in issue templates. The system uses this text to parse issue bodies and identify
+     * which chart an issue relates to. The regex pattern matches this header followed
+     * by a newline and the selected chart name and type.
+     * 
+     * @type {string}
+     * @see getReleaseIssues - Function in github-api.js that uses this header to detect relevant issues
+     */
+    header: '### Related Chart',
+
+    /**
+     * Predefined issue label definitions used across the repository
+     * 
+     * Contains standardized label definitions (color, description) that are used
+     * for categorizing issues in GitHub and generating release notes. These labels
+     * can be automatically created when createLabels is true.
      * 
      * @type {Object}
+     * @see addLabel - Function in utils.js that creates these labels if they don't exist
+     * @see reportWorkflowIssue - Function in utils.js that applies these labels to issues
+     */
+    labels: {
+      /**
+       * Label definition for feature requests and enhancements
+       * 
+       * Used to categorize issues that propose new functionality or enhancements
+       * to existing features. Issues with this label may appear in release notes
+       * under a "New Features" section.
+       * 
+       * @type {Object}
+       * @see addLabel - Function in utils.js that uses this label definition when creating labels
+       * @see reportWorkflowIssue - Function in utils.js that applies this label to feature-related issues
+       */
+      feature: {
+        /**
+         * Display color for the feature label (royal blue)
+         * 
+         * Hexadecimal color code without leading #. This color appears 
+         * as the label background in the GitHub issue interface.
+         * 
+         * @type {string}
+         */
+        color: '4169e1',
+
+        /**
+         * Tooltip description shown when hovering over the feature label
+         * 
+         * This text appears when users hover over the label in the GitHub interface,
+         * providing additional context about what the label means.
+         * 
+         * @type {string}
+         */
+        description: 'Additions of new functionality'
+      },
+
+      /**
+       * Label definition for issues requiring initial assessment
+       * 
+       * Used to mark issues that need initial review and categorization.
+       * This helps workflows identify which issues are still pending review.
+       * 
+       * @type {Object}
+       * @see addLabel - Function in utils.js that uses this label definition when creating labels
+       */
+      triage: {
+        /**
+         * Display color for the triage label (green)
+         * 
+         * Hexadecimal color code without leading #. This color appears 
+         * as the label background in the GitHub issue interface.
+         * 
+         * @type {string}
+         */
+        color: '30783f',
+
+        /**
+         * Tooltip description shown when hovering over the triage label
+         * 
+         * This text appears when users hover over the label in the GitHub interface,
+         * providing additional context about what the label means.
+         * 
+         * @type {string}
+         */
+        description: 'Needs triage'
+      },
+
+      /**
+       * Label definition for workflow-related issues and errors
+       * 
+       * Used to categorize issues that are created automatically by workflows
+       * when they encounter errors or require attention. This helps distinguish
+       * system-generated issues from user-created ones.
+       * 
+       * @type {Object}
+       * @see addLabel - Function in utils.js that uses this label definition when creating labels
+       * @see reportWorkflowIssue - Function in utils.js that applies this label to workflow-generated issues
+       */
+      workflow: {
+        /**
+         * Display color for the workflow label (purple)
+         * 
+         * Hexadecimal color code without leading #. This color appears 
+         * as the label background in the GitHub issue interface.
+         * 
+         * @type {string}
+         */
+        color: 'b84cfd',
+
+        /**
+         * Tooltip description shown when hovering over the workflow label
+         * 
+         * This text appears when users hover over the label in the GitHub interface,
+         * providing additional context about what the label means.
+         * 
+         * @type {string}
+         */
+        description: 'Workflow execution related'
+      }
+    },
+
+    /**
+     * File paths to the issue templates used in the repository
+     * 
+     * Contains paths to YAML-based issue template files that define
+     * the structure and content of new issue forms in GitHub. These templates
+     * are updated by the updateIssueTemplates function to include current chart options.
+     * 
+     * @type {Object}
+     * @see _updateIssueTemplates - Function in chart.js that updates these templates with chart options
+     * @see reportWorkflowIssue - Function in utils.js that uses these templates for creating issues
      */
     template: {
       /**
-       * Path to the bug report issue template
+       * Path to the YAML template for bug reports
+       * 
+       * This file contains the form definition for bug reports including
+       * fields for reproduction steps, expected behavior, and other details.
        * 
        * @type {string}
        */
       bug: '.github/ISSUE_TEMPLATE/bug_report.yml',
 
       /**
-       * Path to the feature request issue template
+       * Path to the YAML template for feature requests
+       * 
+       * This file contains the form definition for feature requests including
+       * fields for describing the proposed feature, use cases, and alternatives.
        * 
        * @type {string}
        */
@@ -43,9 +191,14 @@ const CONFIG = {
     },
 
     /**
-     * Title used for workflow issue reports
+     * Standard title prefix for issues created by workflows
+     * 
+     * When workflows encounter errors or need to report information,
+     * they create issues with this standardized title prefix for easy identification.
+     * The complete title typically includes additional context about the specific issue.
      * 
      * @type {string}
+     * @see reportWorkflowIssue - Function in utils.js that uses this title when creating workflow issue reports
      */
     title: 'workflow: Issues Detected'
   },
@@ -57,152 +210,153 @@ const CONFIG = {
    */
   release: {
     /**
-     * Deployment environment type
-     * Controls how the build and deployment process behaves
+     * Deployment target environment for chart releases
+     * 
+     * Controls how the build and deployment process behaves based on the context.
+     * In production mode, charts are built and deployed to GitHub Pages.
+     * In staging mode, charts are built locally for testing without publishing.
      * 
      * @type {string}
-     * @example 'production' - Builds charts and deploys to GitHub Pages
-     * @example 'staging' - Builds charts locally for testing without deploying
+     * @default 'production'
+     * @see setupBuildEnvironment - Function in release.js that uses this setting to determine deployment behavior
      */
     deployment: 'production',
 
     /**
-     * Jekyll configuration settings
+     * Jekyll static site generator configuration
+     * 
+     * Settings that control how Jekyll generates the GitHub Pages site
+     * for chart documentation and the Helm repository.
      * 
      * @type {Object}
      */
     configuration: {
       /**
-       * Path to the Jekyll configuration file template
+       * Path to the Jekyll _config.yml template file
+       * 
+       * This template contains settings for the Jekyll static site generator
+       * including theme selection, site metadata, and build configuration.
+       * It's copied to the root directory during the build process.
        * 
        * @type {string}
+       * @see setupBuildEnvironment - Function in release.js that copies this file to the build location
        */
       file: '.github/templates/config.yml'
     },
 
     /**
-     * Frontpage settings for the GitHub Pages site
+     * Configuration for the GitHub Pages site homepage
+     * 
+     * Controls the generation of the main index page that lists all available
+     * charts in the repository with their descriptions and versions.
      * 
      * @type {Object}
      */
     frontpage: {
       /**
-       * Path to the index template, used for charts frontpage
+       * Path to the Handlebars template for the repository index page
+       * 
+       * This template defines the structure and content of the main landing page
+       * for the chart repository. It's processed with chart data to generate
+       * a comprehensive listing of all available charts.
        * 
        * @type {string}
+       * @see generateIndex - Function in release.js that uses this template to create the index page
        */
       template: '.github/templates/index.md.hbs'
     },
 
     /**
-     * Issue labels used for release notes and workflow issues
+     * Whether to skip existing releases or fail the workflow
      * 
-     * Contains predefined labels with their colors and descriptions
-     * used for categorizing issues in GitHub and generating release notes.
-     * 
-     * @type {Object}
-     */
-    labels: {
-      /**
-       * Bug label for issues that report something not working
-       * 
-       * @type {Object}
-       */
-      bug: {
-        /**
-         * Hexadecimal color code for bug label (red)
-         * 
-         * @type {string}
-         */
-        color: 'd73a4a',
-
-        /**
-         * Description of the bug label shown in GitHub
-         * 
-         * @type {string}
-         */
-        description: "Something isn't working"
-      },
-
-      /**
-       * Feature label for issues that propose new functionality
-       * 
-       * @type {Object}
-       */
-      feature: {
-        /**
-         * Hexadecimal color code for feature label (royal blue)
-         * 
-         * @type {string}
-         */
-        color: '4169e1',
-
-        /**
-         * Description of the feature label shown in GitHub
-         * 
-         * @type {string}
-         */
-        description: 'Additions of new functionality'
-      }
-    },
-
-    /**
-     * Skip existing releases instead of failing
+     * When true, the workflow will skip chart versions that already have a release
+     * and continue processing other charts. When false, the workflow will fail
+     * if it encounters a chart version that already has a release.
      * 
      * @type {boolean}
+     * @default true
+     * @see _createChartReleases - Function in release.js that checks this flag when processing releases
      */
     skipExisting: true,
 
     /**
-     * Template used for published releases
+     * Path to the Handlebars template for GitHub release notes
+     * 
+     * This template defines the structure and content of release notes
+     * that appear on GitHub releases. It includes chart metadata, dependency
+     * information, and related issues that were addressed in the release.
      * 
      * @type {string}
+     * @see _generateChartRelease - Function in release.js that uses this template to create release content
      */
     template: '.github/templates/release.md.hbs',
 
     /**
-     * Template used for published releases
+     * Format string for release tags and titles
+     * 
+     * This template string is used to generate consistent release tags and titles
+     * for chart releases. It supports variables that are replaced with actual
+     * chart information during the release process.
      * 
      * @type {string}
+     * @default '{{ .Name }}-v{{ .Version }}'
+     * @see _buildChartRelease - Function in release.js that uses this pattern to generate release tags
      */
     title: '{{ .Name }}-v{{ .Version }}'
   },
 
   /**
-   * Repository settings related to charts and releases
+   * Repository-specific configuration
    * 
    * @type {Object}
    */
   repository: {
     /**
-     * Chart-related settings
+     * Configuration for Helm chart structure and organization
+     * 
+     * Defines standardized paths, naming conventions, and organization
+     * for charts within the repository.
      * 
      * @type {Object}
      */
-
     chart: {
       /**
-       * Icon file name used in chart type directories
+       * Standard filename for chart icons in chart directories
+       * 
+       * Charts may include an icon image file with this standardized name.
+       * The icon is displayed in the Helm repository UI and in chart documentation.
+       * If present, the icon is also included in GitHub release notes.
        * 
        * @type {string}
+       * @see _generateChartRelease - Function in release.js that checks for this icon file
        */
       icon: 'icon.png',
 
       /**
-       * Chart types and their directory names
+       * Directory names for different chart categories
+       * 
+       * The repository organizes charts into categories (application vs. library)
+       * with standardized directory names for each category.
        * 
        * @type {Object}
+       * @see findCharts - Function in utils.js that uses these paths to locate chart directories
        */
       type: {
         /**
-         * Directory name for application charts
+         * Directory containing deployable application charts
+         * 
+         * Application charts are full-featured Helm charts that can be installed
+         * directly to create running applications on a Kubernetes cluster.
          * 
          * @type {string}
          */
         application: 'application',
 
         /**
-         * Directory name for library charts
+         * Directory containing reusable library charts
+         * 
+         * Library charts provide reusable chart components and helpers that
+         * can be used by other charts but cannot be installed directly.
          * 
          * @type {string}
          */
@@ -211,9 +365,14 @@ const CONFIG = {
     },
 
     /**
-     * URL of the Helm repository
+     * Public URL of the Helm chart repository
+     * 
+     * This URL is included in the Helm repository index file and is used by
+     * Helm clients to locate and download charts. It points to the GitHub Pages
+     * site where the packaged charts and index.yaml are hosted.
      * 
      * @type {string}
+     * @see _generateHelmIndex - Function in release.js that uses this URL in the repository index
      */
     url: 'https://axivo.github.io/charts/'
   }
