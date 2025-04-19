@@ -1,12 +1,16 @@
 /**
  * Git Signed Commit Utilities
  * 
- * This module provides functions for creating signed commits using GitHub's GraphQL API:
- * - Creating verified commits with file changes
- * - Preparing file additions from git staged changes
- * - Managing commit metadata and branch information
+ * This module provides functions for creating verified commits using GitHub's GraphQL API.
+ * It handles the process of staging changes, preparing file content, and making signed
+ * commits directly through the GitHub API rather than using Git command line operations.
+ * 
+ * Using the GitHub API for commits ensures that commits are properly verified and
+ * attributed, even in automated workflows where GPG signing might not be available.
  * 
  * @module git-signed-commit
+ * @author AXIVO
+ * @license BSD-3-Clause
  */
 
 const fs = require('fs/promises');
@@ -14,6 +18,13 @@ const utils = require('./utils');
 
 /**
  * Create a signed commit using GitHub's GraphQL API
+ * 
+ * This function creates a verified commit through GitHub's GraphQL API instead of
+ * using the Git command line. It handles file additions and deletions, validates branch
+ * state, and ensures commit integrity using the expected HEAD OID for validation.
+ * 
+ * The function requires file content to be properly base64 encoded for additions,
+ * and handles both the GraphQL mutation and error reporting for the commit process.
  * 
  * @param {Object} options - Function parameters
  * @param {Object} options.github - GitHub API client
@@ -84,8 +95,16 @@ async function createSignedCommit({
 /**
  * Helper function to prepare file additions and deletions from git staged changes
  * 
+ * This function processes Git staged changes and prepares them in the format required
+ * by the GitHub API for creating commits. It reads the content of added or modified files,
+ * encodes them in base64, and organizes both additions and deletions into structured arrays.
+ * 
+ * The function uses Git diff commands to identify staged changes and categorizes them
+ * into additions (including modifications) and deletions for proper handling in the
+ * commit process.
+ * 
  * @param {Function} runGit - Function to run git commands
- * @returns {Promise<Object>} - Object containing additions and deletions arrays
+ * @returns {Promise<Object>} - Object containing additions and deletions arrays in the format required by GitHub API
  */
 async function getGitStagedChanges(runGit) {
   const additions = await Promise.all(
@@ -104,6 +123,13 @@ async function getGitStagedChanges(runGit) {
   return { additions, deletions };
 }
 
+/**
+ * Exports the module's signed commit functions
+ * 
+ * This module exports functions for creating signed commits through GitHub's API
+ * and preparing file changes for those commits. These functions are used in various
+ * scripts that need to make authenticated and verified commits to the repository.
+ */
 module.exports = {
   createSignedCommit,
   getGitStagedChanges
