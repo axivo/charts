@@ -184,7 +184,7 @@ async function reportWorkflowIssue({
       Branch: branchName,
       RepoURL: repoUrl
     });
-    const labelNames = ['bug', 'workflow'];
+    const labelNames = ['bug', 'triage', 'workflow'];
     if (config('issue').createLabels) {
       const results = await Promise.all(labelNames.map(async label => {
         return await addLabel({ github, context, core, labelName: label });
