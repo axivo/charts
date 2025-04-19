@@ -207,6 +207,10 @@ async function reportWorkflowIssue({
     core,
     runId: context.runId
   });
+  if (config('issue').createLabels && context.workflow === 'Chart') {
+    hasIssues = true;
+    core.warning('Set "createLabels: false" in config.js after initial setup, to optimize workflow performance.');
+  }
   if (!hasIssues) {
     core.info('No failures or warnings detected, skipping issue creation');
     return;
@@ -288,7 +292,6 @@ async function updateIssueLabels({
     if (createdLabels.length > 0) {
       core.info(`Successfully created ${createdLabels.length} issue labels`);
     }
-    core.warning('Set `createLabels: false` in config.js after initial setup, to optimize workflow performance.');
     return createdLabels;
   } catch (error) {
     handleError(error, core, 'update issue labels', false);
