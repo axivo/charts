@@ -97,17 +97,19 @@ async function checkWorkflowRunStatus({
     const query = `
       query($owner: String!, $repo: String!, $runId: Int!) {
         repository(owner: $owner, name: $repo) {
-          workflowRun(id: $runId) {
-            conclusion
-            checkSuites(first: 20) {
-              nodes {
-                conclusion
-                checkRuns(first: 20) {
-                  nodes {
-                    conclusion
-                    annotations(first: 20) {
-                      nodes {
-                        annotationLevel
+          workflowRuns(first: 1, where: {runId: $runId}) {
+            nodes {
+              conclusion
+              checkSuites(first: 20) {
+                nodes {
+                  conclusion
+                  checkRuns(first: 20) {
+                    nodes {
+                      conclusion
+                      annotations(first: 20) {
+                        nodes {
+                          annotationLevel
+                        }
                       }
                     }
                   }
@@ -124,7 +126,8 @@ async function checkWorkflowRunStatus({
       runId: parseInt(runId, 10)
     };
     const result = await github.graphql(query, variables);
-    const workflowRun = result.repository?.workflowRun;
+    const workflowRuns = result.repository?.workflowRuns?.nodes || [];
+    const workflowRun = workflowRuns[0];
     if (!workflowRun) {
       core.info(`No workflow run found with ID ${runId}`);
       return false;
