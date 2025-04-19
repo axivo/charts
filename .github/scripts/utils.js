@@ -42,12 +42,12 @@ async function addLabel({
   color,
   description
 }) {
-  if (!labelName) handleError(new Error('Label name is required'), core, 'add label');
+  if (!labelName) handleError(new Error('Label name is required'), core, 'add label', false);
   const labelConfig = config('issue').labels[labelName] || {};
   const labelColor = color || labelConfig.color || 'ededed';
   const labelDescription = description || labelConfig.description || '';
   try {
-    core.info(`Checking if label '${labelName}' exists...`);
+    core.info(`Checking if '${labelName}' label exists...`);
     await github.rest.issues.getLabel({
       owner: context.repo.owner,
       repo: context.repo.repo,
@@ -57,7 +57,7 @@ async function addLabel({
     return false;
   } catch (error) {
     if (error.status === 404) {
-      core.info(`Creating label '${labelName}'...`);
+      core.info(`Creating '${labelName}' label...`);
       await github.rest.issues.createLabel({
         owner: context.repo.owner,
         repo: context.repo.repo,
@@ -65,10 +65,10 @@ async function addLabel({
         color: labelColor,
         description: labelDescription
       });
-      core.info(`Successfully created label '${labelName}'`);
+      core.info(`Successfully created '${labelName}' label`);
       return true;
     }
-    handleError(error, core, `check or create label '${labelName}'`, false);
+    handleError(error, core, `check or create '${labelName}' label`, false);
     return false;
   }
 }
@@ -85,6 +85,53 @@ async function addLabel({
  */
 async function fileExists(filePath) {
   return fs.access(filePath).then(() => true).catch(() => false);
+}
+
+/**
+ * Finds deployed charts in application and library paths
+ * 
+ * This function scans the application and library directories to find all valid
+ * Helm charts. It identifies charts by checking for the presence of a Chart.yaml file
+ * within each subdirectory and categorizes them by chart type (application/library).
+ * 
+ * @param {Object} params - Function parameters
+ * @param {Object} params.core - GitHub Actions Core API for logging
+ * @param {string} params.appDir - Path to application charts directory
+ * @param {string} params.libDir - Path to library charts directory
+ * @returns {Promise<{application: string[], library: string[]}>} - Object containing arrays of chart directories by type
+ */
+async function findCharts({
+  core,
+  appDir,
+  libDir
+}) {
+  core.info('Finding chart directories...');
+  const charts = {
+    application: [],
+    library: []
+  };
+  const paths = [
+    { dir: appDir, type: 'application' },
+    { dir: libDir, type: 'library' }
+  ];
+  await Promise.all(paths.map(async ({ dir, type }) => {
+    try {
+      const entries = await fs.readdir(dir, { withFileTypes: true });
+      for (const entry of entries) {
+        if (entry.isDirectory()) {
+          const chartDir = path.join(dir, entry.name);
+          const chartYamlPath = path.join(chartDir, 'Chart.yaml');
+          if (await fileExists(chartYamlPath)) {
+            charts[type].push(chartDir);
+          }
+        }
+      }
+    } catch (error) {
+      handleError(error, core, `read directory ${dir}`, false);
+    }
+  }));
+  core.info(`Found ${charts.application.length} application charts and ${charts.library.length} library charts`);
+  return charts;
 }
 
 /**
@@ -208,53 +255,6 @@ async function reportWorkflowIssue({
 }
 
 /**
- * Finds deployed charts in application and library paths
- * 
- * This function scans the application and library directories to find all valid
- * Helm charts. It identifies charts by checking for the presence of a Chart.yaml file
- * within each subdirectory and categorizes them by chart type (application/library).
- * 
- * @param {Object} params - Function parameters
- * @param {Object} params.core - GitHub Actions Core API for logging
- * @param {string} params.appDir - Path to application charts directory
- * @param {string} params.libDir - Path to library charts directory
- * @returns {Promise<{application: string[], library: string[]}>} - Object containing arrays of chart directories by type
- */
-async function findCharts({
-  core,
-  appDir,
-  libDir
-}) {
-  core.info('Finding chart directories...');
-  const charts = {
-    application: [],
-    library: []
-  };
-  const paths = [
-    { dir: appDir, type: 'application' },
-    { dir: libDir, type: 'library' }
-  ];
-  await Promise.all(paths.map(async ({ dir, type }) => {
-    try {
-      const entries = await fs.readdir(dir, { withFileTypes: true });
-      for (const entry of entries) {
-        if (entry.isDirectory()) {
-          const chartDir = path.join(dir, entry.name);
-          const chartYamlPath = path.join(chartDir, 'Chart.yaml');
-          if (await fileExists(chartYamlPath)) {
-            charts[type].push(chartDir);
-          }
-        }
-      }
-    } catch (error) {
-      handleError(error, core, `read directory ${dir}`, false);
-    }
-  }));
-  core.info(`Found ${charts.application.length} application charts and ${charts.library.length} library charts`);
-  return charts;
-}
-
-/**
  * Exports the module's functions
  */
 module.exports = {
@@ -262,6 +262,6 @@ module.exports = {
   fileExists,
   findCharts,
   handleError,
-  reportWorkflowIssue,
-  registerHandlebarsHelpers
+  registerHandlebarsHelpers,
+  reportWorkflowIssue
 };
