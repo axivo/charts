@@ -37,9 +37,9 @@ async function installHelmDocs({
   try {
     const tmpDir = os.tmpdir();
     const packageFile = `helm-docs_${version}_Linux_x86_64.deb`;
-    const packagePath = [tmpDir, packageFile].join('/');
     const packageBaseUrl = 'https://github.com/norwoodj/helm-docs/releases/download';
     const packageUrl = [packageBaseUrl, `v${version}`, packageFile].join('/');
+    const packagePath = [tmpDir, packageFile].join('/');
     core.info(`Installing helm-docs v${version}...`);
     const runSudo = async (args) => (await exec.getExecOutput('sudo', args)).stdout.trim();
     await runSudo(['wget', '-qP', tmpDir, '-t', '10', '-T', '60', packageUrl]);

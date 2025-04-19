@@ -27,22 +27,26 @@ const CONFIG = {
      * in the labels configuration during workflow execution. When disabled,
      * the system will only use existing labels without creating missing ones.
      * 
+     * Note that if left enabled, the system will create GitHub issues during each workflow run,
+     * including a reminder to set this value to "false" after initial setup. This can result in
+     * numerous notifications for repository maintainers.
+     * 
      * @type {boolean}
      * @default false
      * @see addLabel - Function in utils.js that checks this flag before creating labels
      * @see reportWorkflowIssue - Function in utils.js that uses this setting when creating issues
      */
-    createLabels: false,
+    createLabels: true,
 
     /**
      * Header text used to identify the chart selection section in issues
      * 
      * This configuration defines the exact heading text that precedes the chart selection
      * in issue templates. The system uses this text to parse issue bodies and identify
-     * which chart an issue relates to. The regex pattern matches this header followed
-     * by a newline and the selected chart name and type.
+     * which chart an issue relates to.
      * 
      * @type {string}
+     * @default '### Related Chart'
      * @see getReleaseIssues - Function in github-api.js that uses this header to detect relevant issues
      */
     header: '### Related Chart',
@@ -59,6 +63,40 @@ const CONFIG = {
      * @see reportWorkflowIssue - Function in utils.js that applies these labels to issues
      */
     labels: {
+      /**
+       * Label definition for dependency updates from automated tools
+       * 
+       * Used to categorize issues and pull requests related to dependency version updates,
+       * particularly those created by Renovate or similar dependency management bots.
+       * This helps distinguish automated updates from manual changes.
+       * 
+       * @type {Object}
+       * @see addLabel - Function in utils.js that uses this label definition when creating labels
+       */
+      dependency: {
+        /**
+         * Display color for the dependency label (dark blue)
+         * 
+         * Hexadecimal color code without leading #. This color appears 
+         * as the label background in the GitHub issue interface.
+         * 
+         * @type {string}
+         * @default '00008b'
+         */
+        color: '00008b',
+
+        /**
+         * Tooltip description shown when hovering over the dependency label
+         * 
+         * This text appears when users hover over the label in the GitHub interface,
+         * providing additional context about what the label means.
+         * 
+         * @type {string}
+         * @default 'Dependency version update'
+         */
+        description: 'Dependency version update'
+      },
+
       /**
        * Label definition for feature requests and enhancements
        * 
@@ -78,6 +116,7 @@ const CONFIG = {
          * as the label background in the GitHub issue interface.
          * 
          * @type {string}
+         * @default '4169e1'
          */
         color: '4169e1',
 
@@ -88,6 +127,7 @@ const CONFIG = {
          * providing additional context about what the label means.
          * 
          * @type {string}
+         * @default 'Additions of new functionality'
          */
         description: 'Additions of new functionality'
       },
@@ -109,6 +149,7 @@ const CONFIG = {
          * as the label background in the GitHub issue interface.
          * 
          * @type {string}
+         * @default '30783f'
          */
         color: '30783f',
 
@@ -119,6 +160,7 @@ const CONFIG = {
          * providing additional context about what the label means.
          * 
          * @type {string}
+         * @default 'Needs triage'
          */
         description: 'Needs triage'
       },
@@ -142,6 +184,7 @@ const CONFIG = {
          * as the label background in the GitHub issue interface.
          * 
          * @type {string}
+         * @default 'b84cfd'
          */
         color: 'b84cfd',
 
@@ -152,6 +195,7 @@ const CONFIG = {
          * providing additional context about what the label means.
          * 
          * @type {string}
+         * @default 'Workflow execution related'
          */
         description: 'Workflow execution related'
       }
@@ -176,6 +220,7 @@ const CONFIG = {
        * fields for reproduction steps, expected behavior, and other details.
        * 
        * @type {string}
+       * @default '.github/ISSUE_TEMPLATE/bug_report.yml'
        */
       bug: '.github/ISSUE_TEMPLATE/bug_report.yml',
 
@@ -186,6 +231,7 @@ const CONFIG = {
        * fields for describing the proposed feature, use cases, and alternatives.
        * 
        * @type {string}
+       * @default '.github/ISSUE_TEMPLATE/feature_request.yml'
        */
       feature: '.github/ISSUE_TEMPLATE/feature_request.yml'
     },
@@ -198,6 +244,7 @@ const CONFIG = {
      * The complete title typically includes additional context about the specific issue.
      * 
      * @type {string}
+     * @default 'workflow: Issues Detected'
      * @see reportWorkflowIssue - Function in utils.js that uses this title when creating workflow issue reports
      */
     title: 'workflow: Issues Detected'
@@ -239,6 +286,7 @@ const CONFIG = {
        * It's copied to the root directory during the build process.
        * 
        * @type {string}
+       * @default '.github/templates/config.yml'
        * @see setupBuildEnvironment - Function in release.js that copies this file to the build location
        */
       file: '.github/templates/config.yml'
@@ -261,6 +309,7 @@ const CONFIG = {
        * a comprehensive listing of all available charts.
        * 
        * @type {string}
+       * @default '.github/templates/index.md.hbs'
        * @see generateIndex - Function in release.js that uses this template to create the index page
        */
       template: '.github/templates/index.md.hbs'
@@ -287,6 +336,7 @@ const CONFIG = {
      * information, and related issues that were addressed in the release.
      * 
      * @type {string}
+     * @default '.github/templates/release.md.hbs'
      * @see _generateChartRelease - Function in release.js that uses this template to create release content
      */
     template: '.github/templates/release.md.hbs',
@@ -328,6 +378,7 @@ const CONFIG = {
        * If present, the icon is also included in GitHub release notes.
        * 
        * @type {string}
+       * @default 'icon.png'
        * @see _generateChartRelease - Function in release.js that checks for this icon file
        */
       icon: 'icon.png',
@@ -349,6 +400,7 @@ const CONFIG = {
          * directly to create running applications on a Kubernetes cluster.
          * 
          * @type {string}
+         * @default 'application'
          */
         application: 'application',
 
@@ -359,6 +411,7 @@ const CONFIG = {
          * can be used by other charts but cannot be installed directly.
          * 
          * @type {string}
+         * @default 'library'
          */
         library: 'library'
       }
@@ -372,6 +425,7 @@ const CONFIG = {
      * site where the packaged charts and index.yaml are hosted.
      * 
      * @type {string}
+     * @default 'https://axivo.github.io/charts/'
      * @see _generateHelmIndex - Function in release.js that uses this URL in the repository index
      */
     url: 'https://axivo.github.io/charts/'
