@@ -94,61 +94,22 @@ async function checkWorkflowRunStatus({
 }) {
   try {
     core.info(`Checking workflow run ${runId} status...`);
-    const query = `
-      query($owner: String!, $repo: String!, $runId: Int!) {
-        repository(owner: $owner, name: $repo) {
-          workflowRuns(first: 1, where: {runId: $runId}) {
-            nodes {
-              conclusion
-              checkSuites(first: 20) {
-                nodes {
-                  conclusion
-                  checkRuns(first: 20) {
-                    nodes {
-                      conclusion
-                      annotations(first: 20) {
-                        nodes {
-                          annotationLevel
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    `;
-    const variables = {
+    const response = await github.rest.actions.getWorkflowRun({
       owner: context.repo.owner,
       repo: context.repo.repo,
-      runId: parseInt(runId, 10)
-    };
-    const result = await github.graphql(query, variables);
-    const workflowRuns = result.repository?.workflowRuns?.nodes || [];
-    const workflowRun = workflowRuns[0];
+      run_id: parseInt(runId, 10)
+    });
+    const workflowRun = response.data;
     if (!workflowRun) {
       core.info(`No workflow run found with ID ${runId}`);
       return false;
     }
-    if (workflowRun.conclusion === 'SUCCESS' || workflowRun.conclusion === null) {
-      return false;
-    }
-    if (workflowRun.conclusion === 'FAILURE' || workflowRun.conclusion === 'CANCELLED') {
+    const errorConclusions = ['cancelled', 'failure'];
+    const successConclusions = [null, 'success'];
+    if (errorConclusions.includes(workflowRun.conclusion)) {
       core.info(`Workflow run concluded with ${workflowRun.conclusion}`);
-      return true;
     }
-    const hasIssues = workflowRun.checkSuites.nodes.some(suite =>
-      suite.conclusion === 'FAILURE' ||
-      suite.checkRuns.nodes.some(run =>
-        run.conclusion === 'FAILURE' ||
-        run.annotations.nodes.some(annotation =>
-          annotation.annotationLevel === 'WARNING' ||
-          annotation.annotationLevel === 'FAILURE'
-        )
-      )
-    );
+    const hasIssues = !successConclusions.includes(workflowRun.conclusion);
     core.info(`Workflow run status check completed. Issues found: ${hasIssues}`);
     return hasIssues;
   } catch (error) {
