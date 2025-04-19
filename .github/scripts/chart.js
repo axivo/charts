@@ -164,7 +164,9 @@ async function _updateIssueTemplates({
     const libCharts = charts.library;
     const appChartOptions = appCharts.map(dir => `${path.basename(dir)} (application)`).sort();
     const libChartOptions = libCharts.map(dir => `${path.basename(dir)} (library)`).sort();
-    const chartOptions = [...appChartOptions, ...libChartOptions];
+    const featureNewOptions = ['new chart (application)', 'new chart (library)'];
+    const featureChartOptions = [...featureNewOptions, ...appChartOptions, ...libChartOptions];
+    const bugChartOptions = [...appChartOptions, ...libChartOptions];
     const indentationRegex = /(\s+)-.+\(.+\)/;
     const optionsRegex = /(id:\s+chart[\s\S]+options:)([\r\n]+\s+)[\s\S]+?(\s+default:\s+0)/;
     for (const templatePath of templatePaths) {
@@ -174,7 +176,8 @@ async function _updateIssueTemplates({
           continue;
         }
         const indentation = content.match(indentationRegex)[1];
-        const optionsText = chartOptions.map(option => `${indentation}- ${option}`).join('');
+        const templateOptions = templatePath === featureTemplatePath ? featureChartOptions : bugChartOptions;
+        const optionsText = templateOptions.map(option => `${indentation}- ${option}`).join('');
         const replacementText = `$1${optionsText}$3`;
         content = content.replace(optionsRegex, replacementText);
         await fs.writeFile(templatePath, content, 'utf8');
