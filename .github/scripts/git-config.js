@@ -49,11 +49,7 @@ async function configureGit({ github, context, core, exec }) {
 }
 
 /**
- * Exports the module's Git configuration function
- * 
- * This module exports the configureGit function which provides a standardized way
- * to set up Git for GitHub Actions workflows. This function is used across different
- * scripts in the repository that need to make Git commits as part of their operation.
+ * Exports the module's functions
  */
 module.exports = {
   configureGit

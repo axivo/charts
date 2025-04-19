@@ -288,10 +288,6 @@ async function performUpdates({
 
 /**
  * Exports the module's functions
- * 
- * This module exports the performUpdates function which serves as the main entry point
- * for chart-related repository maintenance tasks. More functions may be added to this
- * export statement as new functionality is developed.
  */
 module.exports = {
   performUpdates

@@ -457,8 +457,5 @@ function config(section) {
  * for accessing the centralized configuration settings. The CONFIG object itself
  * is not exported to encourage proper access patterns and maintain
  * encapsulation of configuration details.
- * 
- * As new configuration sections are added, they will be accessible through this
- * same interface without requiring changes to consuming modules.
  */
 module.exports = config;

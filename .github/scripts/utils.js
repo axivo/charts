@@ -255,12 +255,7 @@ async function findCharts({
 }
 
 /**
- * Exports the module's utility functions
- * 
- * This module exports a collection of utility functions that provide common
- * functionality needed across different scripts in the repository. These functions
- * include file operations, error handling, GitHub API interactions, and templating
- * utilities that simplify workflow implementation.
+ * Exports the module's functions
  */
 module.exports = {
   addLabel,

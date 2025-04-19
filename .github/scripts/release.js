@@ -525,11 +525,7 @@ async function setupBuildEnvironment({ core }) {
 }
 
 /**
- * Exports the module's configuration and functions
- * 
- * As functions are migrated from chart.js, they will be added to this export statement.
- * Each function will be documented with JSDoc comments to describe its purpose,
- * parameters, and return values.
+ * Exports the module's functions
  */
 module.exports = {
   generateIndex,

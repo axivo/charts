@@ -404,12 +404,7 @@ async function uploadReleaseAsset({
 }
 
 /**
- * Exports the module's GitHub API functions
- * 
- * This module exports a collection of functions for interacting with GitHub's
- * API in a consistent and standardized way. These functions provide a higher-level
- * interface for common operations like creating releases, checking workflows,
- * and managing issues, simplifying GitHub interactions across the codebase.
+ * Exports the module's functions
  */
 module.exports = {
   checkWorkflowRunStatus,

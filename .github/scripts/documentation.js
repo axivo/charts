@@ -110,10 +110,6 @@ async function updateDocumentation({
 
 /**
  * Exports the module's functions
- * 
- * This module exports functions for installing helm-docs and updating chart
- * documentation. These functions are designed to be used within GitHub Actions
- * workflows to automate the process of keeping chart documentation up-to-date.
  */
 module.exports = {
   installHelmDocs,

@@ -124,11 +124,7 @@ async function getGitStagedChanges(runGit) {
 }
 
 /**
- * Exports the module's signed commit functions
- * 
- * This module exports functions for creating signed commits through GitHub's API
- * and preparing file changes for those commits. These functions are used in various
- * scripts that need to make authenticated and verified commits to the repository.
+ * Exports the module's functions
  */
 module.exports = {
   createSignedCommit,
