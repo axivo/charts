@@ -225,7 +225,7 @@ async function reportWorkflowIssue({
     const commitSha = isPullRequest
       ? context.payload.pull_request.head.sha
       : context.payload.after;
-    const templateContent = await fs.readFile(config('issue').template.bug, 'utf8');
+    const templateContent = await fs.readFile(config('issue').template.workflow, 'utf8');
     const handlebars = registerHandlebarsHelpers(repoUrl);
     const template = handlebars.compile(templateContent);
     const issueBody = template({

@@ -233,7 +233,19 @@ const CONFIG = {
        * @type {string}
        * @default '.github/ISSUE_TEMPLATE/feature_request.yml'
        */
-      feature: '.github/ISSUE_TEMPLATE/feature_request.yml'
+      feature: '.github/ISSUE_TEMPLATE/feature_request.yml',
+
+      /**
+       * Path to the Handlebars template for workflow issue reports
+       * 
+       * This file contains the Handlebars template used to generate the content
+       * of issues created by workflow runs when errors or warnings are detected.
+       * It includes placeholders for workflow name, branch, commit, and run details.
+       * 
+       * @type {string}
+       * @default '.github/templates/workflow.md.hbs'
+       */
+      workflow: '.github/templates/workflow.md.hbs'
     },
 
     /**
