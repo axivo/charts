@@ -1,40 +1,30 @@
 /**
- * Utility Functions for GitHub Actions Workflows
+ * Common Utility Functions for GitHub Actions Workflows
  * 
- * This module provides utility functions for GitHub Actions workflows:
- * - Issue creation for warnings
- * - Warning detection and reporting
+ * This module provides a suite of utility functions for GitHub Actions workflows
+ * used across different scripts in the repository. It includes functions for
+ * error handling, file operations, issue creation, and templating using Handlebars.
+ * 
+ * These utilities provide consistent behavior for error management, repository
+ * operations, and user feedback through issues and GitHub API interactions.
  * 
  * @module utils
+ * @author AXIVO
+ * @license BSD-3-Clause
  */
 
 const fs = require('fs/promises');
+const path = require('path');
 const Handlebars = require('handlebars');
-const githubApi = require('./github-api');
-
-/**
- * Configuration constants for Utility Functions module
- * Contains settings for GitHub issues, API interactions and other customizable parameters
- */
-const CONFIG = {
-  issue: {
-    labels: {
-      bug: {
-        color: 'd73a4a',
-        description: "Something isn't working"
-      },
-      workflow: {
-        color: 'b60205',
-        description: 'Workflow execution related issue'
-      }
-    },
-    template: '.github/templates/issue.md.hbs',
-    title: 'workflow: Issues Detected'
-  }
-}
+const api = require('./github-api');
+const config = require('./config');
 
 /**
  * Adds a label to a repository if it doesn't exist
+ * 
+ * This function checks if a label exists in the repository and creates it if it doesn't.
+ * It uses the GitHub API to manage labels with their colors and descriptions, making
+ * it useful for ensuring that required labels are available for issues and PRs.
  * 
  * @param {Object} params - Function parameters
  * @param {Object} params.github - GitHub API client
@@ -54,7 +44,7 @@ async function addLabel({
   description
 }) {
   if (!labelName) handleError(new Error('Label name is required'), core, 'add label');
-  const labelConfig = CONFIG.issue.labels[labelName] || {};
+  const labelConfig = config('issue').labels[labelName] || {};
   const labelColor = color || labelConfig.color || 'ededed';
   const labelDescription = description || labelConfig.description || '';
   try {
@@ -85,9 +75,13 @@ async function addLabel({
 }
 
 /**
- * Checks if a file exists
+ * Checks if a file exists in the filesystem
  * 
- * @param {string} filePath - Path to check
+ * This function provides a simple promise-based way to check if a file exists
+ * without throwing exceptions. It's useful for conditional logic that depends
+ * on file existence before attempting operations on the file.
+ * 
+ * @param {string} filePath - Path to the file to check
  * @returns {Promise<boolean>} - True if file exists, false otherwise
  */
 async function fileExists(filePath) {
@@ -95,12 +89,17 @@ async function fileExists(filePath) {
 }
 
 /**
- * Handles errors in a standardized way
+ * Handles errors in a standardized way across workflows
+ * 
+ * This function provides a centralized error handling mechanism that can be configured
+ * for different levels of severity. For fatal errors, it logs the error and throws
+ * a new exception to terminate execution. For non-fatal errors, it logs a warning
+ * and allows execution to continue.
  * 
  * @param {Error} error - The error that occurred
  * @param {Object} core - GitHub Actions Core API for logging
- * @param {string} operation - The operation that failed
- * @param {boolean} [fatal=true] - Whether to treat the error as fatal
+ * @param {string} operation - The operation that failed (for context in the error message)
+ * @param {boolean} [fatal=true] - Whether to treat the error as fatal (throw exception)
  * @returns {string} - The formatted error message
  */
 function handleError(error, core, operation, fatal = true) {
@@ -115,9 +114,13 @@ function handleError(error, core, operation, fatal = true) {
 }
 
 /**
- * Registers common Handlebars helpers
+ * Registers common Handlebars helpers for templates
  * 
- * @param {string} repoUrl - Repository URL
+ * This function sets up commonly used Handlebars helper functions to be used in
+ * templates throughout the repository. It provides utilities like equality comparison
+ * and URL transformation helpers that simplify template creation and maintenance.
+ * 
+ * @param {string} repoUrl - Repository URL for use in URL transformation helpers
  * @returns {Object} - Handlebars instance with registered helpers
  */
 function registerHandlebarsHelpers(repoUrl) {
@@ -133,6 +136,13 @@ function registerHandlebarsHelpers(repoUrl) {
 /**
  * Reports workflow issues by creating a GitHub issue
  * 
+ * This function automatically detects problems in a GitHub Actions workflow run
+ * and creates a detailed issue in the repository to track these problems. It uses
+ * a template to format the issue and applies appropriate labels for categorization.
+ * 
+ * The function first checks if the workflow run has any warnings or errors before
+ * creating an issue, to avoid unnecessary issue creation for successful runs.
+ * 
  * @param {Object} params - Function parameters
  * @param {Object} params.github - GitHub API client
  * @param {Object} params.context - GitHub Actions context for repository info
@@ -144,7 +154,7 @@ async function reportWorkflowIssue({
   context,
   core
 }) {
-  let hasIssues = await githubApi.checkWorkflowRunStatus({
+  let hasIssues = await api.checkWorkflowRunStatus({
     github,
     context,
     core,
@@ -164,7 +174,7 @@ async function reportWorkflowIssue({
     const commitSha = isPullRequest
       ? context.payload.pull_request.head.sha
       : context.payload.after;
-    const templateContent = await fs.readFile(CONFIG.issue.template, 'utf8');
+    const templateContent = await fs.readFile(config('issue').template.bug, 'utf8');
     const handlebars = registerHandlebarsHelpers(repoUrl);
     const template = handlebars.compile(templateContent);
     const issueBody = template({
@@ -174,14 +184,14 @@ async function reportWorkflowIssue({
       Branch: branchName,
       RepoURL: repoUrl
     });
-    const labelNames = Object.keys(CONFIG.issue.labels);
+    const labelNames = Object.keys(config('issue').labels);
     await Promise.all(labelNames.map(label =>
       addLabel({ github, context, core, labelName: label })
     ));
     await github.rest.issues.create({
       owner: context.repo.owner,
       repo: context.repo.repo,
-      title: CONFIG.issue.title,
+      title: config('issue').title,
       body: issueBody,
       labels: labelNames
     });
@@ -191,9 +201,65 @@ async function reportWorkflowIssue({
   }
 }
 
+/**
+ * Finds deployed charts in application and library paths
+ * 
+ * This function scans the application and library directories to find all valid
+ * Helm charts. It identifies charts by checking for the presence of a Chart.yaml file
+ * within each subdirectory and categorizes them by chart type (application/library).
+ * 
+ * @param {Object} params - Function parameters
+ * @param {Object} params.core - GitHub Actions Core API for logging
+ * @param {string} params.appDir - Path to application charts directory
+ * @param {string} params.libDir - Path to library charts directory
+ * @returns {Promise<{application: string[], library: string[]}>} - Object containing arrays of chart directories by type
+ */
+async function findCharts({
+  core,
+  appDir,
+  libDir
+}) {
+  core.info('Finding chart directories...');
+  const charts = {
+    application: [],
+    library: []
+  };
+  const paths = [
+    { dir: appDir, type: 'application' },
+    { dir: libDir, type: 'library' }
+  ];
+  await Promise.all(paths.map(async ({ dir, type }) => {
+    try {
+      const entries = await fs.readdir(dir, { withFileTypes: true });
+      for (const entry of entries) {
+        if (entry.isDirectory()) {
+          const chartDir = path.join(dir, entry.name);
+          const chartYamlPath = path.join(chartDir, 'Chart.yaml');
+          if (await fileExists(chartYamlPath)) {
+            charts[type].push(chartDir);
+          }
+        }
+      }
+    } catch (error) {
+      handleError(error, core, `read directory ${dir}`, false);
+    }
+  }));
+  core.info(`Found ${charts.application.length} application charts and ${charts.library.length} library charts`);
+  return charts;
+}
+
+/**
+ * Exports the module's utility functions
+ * 
+ * This module exports a collection of utility functions that provide common
+ * functionality needed across different scripts in the repository. These functions
+ * include file operations, error handling, GitHub API interactions, and templating
+ * utilities that simplify workflow implementation.
+ */
 module.exports = {
   addLabel,
   fileExists,
+  findCharts,
   handleError,
   reportWorkflowIssue,
   registerHandlebarsHelpers

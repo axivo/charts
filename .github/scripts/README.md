@@ -34,15 +34,20 @@ Code documentation should be comprehensive but not redundant:
   /**
    * Brief function description
    * 
+   * More detailed explanation of what the function does and how it works.
+   * Include any important context or constraints that apply.
+   * 
    * @param {Object} params - Function parameters
    * @param {Object} params.github - GitHub API client
    * @param {Object} params.context - GitHub Actions context
    * @returns {Promise<void>}
    */
   ```
+- Module headers should include `@author` and `@license` tags
 - Include parameter descriptions for all destructured parameters
 - Document return values and their types
 - Don't document obvious information that's clear from the code itself
+- Add a JSDoc comment for the module.exports section
 
 ### Naming Conventions and Code Style
 
@@ -66,7 +71,8 @@ File organization should follow this order:
 
 Centralized configuration improves maintainability and makes changes easier to implement:
 
-- All configuration values should be in the `CONFIG` object at the top of each file
+- All configuration values should be in the central `config.js` module
+- Use the `config(section)` function to access configuration values
 - No hardcoded values in function bodies
 - Return data structure should be consistent across similar functions
 
@@ -139,9 +145,32 @@ Most functions in these modules accept a destructured object with the following 
 - `exec` - GitHub Actions exec helpers for running commands
 - `fs` - Node.js fs/promises module for file operations
 
+## Centralized Configuration
+
+The repository uses a centralized configuration approach through the `config.js` module. This provides:
+
+- A single source of truth for all configuration values
+- Consistent access pattern via the `config(section)` function
+- Clear organization of configuration into logical sections
+- Better maintainability through encapsulated changes
+
+Example usage:
+
+```javascript
+// Import the config module
+const config = require('./config');
+
+// Get a specific section of configuration
+const releaseConfig = config('release');
+
+// Access specific configuration properties
+const templatePath = config('release').template;
+const chartTypes = config('repository').chart.type;
+```
+
 ## Deployment Types
 
-The scripts support two deployment types controlled by the `CONFIG.deployment` setting in `chart.js`:
+The scripts support two deployment types controlled by the `config('release').deployment` setting:
 
 - `production`: Builds charts and deploys to GitHub Pages. This is the default mode used when running on the main repository.
 - `staging`: Builds charts locally on the current branch without deploying to GitHub Pages. This mode is useful for testing changes before applying them to production.
@@ -150,42 +179,32 @@ The deployment type is made available as an output from the `setupBuildEnvironme
 
 ## Scripts Overview
 
+### `config.js`
+
+Centralizes configuration settings for all GitHub Actions workflows in the repository.
+
+#### Exported Function
+
+- `config(section)` - Returns the requested configuration section or the entire config object
+
 ### `chart.js`
 
-Provides functions for Helm chart management, releases and GitHub Pages generation.
-
-#### Configuration
-
-- `CONFIG.chart` - Chart-specific settings like templates and repository URL
-- `CONFIG.deployment` - Deployment type (production/staging)
-- `CONFIG.filesystem` - File paths for templates, charts, and output directories
+Provides functions for Helm chart management and repository maintenance.
 
 #### Internal Functions
 
-- `_buildChartRelease` - Builds a GitHub release for a single chart and uploads the chart package as an asset
-- `_createChartReleases` - Creates GitHub releases for packaged charts and uploads the chart packages as release assets
-- `_findCharts` - Finds deployed charts in application and library paths
-- `_generateChartRelease` - Generates release content using the template file
-- `_generateHelmIndex` - Generates the Helm repository index file
-- `_packageCharts` - Packages all charts in a specified directory and updates application references
 - `_performCommit` - Generic function to commit changes to files with appropriate messages
+- `_updateAppFiles` - Updates application files content with latest chart versions
+- `_updateIssueTemplates` - Updates issue templates with current chart options
+- `_updateLockFiles` - Updates Chart.lock files for charts in a pull request
 
 #### Exported Functions
 
-- `generateIndex` - Generates the chart index page from the index.yaml file
 - `performUpdates` - Performs repository updates including lock files and issue templates
-- `processReleases` - Handles the complete Helm chart release process
-- `setupBuildEnvironment` - Sets up the build environment for generating the static site
-- `updateIssueTemplates` - Updates issue templates with current chart options
-- `updateLockFiles` - Updates Chart.lock files for charts in a pull request
 
 ### `documentation.js`
 
 Provides utilities for automating chart documentation updates.
-
-#### Configuration
-
-- `CONFIG.helmDocs` - Configuration for helm-docs installation
 
 #### Exported Functions
 
@@ -198,7 +217,7 @@ Configures Git with GitHub Actions bot identity for making commits in workflows.
 
 #### Exported Function
 
-- Module exports a single function that configures Git and returns a `runGit` function for executing Git commands
+- `configureGit` - Configures Git with GitHub Actions bot identity and returns a `runGit` function
 
 ### `git-signed-commit.js`
 
@@ -213,33 +232,45 @@ Creates verified commits using GitHub's GraphQL API.
 
 Provides centralized functions for interacting with the GitHub API.
 
-#### Configuration
-
-- `CONFIG.release.labels` - Configuration for issue labels used in releases
-
 #### Internal Functions
 
 - `_getLastReleaseDate` - Gets the date of the last release for a chart
 
 #### Exported Functions
 
+- `checkWorkflowRunStatus` - Checks if a workflow run has any warnings or errors
 - `createRelease` - Creates a new GitHub release
 - `getReleaseByTag` - Checks if a GitHub release with the specified tag exists
 - `getReleaseIssues` - Fetches issues related to a specific chart since the last release
 - `uploadReleaseAsset` - Uploads an asset to a GitHub release
 
+### `release.js`
+
+Handles Helm chart releases and GitHub Pages generation.
+
+#### Internal Functions
+
+- `_buildChartRelease` - Builds a GitHub release for a single chart and uploads the chart package as an asset
+- `_createChartReleases` - Creates GitHub releases for packaged charts and uploads the chart packages as release assets
+- `_generateChartRelease` - Generates release content using the template file
+- `_generateHelmIndex` - Generates the Helm repository index file
+- `_packageCharts` - Packages all charts in a specified directory and updates application references
+
+#### Exported Functions
+
+- `generateIndex` - Generates the chart index page from the index.yaml file
+- `processReleases` - Handles the complete Helm chart release process
+- `setupBuildEnvironment` - Sets up the build environment for generating the static site
+
 ### `utils.js`
 
 Provides utility functions for GitHub Actions workflows.
-
-#### Configuration
-
-- `CONFIG.issue` - Configuration for issues created by the workflow
 
 #### Exported Functions
 
 - `addLabel` - Adds a label to a repository if it doesn't exist
 - `fileExists` - Helper function to check if a file exists
+- `findCharts` - Finds deployed charts in application and library paths
 - `handleError` - Handles errors in a standardized way with configurable severity
 - `registerHandlebarsHelpers` - Registers common Handlebars helpers for templates
 - `reportWorkflowIssue` - Reports workflow issues by creating a GitHub issue

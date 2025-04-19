@@ -1,38 +1,29 @@
 /**
- * GitHub API Utilities
+ * GitHub API Utilities Module
  * 
- * This module provides centralized functions for interacting with the GitHub API:
- * - Fetching repository issues
- * - Retrieving release information
- * - Creating GitHub releases
- * - Uploading release assets
+ * This module provides centralized functions for interacting with the GitHub API,
+ * including repository issues, releases, and assets management. It handles all
+ * communication with GitHub's REST and GraphQL APIs, providing a consistent
+ * interface for other modules.
+ * 
+ * The module includes functions for:
+ * - Managing GitHub releases and their assets
+ * - Fetching and filtering repository issues
+ * - Checking workflow run status
  * 
  * @module github-api
+ * @author AXIVO
+ * @license BSD-3-Clause
  */
 
+const config = require('./config');
 const utils = require('./utils');
 
 /**
- * Configuration constants for GitHub API module
- * Contains settings for release issue labels filtering and other API-related parameters
- */
-const CONFIG = {
-  release: {
-    labels: {
-      bug: {
-        color: 'd73a4a',
-        description: "Something isn't working"
-      },
-      feature: {
-        color: '4169e1',
-        description: 'Additions of new functionality'
-      }
-    }
-  }
-};
-
-/**
  * Gets the date of the last release for a chart
+ * 
+ * Searches through all GitHub releases to find the most recent one
+ * for a specific chart and returns its creation date.
  * 
  * @param {Object} options - Function parameters
  * @param {Object} options.github - GitHub API client
@@ -83,6 +74,10 @@ async function _getLastReleaseDate({
 
 /**
  * Checks if a workflow run has any warnings or errors using GraphQL API
+ * 
+ * Analyzes a specific workflow run to determine if it has encountered any issues,
+ * including failures, warnings, or annotations. This helps identify problematic
+ * runs that may require attention.
  * 
  * @param {Object} params - Function parameters
  * @param {Object} params.github - GitHub API client
@@ -162,6 +157,10 @@ async function checkWorkflowRunStatus({
 /**
  * Creates a new GitHub release
  * 
+ * Publishes a new release on GitHub with the specified tag, name, and content.
+ * The function handles all the necessary API calls and returns the created release
+ * data with standardized format.
+ * 
  * @param {Object} options - Function parameters
  * @param {Object} options.github - GitHub API client
  * @param {Object} options.context - GitHub Actions context for repository info
@@ -214,6 +213,10 @@ async function createRelease({
 
 /**
  * Checks if a GitHub release with the specified tag exists
+ * 
+ * Queries the GitHub API to determine if a release with the given tag name
+ * already exists in the repository. If found, it returns detailed information
+ * about the release in a standardized format.
  * 
  * @param {Object} options - Function parameters
  * @param {Object} options.github - GitHub API client
@@ -278,6 +281,10 @@ async function getReleaseByTag({
 /**
  * Fetches issues related to a specific chart since the last release
  * 
+ * Identifies and filters issues that are related to a particular chart based on
+ * specific criteria including issue body content and labels. It uses GraphQL to
+ * efficiently query issues and returns only those relevant to the specified chart.
+ * 
  * @param {Object} options - Function parameters
  * @param {Object} options.github - GitHub API client
  * @param {Object} options.context - GitHub Actions context for repository info
@@ -339,7 +346,7 @@ async function getReleaseIssues({
       const chartDropdownRegex = /### Related Chart\s*\n\s*([^\n]+)/;
       const dropdownMatch = issue.bodyText.match(chartDropdownRegex);
       const isChartRelated = dropdownMatch && dropdownMatch[1].trim() === `${chartName} (${chartType})`;
-      const isLabelRelated = issue.labels.nodes.some(label => Object.keys(CONFIG.release.labels).includes(label.name));
+      const isLabelRelated = issue.labels.nodes.some(label => Object.keys(config('release').labels).includes(label.name));
       return isChartRelated && isLabelRelated
     });
     core.info(`Found ${relevantIssues.length} relevant issues for ${chartPath} chart`);
@@ -358,6 +365,10 @@ async function getReleaseIssues({
 
 /**
  * Uploads an asset to a GitHub release
+ * 
+ * Attaches a file as an asset to an existing GitHub release. This function handles
+ * the binary data upload process and ensures proper association with the specified
+ * release ID. It returns detailed information about the uploaded asset.
  * 
  * @param {Object} options - Function parameters
  * @param {Object} options.github - GitHub API client
@@ -392,8 +403,15 @@ async function uploadReleaseAsset({
   }
 }
 
+/**
+ * Exports the module's GitHub API functions
+ * 
+ * This module exports a collection of functions for interacting with GitHub's
+ * API in a consistent and standardized way. These functions provide a higher-level
+ * interface for common operations like creating releases, checking workflows,
+ * and managing issues, simplifying GitHub interactions across the codebase.
+ */
 module.exports = {
-  CONFIG,
   checkWorkflowRunStatus,
   createRelease,
   getReleaseByTag,
