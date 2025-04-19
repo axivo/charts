@@ -139,8 +139,8 @@ async function _createChartReleases({
       const chartName = chartNameWithVersion.substring(0, lastDashIndex);
       const chartVersion = chartNameWithVersion.substring(lastDashIndex + 1);
       try {
-        const appChartDir = path.join(config('release').repository.chart.type.application, chartName);
-        const libChartDir = path.join(config('release').repository.chart.type.library, chartName);
+        const appChartDir = path.join(config('repository').chart.type.application, chartName);
+        const libChartDir = path.join(config('repository').chart.type.library, chartName);
         const libChartExists = await utils.fileExists(libChartDir);
         const chartType = libChartExists ? 'library' : 'application';
         const chartDir = chartType === 'library' ? libChartDir : appChartDir;
@@ -153,7 +153,7 @@ async function _createChartReleases({
         } catch (error) {
           core.warning(`Failed to load chart metadata: ${error.message}`);
         }
-        const iconPath = path.join(chartDir, config('release').repository.chart.icon);
+        const iconPath = path.join(chartDir, config('repository').chart.icon);
         const iconExists = await utils.fileExists(iconPath);
         await _buildChartRelease({
           github,
@@ -308,8 +308,8 @@ async function _packageCharts({
   try {
     const charts = await utils.findCharts({
       core,
-      appDir: config('release').repository.chart.type.application,
-      libDir: config('release').repository.chart.type.library
+      appDir: config('repository').chart.type.application,
+      libDir: config('repository').chart.type.library
     });
     charts.application.sort();
     charts.library.sort();
@@ -445,7 +445,7 @@ async function processReleases({
     core.info('Creating all chart releases...');
     await _createChartReleases({ github, context, core, packagesPath: releasePackages });
     core.info('Generating Helm repository index...');
-    const repoUrl = config('release').repository.url;
+    const repoUrl = config('repository').url;
     await _generateHelmIndex({
       exec,
       core,

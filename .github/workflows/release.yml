@@ -21,8 +21,8 @@ permissions:
   pages: write
 
 jobs:
-  publish:
-    name: Publish
+  distribution:
+    name: Distribution
     runs-on: ubuntu-latest
     timeout-minutes: 10
     environment:
@@ -68,7 +68,7 @@ jobs:
             const { generateIndex } = require('./.github/scripts/release.js');
             await generateIndex({ context, core });
 
-      - name: Setup release build environment
+      - name: Setup pages build environment
         id: setup
         uses: actions/github-script@v7
         with:

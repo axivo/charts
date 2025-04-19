@@ -69,7 +69,7 @@ async function addLabel({
       return true;
     }
     handleError(error, core, `check or create '${labelName}' label`, false);
-    return true;
+    return false;
   }
 }
 
@@ -255,6 +255,46 @@ async function reportWorkflowIssue({
 }
 
 /**
+ * Updates repository issue labels based on configuration
+ * 
+ * This function ensures all labels defined in the configuration exist in the repository
+ * when issue.createLabels is enabled. It iterates through the labels configuration
+ * and creates any missing labels with their specified colors and descriptions.
+ * When createLabels is disabled, this operation is skipped.
+ * 
+ * @param {Object} params - Function parameters
+ * @param {Object} params.github - GitHub API client
+ * @param {Object} params.context - GitHub Actions context
+ * @param {Object} params.core - GitHub Actions Core API for logging
+ * @returns {Promise<string[]>} - Array of label names that were created or empty array if skipped
+ */
+async function updateIssueLabels({
+  github,
+  context,
+  core
+}) {
+  try {
+    if (!config('issue').createLabels) {
+      core.info('Label creation is disabled in configuration, skipping label updates');
+      return [];
+    }
+    core.info('Updating repository issue labels...');
+    const createdLabels = [];
+    const labelsConfig = config('issue').labels;
+    for (const labelName in labelsConfig) {
+      const result = await addLabel({ github, context, core, labelName });
+      if (result) createdLabels.push(labelName);
+    }
+    if (createdLabels.length > 0) {
+      core.info(`Successfully created ${createdLabels.length} issue labels`);
+    }
+    return createdLabels;
+  } catch (error) {
+    handleError(error, core, 'update issue labels', false);
+  }
+}
+
+/**
  * Exports the module's functions
  */
 module.exports = {
@@ -263,5 +303,6 @@ module.exports = {
   findCharts,
   handleError,
   registerHandlebarsHelpers,
-  reportWorkflowIssue
+  reportWorkflowIssue,
+  updateIssueLabels
 };
