@@ -85,6 +85,40 @@ const CONFIG = {
       },
 
       /**
+       * Label definition for blocked issues or pull requests
+       * 
+       * Used to identify items that cannot proceed due to unresolved dependencies,
+       * requirements, or other blockers. This helps prioritize work by highlighting
+       * items that need special attention to move forward.
+       * 
+       * @type {Object}
+       * @see addLabel - Function in utils.js that uses this label definition when creating labels
+       */
+      blocked: {
+        /**
+         * Display color for the blocked label (red-orange)
+         * 
+         * Hexadecimal color code without leading #. This color appears 
+         * as the label background in the GitHub issue interface.
+         * 
+         * @type {string}
+         * @default 'd93f0b'
+         */
+        color: 'd93f0b',
+
+        /**
+         * Tooltip description shown when hovering over the blocked label
+         * 
+         * This text appears when users hover over the label in the GitHub interface,
+         * providing additional context about what the label means.
+         * 
+         * @type {string}
+         * @default 'Not ready due to unresolved issues'
+         */
+        description: 'Not ready due to unresolved issues'
+      },
+
+      /**
        * Label definition for dependency updates from automated tools
        * 
        * Used to categorize issues and pull requests related to dependency version updates,
