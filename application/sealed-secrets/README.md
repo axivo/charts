@@ -6,14 +6,14 @@
 
 ArgoCD application for `sealed-secrets` [chart](https://github.com/bitnami-labs/sealed-secrets/blob/helm-v2.17.2/helm/sealed-secrets), deployed into AXIVO [K3s Cluster](https://github.com/axivo/k3s-cluster). Review the cluster [documentation](https://axivo.com/k3s-cluster/), for additional details. The application deployment is also compatible with a generic Kubernetes cluster.
 
-## Prerequisites
+### Prerequisites
 
 - Kubernetes cluster (1.19+)
 - Helm 3.0+
 - ArgoCD installed in your cluster
 - For client-side usage: kubeseal CLI tool
 
-## Application Deployment
+### Application Deployment
 
 > [!IMPORTANT]
 > Prior application deployment, adjust the [`values.yaml`](./values.yaml) chart configurable parameters.
@@ -122,9 +122,9 @@ spec:
     type: Opaque
 ```
 
-## Troubleshooting
+### Troubleshooting
 
-### Certificate Issues
+#### Certificate Issues
 
 If you encounter certificate issues, fetch the public key from the controller:
 
@@ -133,7 +133,7 @@ $ kubeseal --fetch-cert > public-key-cert.pem
 $ kubeseal --cert=public-key-cert.pem -o yaml -f secret.yaml -w sealed-secret.yaml
 ```
 
-### Common Errors
+#### Common Errors
 
 If sealed secrets don't decrypt automatically:
 

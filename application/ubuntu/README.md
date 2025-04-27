@@ -6,13 +6,13 @@
 
 ArgoCD application for a minimal Ubuntu `24.04` LTS container, deployed into AXIVO [K3s Cluster](https://github.com/axivo/k3s-cluster). Review the cluster [documentation](https://axivo.com/k3s-cluster/), for additional details. The application deployment is also compatible with a generic Kubernetes cluster.
 
-## Prerequisites
+### Prerequisites
 
 - Kubernetes cluster (1.19+)
 - Helm 3.0+
 - ArgoCD installed in your cluster
 
-## Application Deployment
+### Application Deployment
 
 > [!IMPORTANT]
 > Prior application deployment, adjust the [`values.yaml`](./values.yaml) chart configurable parameters.
@@ -70,7 +70,7 @@ See the chart values, listed below.
 | volumeMounts | list | [] | Additional volume mounts for the container |
 | volumes | list | [] | Additional volumes for the pod |
 
-## Shell Login
+### Shell Login
 
 Example of container shell login:
 
@@ -91,7 +91,7 @@ $ kubectl exec -it -n default $(kubectl get pods -n default -l app=ubuntu -o nam
 
 End-user will have `root` access to a minimal Ubuntu `24.04` LTS container, connected to the Kubernetes cluster network. Common tools may require manual installation via `apt-get`.
 
-## Troubleshooting
+### Troubleshooting
 
 If the pod doesn't start, check its status and events:
 

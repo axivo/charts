@@ -6,11 +6,7 @@
 
 Common library used for ArgoCD applications, deployed into AXIVO [K3s Cluster](https://github.com/axivo/k3s-cluster). Review the cluster [documentation](https://axivo.com/k3s-cluster/), for additional details. The library chart is also compatible with a generic Kubernetes cluster.
 
-## Overview
-
-This is a library chart providing commonly used templates and utilities to applications. Library charts do not deploy any resources by themselves and must be used as dependencies by application charts.
-
-## Usage
+### Usage
 
 To use this library chart, include it as a dependency in your `Chart.yaml` file:
 
@@ -22,16 +18,6 @@ dependencies:
 ```
 
 Then include the templates you need in your application chart.
-
-## Available Templates
-
-This library provides several templates to standardize application deployments:
-
-- Deployments
-- Services
-- Ingress resources
-- ConfigMaps and Secrets
-- ServiceAccounts
 
 ### Chart Values
 
