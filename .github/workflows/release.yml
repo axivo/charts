@@ -18,6 +18,7 @@ defaults:
     shell: bash
 
 permissions:
+  checks: write
   contents: write
   id-token: write
   issues: write

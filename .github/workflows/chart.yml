@@ -19,6 +19,7 @@ defaults:
     shell: bash
 
 permissions:
+  checks: write
   contents: write
   issues: write
 
