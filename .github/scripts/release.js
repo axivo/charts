@@ -168,7 +168,7 @@ async function _createChartReleases({
         try {
           const chartYamlContent = await fs.readFile(chartYamlPath, 'utf8');
           chartMetadata = yaml.load(chartYamlContent);
-          core.info(`Sucessfully loaded '${chartDir}' chart metadata`);
+          core.info(`Successfully loaded '${chartDir}' chart metadata`);
         } catch (error) {
           utils.handleError(error, core, `load '${chartDir}' chart metadata`, false);
         }
@@ -496,6 +496,7 @@ async function processReleases({
   core,
   exec
 }) {
+  let conclusion = 'success';
   try {
     const appChartType = config('repository').chart.type.application;
     const libChartType = config('repository').chart.type.library;
@@ -503,6 +504,13 @@ async function processReleases({
     const charts = await utils.findCharts({ core, appDir: appChartType, libDir: libChartType, files });
     if (!(charts.application.length + charts.library.length)) {
       core.info('No new charts releases found');
+      await api.createCheckRun({
+        github,
+        context,
+        core,
+        name: 'release',
+        conclusion
+      });
       return;
     }
     const repositoryIndexDist = './_dist/index.yaml';
@@ -559,7 +567,16 @@ async function processReleases({
     }
     core.info('Successfully completed the chart releases process');
   } catch (error) {
+    conclusion = 'failure';
     utils.handleError(error, core, 'process chart releases');
+  } finally {
+    await api.createCheckRun({
+      github,
+      context,
+      core,
+      name: 'release',
+      conclusion
+    });
   }
 }
 
