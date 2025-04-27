@@ -26,7 +26,8 @@ $ kubectl apply -f application/ubuntu/application.yaml
 Alternatively, you can deploy using Helm directly:
 
 ```shell
-$ helm install ubuntu application/ubuntu -n default
+$ helm repo add axivo https://axivo.github.io/charts
+$ helm install ubuntu axivo/ubuntu -n kube-system
 ```
 
 ### Chart Values
