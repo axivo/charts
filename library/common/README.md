@@ -19,7 +19,7 @@ dependencies:
     repository: https://axivo.github.io/charts
 ```
 
-Then include the templates you need in your application chart.
+Then, include the templates needed into related application chart.
 
 ### Chart Values
 
