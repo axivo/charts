@@ -12,7 +12,7 @@ To use this library chart, include it as a dependency in your `Chart.yaml` file:
 
 ```yaml
 dependencies:
-  - name: common
+  - name: {{ template "chart.name" . }}
     version: {{ template "chart.version" . }}
     repository: https://axivo.github.io/charts
 ```

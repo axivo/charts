@@ -36,7 +36,8 @@ $ kubectl apply -f application/{{ template "chart.name" . }}/application.yaml
 Alternatively, you can deploy using Helm directly:
 
 ```shell
-$ helm install sealed-secrets application/{{ template "chart.name" . }} -n kube-system
+$ helm repo add axivo https://axivo.github.io/charts
+$ helm install {{ template "chart.name" . }} axivo/{{ template "chart.name" . }} -n kube-system
 ```
 
 ### Chart Values
