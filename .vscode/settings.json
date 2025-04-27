@@ -1,0 +1,102 @@
+{
+  "[github-actions-workflow]": {
+    "editor.defaultFormatter": "redhat.vscode-yaml"
+  },
+  "[go-template]": {
+    "editor.autoIndent": "keep",
+    "editor.insertSpaces": true,
+    "editor.tabSize": 2
+  },
+  "[handlebars]": {
+    "editor.formatOnSave": false
+  },
+  "[helm]": {
+    "editor.autoIndent": "keep",
+    "editor.formatOnSave": true,
+    "editor.insertSpaces": true,
+    "editor.tabSize": 2
+  },
+  "[javascript]": {
+    "editor.defaultFormatter": "vscode.typescript-language-features",
+    "editor.formatOnSave": true,
+    "editor.insertSpaces": true,
+    "editor.tabSize": 2
+  },
+  "[jsonc]": {
+    "editor.defaultFormatter": "vscode.json-language-features",
+    "editor.formatOnSave": true,
+    "editor.tabSize": 2
+  },
+  "[yaml]": {
+    "editor.autoIndent": "keep",
+    "editor.defaultFormatter": "redhat.vscode-yaml",
+    "editor.formatOnSave": true,
+    "editor.insertSpaces": true,
+    "editor.tabSize": 2,
+    "files.insertFinalNewline": true,
+    "files.trimFinalNewlines": true,
+    "files.trimTrailingWhitespace": true
+  },
+  "editor.formatOnSave": true,
+  "editor.rulers": [
+    120
+  ],
+  "files.associations": {
+    "*.gotmpl": "helm",
+    "*.hbs": "handlebars",
+    "*.tpl": "helm",
+    "*.yaml": "yaml",
+    "*.yml": "yaml",
+    "**/.github/workflows/*.yml": "yaml",
+    "**/renovate.json5": "jsonc",
+    "**/templates/*.yaml": "helm",
+    "**/templates/*.yml": "helm"
+  },
+  "files.exclude": {
+    "**/.git": true,
+    "**/.DS_Store": true
+  },
+  "files.watcherExclude": {
+    "**/.git/objects/**": true,
+    "**/.git/subtree-cache/**": true
+  },
+  "json.schemas": [
+    {
+      "fileMatch": [
+        "renovate.json5"
+      ],
+      "url": "https://docs.renovatebot.com/renovate-schema.json"
+    }
+  ],
+  "yaml.customTags": [
+    "!include_dir_named",
+    "!include_dir_list",
+    "!include_dir_merge_list",
+    "!include_dir_merge_named",
+    "!secret"
+  ],
+  "yaml.format.bracketSpacing": true,
+  "yaml.format.enable": true,
+  "yaml.format.printWidth": 120,
+  "yaml.format.proseWrap": "preserve",
+  "yaml.format.singleQuote": false,
+  "yaml.hover": true,
+  "yaml.completion": true,
+  "yaml.schemas": {
+    "https://json.schemastore.org/chart.json": "application/*/Chart.yaml",
+    "https://json.schemastore.org/github-workflow.json": "**/.github/workflows/*.yml",
+    "https://json.schemastore.org/helmfile.json": "**/helmfile.yaml",
+    "https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/v1.24.0-standalone-strict/all.json": [
+      "application/*/templates/*.yaml",
+      "kubernetes/*.yaml",
+      "library/*/templates/*.yaml"
+    ]
+  },
+  "yaml.schemaStore.enable": true,
+  "yaml.validate": true,
+  "yaml.disableAdditionalProperties": false,
+  "yaml.maxItemsComputed": 8000,
+  "yaml.style.flowMapping": "forbid",
+  "yaml.style.flowSequence": "forbid",
+  "yaml.keyOrdering": false
+}

@@ -1,0 +1,58 @@
+name: Feature Request
+title: "feature: "
+description: Suggest an idea for this project.
+labels:
+  - feature
+  - triage
+body:
+  - type: markdown
+    attributes:
+      value: |
+        > [!IMPORTANT]
+        > If you have usage questions, please read first the [Wiki](https://axivo.com/k3s-cluster) and use [GitHub Discussions](https://github.com/axivo/charts/discussions), for community support.
+  - type: checkboxes
+    attributes:
+      label: Existing Issues
+      description: Please search to see if an issue already exists for the feature request.
+      options:
+        - label: I have searched the existing issues
+          required: true
+  - type: textarea
+    id: related-problem
+    attributes:
+      label: Related Problem
+      description: Is your feature request related to a problem?
+      value: |
+        **Chart Name and Version**
+        - chart: related-chart-name
+        - version: v1.0.0
+
+        **Describe the issue**
+        A clear and concise description of what the issue is.
+    validations:
+      required: true
+  - type: textarea
+    id: solution-implementation
+    attributes:
+      label: Solution Implementation
+      description: Describe the solution you would like to see implemented.
+    validations:
+      required: true
+  - type: textarea
+    id: solution-alternatives
+    attributes:
+      label: Solution Alternatives
+      description: Describe any solution alternatives you've considered.
+  - type: textarea
+    id: anything-else
+    attributes:
+      label: Anything Else
+      description: Links? References? Anything that will provide more context about the feature request.
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: Code of Conduct
+      description: By submitting this issue, you agree to follow our [Code of Conduct](https://github.com/axivo/charts/blob/main/CODE_OF_CONDUCT.md)
+      options:
+        - label: I agree to follow project's Code of Conduct
+          required: true
