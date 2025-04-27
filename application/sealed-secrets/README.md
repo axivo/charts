@@ -24,7 +24,7 @@ The application can be deployed from ArgoCD UI, or terminal:
 $ kubectl apply -f application/sealed-secrets/application.yaml
 ```
 
-Alternatively, you can deploy using Helm directly:
+Alternatively, deploy using Helm directly:
 
 ```shell
 $ helm repo add axivo https://axivo.github.io/charts
