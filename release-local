@@ -1,0 +1,37 @@
+/**
+ * Local Helm Chart Validation
+ * 
+ * This script provides a convenient entry point for validating Helm charts locally
+ * before committing and pushing changes. It performs a comprehensive validation
+ * including:
+ * 
+ * - Dependency verification (tools and Node.js packages)
+ * - Helm chart linting and template validation
+ * - Kubernetes API schema validation using dry-run
+ * - Chart icon validation (existence and dimensions)
+ * 
+ * Usage: node release-local
+ * 
+ * @module release-local
+ * @author AXIVO
+ * @license BSD-3-Clause
+ */
+
+const exec = require('@actions/exec');
+const processLocalReleases = require('./.github/scripts/release-local');
+const core = {
+  info: console.log,
+  warning: console.warn,
+  error: console.error,
+  setFailed: console.error,
+  setOutput: (name, value) => { }
+};
+
+(async () => {
+  try {
+    await processLocalReleases({ core, exec });
+  } catch (error) {
+    console.error(`Error: ${error.message}`);
+    process.exit(1);
+  }
+})();

@@ -1,0 +1,80 @@
+name: Chart
+
+on:
+  pull_request:
+    paths:
+      - application/*/Chart.yaml
+      - application/*/README.md.gotmpl
+      - application/*/values.yaml
+      - library/*/Chart.yaml
+      - library/*/README.md.gotmpl
+      - library/*/values.yaml
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
+
+permissions:
+  contents: write
+  issues: write
+
+jobs:
+  update:
+    name: Updates
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup helm
+        uses: azure/setup-helm@v4
+        with:
+          version: v3.17.3
+
+      - name: Setup node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install node dependencies
+        run: npm install js-yaml handlebars
+
+      - name: Configure repository
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { configureGitRepository } = require('./.github/scripts/utils.js');
+            await configureGitRepository({ github, context, core, exec });
+
+      - name: Update repository issue labels
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { updateIssueLabels } = require('./.github/scripts/utils.js');
+            await updateIssueLabels({ github, context, core });
+
+      - name: Install helm-docs
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { installHelmDocs } = require('./.github/scripts/documentation.js');
+            await installHelmDocs({ core, exec, version: '1.14.2' });
+
+      - name: Update repository charts
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { updateCharts } = require('./.github/scripts/chart.js');
+            await updateCharts({ github, context, core, exec });
+
+      - name: Report workflow issue
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { reportWorkflowIssue } = require('./.github/scripts/utils.js');
+            await reportWorkflowIssue({ github, context, core });
