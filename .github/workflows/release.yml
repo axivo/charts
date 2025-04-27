@@ -1,0 +1,101 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/templates/*
+      - application/**
+      - library/**
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
+
+permissions:
+  contents: write
+  id-token: write
+  issues: write
+  packages: write
+  pages: write
+
+jobs:
+  distribution:
+    name: Distribution
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup helm
+        uses: azure/setup-helm@v4
+        with:
+          version: v3.17.3
+
+      - name: Setup node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install node dependencies
+        run: npm install js-yaml handlebars
+
+      - name: Configure repository
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { configureGitRepository } = require('./.github/scripts/utils.js');
+            await configureGitRepository({ github, context, core, exec });
+
+      - name: Process chart releases
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { processReleases } = require('./.github/scripts/release.js');
+            await processReleases({ github, context, core, exec });
+
+      - name: Setup pages build environment
+        id: setup
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { setupBuildEnvironment } = require('./.github/scripts/release.js');
+            await setupBuildEnvironment({ context, core });
+
+      - name: Build pages
+        uses: actions/jekyll-build-pages@v1
+        with:
+          source: ./
+          destination: ./_site
+
+      - name: Configure pages
+        id: pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload pages artifact
+        if: steps.setup.outputs.publish
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./_site
+
+      - name: Deploy pages
+        if: steps.setup.outputs.publish
+        uses: actions/deploy-pages@v4
+
+      - name: Report workflow issue
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { reportWorkflowIssue } = require('./.github/scripts/utils.js');
+            await reportWorkflowIssue({ github, context, core });
