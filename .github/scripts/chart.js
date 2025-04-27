@@ -242,6 +242,7 @@ async function updateCharts({
   core,
   exec
 }) {
+  let conclusion = 'success';
   try {
     const appChartType = config('repository').chart.type.application;
     const libChartType = config('repository').chart.type.library;
@@ -261,7 +262,16 @@ async function updateCharts({
       await _updateLockFiles({ github, context, core, exec, charts: updatedCharts });
     }
   } catch (error) {
+    conclusion = 'failure';
     utils.handleError(error, core, 'update repository charts');
+  } finally {
+    await api.createCheckRun({
+      github,
+      context,
+      core,
+      name: 'chart',
+      conclusion
+    });
   }
 }
 
