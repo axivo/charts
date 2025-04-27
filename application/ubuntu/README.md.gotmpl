@@ -1,8 +1,16 @@
 # {{ template "chart.name" . }}
 
+<img align="right" width="250" height="250" src="https://raw.githubusercontent.com/axivo/charts/main/application/{{ template "chart.name" . }}/icon.png" alt="{{ template "chart.name" . }}" />
+
 {{ template "chart.typeBadge" . }} {{ template "chart.versionBadge" . }} {{ template "chart.appVersionBadge" . }}
 
 ArgoCD application for a minimal Ubuntu `{{ template "chart.appVersion" . }}` LTS container, deployed into AXIVO [K3s Cluster](https://github.com/axivo/k3s-cluster). Review the cluster [documentation](https://axivo.com/k3s-cluster/), for additional details. The application deployment is also compatible with a generic Kubernetes cluster.
+
+## Prerequisites
+
+- Kubernetes cluster (1.19+)
+- Helm 3.0+
+- ArgoCD installed in your cluster
 
 ## Application Deployment
 
@@ -13,6 +21,12 @@ The application can be deployed from ArgoCD UI, or terminal:
 
 ```shell
 $ kubectl apply -f application/{{ template "chart.name" . }}/application.yaml
+```
+
+Alternatively, you can deploy using Helm directly:
+
+```shell
+$ helm install ubuntu application/{{ template "chart.name" . }} -n default
 ```
 
 ### Chart Values
@@ -37,4 +51,18 @@ $ kubectl exec -itn default ubuntu-6589cf5fb4-p9z2b -- /bin/bash
 root@ubuntu-6589cf5fb4-p9z2b:/#
 ```
 
+You can also use this shorter form for accessing the shell:
+
+```shell
+$ kubectl exec -it -n default $(kubectl get pods -n default -l app=ubuntu -o name | head -n 1) -- /bin/bash
+```
+
 End-user will have `root` access to a minimal Ubuntu `{{ template "chart.appVersion" . }}` LTS container, connected to the Kubernetes cluster network. Common tools may require manual installation via `apt-get`.
+
+## Troubleshooting
+
+If the pod doesn't start, check its status and events:
+
+```shell
+$ kubectl describe pod -n default -l app=ubuntu
+```

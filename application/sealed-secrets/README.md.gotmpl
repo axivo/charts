@@ -9,9 +9,18 @@
 {{- end -}}
 # {{ template "chart.name" . }}
 
+<img align="right" width="250" height="250" src="https://raw.githubusercontent.com/axivo/charts/main/application/{{ template "chart.name" . }}/icon.png" alt="{{ template "chart.name" . }}" />
+
 {{ template "chart.typeBadge" . }} {{ template "chart.versionBadge" . }} {{ template "chart.appVersionBadge" . }}
 
 ArgoCD application for `{{ template "chart.name" . }}` [chart]({{ template "chart.url" . }}), deployed into AXIVO [K3s Cluster](https://github.com/axivo/k3s-cluster). Review the cluster [documentation](https://axivo.com/k3s-cluster/), for additional details. The application deployment is also compatible with a generic Kubernetes cluster.
+
+## Prerequisites
+
+- Kubernetes cluster (1.19+)
+- Helm 3.0+
+- ArgoCD installed in your cluster
+- For client-side usage: kubeseal CLI tool
 
 ## Application Deployment
 
@@ -24,6 +33,12 @@ The application can be deployed from ArgoCD UI, or terminal:
 $ kubectl apply -f application/{{ template "chart.name" . }}/application.yaml
 ```
 
+Alternatively, you can deploy using Helm directly:
+
+```shell
+$ helm install sealed-secrets application/{{ template "chart.name" . }} -n kube-system
+```
+
 ### Chart Values
 
 See the chart values, listed below.
@@ -34,6 +49,8 @@ See the chart values, listed below.
 {{ template "chart.valuesTable" . }}
 
 ## Command-Line Interface
+
+### Installation
 
 To encrypt sensitive information prior storing it into a Git repository, install the CLI tool:
 
@@ -90,4 +107,23 @@ spec:
       name: my-secret
       namespace: my-namespace
     type: Opaque
+```
+
+## Troubleshooting
+
+### Certificate Issues
+
+If you encounter certificate issues, fetch the public key from the controller:
+
+```shell
+$ kubeseal --fetch-cert > public-key-cert.pem
+$ kubeseal --cert=public-key-cert.pem -o yaml -f secret.yaml -w sealed-secret.yaml
+```
+
+### Common Errors
+
+If sealed secrets don't decrypt automatically:
+
+```shell
+$ kubectl get events -n kube-system --field-selector involvedObject.kind=SealedSecret
 ```
