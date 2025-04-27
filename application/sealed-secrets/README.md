@@ -1,19 +1,10 @@
-{{- define "chart.appVersionBadge" -}}
-{{- $version := (index .Dependencies 0).Version -}}
-![AppVersion: {{ $version }}](https://img.shields.io/badge/AppVersion-{{ $version | replace "-" "--" }}-informational?style=flat-square)
-{{- end -}}
-{{- define "chart.url" -}}
-{{- $source := (index .Sources 0) -}}
-{{- $version := (index .Dependencies 0).Version -}}
-{{- printf "%s/blob/helm-v%s/helm/%s" $source $version .Name -}}
-{{- end -}}
-# {{ template "chart.name" . }}
+# sealed-secrets
 
-<img align="right" width="250" height="250" src="https://raw.githubusercontent.com/axivo/charts/main/application/{{ template "chart.name" . }}/icon.png" alt="{{ template "chart.name" . }}" />
+<img align="right" width="250" height="250" src="https://raw.githubusercontent.com/axivo/charts/main/application/sealed-secrets/icon.png" alt="sealed-secrets" />
 
-{{ template "chart.typeBadge" . }} {{ template "chart.versionBadge" . }} {{ template "chart.appVersionBadge" . }}
+![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square)  ![Version: 1.0.0](https://img.shields.io/badge/Version-1.0.0-informational?style=flat-square)  ![AppVersion: 2.17.2](https://img.shields.io/badge/AppVersion-2.17.2-informational?style=flat-square)
 
-ArgoCD application for `{{ template "chart.name" . }}` [chart]({{ template "chart.url" . }}), deployed into AXIVO [K3s Cluster](https://github.com/axivo/k3s-cluster). Review the cluster [documentation](https://axivo.com/k3s-cluster/), for additional details. The application deployment is also compatible with a generic Kubernetes cluster.
+ArgoCD application for `sealed-secrets` [chart](https://github.com/bitnami-labs/sealed-secrets/blob/helm-v2.17.2/helm/sealed-secrets), deployed into AXIVO [K3s Cluster](https://github.com/axivo/k3s-cluster). Review the cluster [documentation](https://axivo.com/k3s-cluster/), for additional details. The application deployment is also compatible with a generic Kubernetes cluster.
 
 ### Prerequisites
 
@@ -30,14 +21,14 @@ ArgoCD application for `{{ template "chart.name" . }}` [chart]({{ template "char
 The application can be deployed from ArgoCD UI, or terminal:
 
 ```shell
-$ kubectl apply -f application/{{ template "chart.name" . }}/application.yaml
+$ kubectl apply -f application/sealed-secrets/application.yaml
 ```
 
 Alternatively, deploy using Helm directly:
 
 ```shell
 $ helm repo add axivo https://axivo.github.io/charts
-$ helm install {{ template "chart.name" . }} axivo/{{ template "chart.name" . }} -n kube-system
+$ helm install sealed-secrets axivo/sealed-secrets -n kube-system
 ```
 
 ### Chart Values
@@ -47,7 +38,29 @@ See the chart values, listed below.
 > [!TIP]
 > Use [Robusta KRR](https://axivo.com/k3s-cluster/tutorials/handbook/tools/#robusta-krr), to optimize the cluster resources allocation.
 
-{{ template "chart.valuesTable" . }}
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| sealed-secrets.fullnameOverride | string | "sealed-secrets-controller" | Fully overrides the controller fullname |
+| sealed-secrets.keyrenewperiod | string | "" | Specifies key renewal period, e.g., 720h0m (30 days) |
+| sealed-secrets.metrics.dashboards.annotations | map | {} | Annotations added to Grafana dashboard ConfigMap |
+| sealed-secrets.metrics.dashboards.create | bool | true | Specifies whether a Grafana dashboard ConfigMap is created |
+| sealed-secrets.metrics.dashboards.labels | map | {} | Labels added to Grafana dashboard ConfigMap |
+| sealed-secrets.metrics.dashboards.namespace | string | "kube-system" | Namespace where Grafana dashboard ConfigMap is deployed |
+| sealed-secrets.metrics.serviceMonitor.enabled | bool | true | Specifies if a ServiceMonitor is deployed |
+| sealed-secrets.metrics.serviceMonitor.honorLabels | bool | true | Specifies if ServiceMonitor endpoints honor labels |
+| sealed-secrets.metrics.serviceMonitor.interval | string | "30s" | How frequently to scrape metrics |
+| sealed-secrets.metrics.serviceMonitor.metricRelabelings | list | [] | Specifies additional relabeling rules for metrics |
+| sealed-secrets.metrics.serviceMonitor.namespace | string | "kube-system" | Namespace where Prometheus Operator is running |
+| sealed-secrets.metrics.serviceMonitor.relabelings | list | [] | Specifies general relabeling rules for metrics |
+| sealed-secrets.metrics.serviceMonitor.scrapeTimeout | string | "15s" | Timeout after which scrape is ended |
+| sealed-secrets.pdb.create | bool | true | Specifies whether a PodDisruptionBudget is created |
+| sealed-secrets.pdb.maxUnavailable | int/string | 1 | Maximum number of unavailable pods, mutually exclusive with minAvailable |
+| sealed-secrets.pdb.minAvailable | int/string | "" | Minimum number of available pods, mutually exclusive with maxUnavailable |
+| sealed-secrets.resources.limits | map | `{"memory":"128Mi"}` | Resource limits for the container |
+| sealed-secrets.resources.limits.memory | string | "128Mi" | Memory limit |
+| sealed-secrets.resources.requests | map | `{"cpu":"10m","memory":"128Mi"}` | Resource requests for the container |
+| sealed-secrets.resources.requests.cpu | string | "10m" | CPU request |
+| sealed-secrets.resources.requests.memory | string | "128Mi" | Memory request |
 
 ### Command-Line Interface
 
