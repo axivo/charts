@@ -11,7 +11,7 @@ ArgoCD application for `sealed-secrets` [chart](https://github.com/bitnami-labs/
 - Kubernetes cluster (1.19+)
 - Helm 3.0+
 - ArgoCD installed in your cluster
-- For client-side usage: kubeseal CLI tool
+- CLI tool `kubeseal`, for client-side usage
 
 ### Application Deployment
 
@@ -61,9 +61,7 @@ See the chart values, listed below.
 | sealed-secrets.resources.requests.cpu | string | "10m" | CPU request |
 | sealed-secrets.resources.requests.memory | string | "128Mi" | Memory request |
 
-## Command-Line Interface
-
-### Installation
+### Command-Line Interface
 
 To encrypt sensitive information prior storing it into a Git repository, install the CLI tool:
 
@@ -124,16 +122,12 @@ spec:
 
 ### Troubleshooting
 
-#### Certificate Issues
-
 If you encounter certificate issues, fetch the public key from the controller:
 
 ```shell
 $ kubeseal --fetch-cert > public-key-cert.pem
 $ kubeseal --cert=public-key-cert.pem -o yaml -f secret.yaml -w sealed-secret.yaml
 ```
-
-#### Common Errors
 
 If sealed secrets don't decrypt automatically:
 
