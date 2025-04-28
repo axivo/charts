@@ -10,7 +10,7 @@ ArgoCD application for `sealed-secrets` [chart](https://github.com/bitnami-labs/
 
 - Kubernetes cluster (1.19+)
 - Helm 3.0+
-- ArgoCD
+- ArgoCD installed
 - CLI tool `kubeseal`, for client-side usage
 
 ### Application Deployment
