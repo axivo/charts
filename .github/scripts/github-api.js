@@ -119,7 +119,7 @@ async function createCheckRun({
   status = 'completed'
 }) {
   try {
-    core.info(`Creating '${name}' check run for ${context.sha}...`);
+    core.info(`Creating '${name}' check run for '${context.sha}' hash...`);
     await github.rest.checks.create({
       completed_at: new Date().toISOString(),
       conclusion,
