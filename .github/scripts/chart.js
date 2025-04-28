@@ -264,14 +264,6 @@ async function updateCharts({
   } catch (error) {
     conclusion = 'failure';
     utils.handleError(error, core, 'update repository charts');
-  } finally {
-    await api.createCheckRun({
-      github,
-      context,
-      core,
-      name: 'chart',
-      conclusion
-    });
   }
 }
 
