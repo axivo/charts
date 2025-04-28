@@ -80,63 +80,6 @@ async function _getLastReleaseDate({
 }
 
 /**
- * Creates a check run
- * 
- * This function creates a check run that will appear in branch protection rules.
- * The Check Runs API provides richer status reporting capabilities than the
- * older Commit Status API, including more detailed status reporting and line-specific
- * annotations.
- * 
- * The check name is formatted as "${context.workflow} / ${name}" to ensure it appears
- * properly in GitHub rulesets and branch protection settings. The details_url is 
- * automatically set to link the check to its workflow run.
- * 
- * Supported conclusion types:
- * - action_required: The check run requires additional actions to succeed
- * - cancelled: The check run was cancelled before completion
- * - failure: The check run failed
- * - neutral: The check run completed with a neutral result
- * - skipped: The check run was skipped
- * - stale: The check run was marked stale by GitHub
- * - success: The check run completed successfully
- * - timed_out: The check run timed out
- * 
- * @param {Object} options - Function parameters
- * @param {Object} options.github - GitHub API client for making API calls
- * @param {Object} options.context - GitHub Actions context containing repository information
- * @param {Object} options.core - GitHub Actions Core API for logging and output
- * @param {string} options.name - Name of the check (will be prefixed with workflow name)
- * @param {string} [options.conclusion='success'] - Conclusion of the check run
- * @param {string} [options.status='completed'] - Status of the check run
- * @returns {Promise<void>}
- */
-async function createCheckRun({
-  github,
-  context,
-  core,
-  name,
-  conclusion = 'success',
-  status = 'completed'
-}) {
-  try {
-    core.info(`Creating '${name}' check run for '${context.sha}' hash...`);
-    await github.rest.checks.create({
-      completed_at: new Date().toISOString(),
-      conclusion,
-      details_url: `${context.payload.repository.html_url}/actions/runs/${context.runId}`,
-      head_sha: context.sha,
-      name: `${context.workflow} / ${name}`,
-      owner: context.repo.owner,
-      repo: context.repo.repo,
-      status
-    });
-    core.info(`Successfully created '${name}' check run`);
-  } catch (error) {
-    utils.handleError(error, core, 'create check run');
-  }
-}
-
-/**
  * Checks if a workflow run has any warnings or errors using GraphQL API
  * 
  * Analyzes a specific workflow run by its run ID to determine if it encountered any issues,
@@ -644,7 +587,6 @@ async function uploadReleaseAsset({
  */
 module.exports = {
   checkWorkflowRunStatus,
-  createCheckRun,
   createRelease,
   createSignedCommit,
   getReleaseByTag,
