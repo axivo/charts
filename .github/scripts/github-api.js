@@ -87,9 +87,9 @@ async function _getLastReleaseDate({
  * older Commit Status API, including more detailed status reporting and line-specific
  * annotations.
  * 
- * The function is used during workflow runs to create statuses that can be selected
- * in branch protection rules, providing visibility into the workflow execution and
- * enabling enforcement of status checks for branch protection.
+ * The check name is formatted as "${context.workflow} / ${name}" to ensure it appears
+ * properly in GitHub rulesets and branch protection settings. The details_url is 
+ * automatically set to link the check to its workflow run.
  * 
  * Supported conclusion types:
  * - action_required: The check run requires additional actions to succeed
@@ -105,8 +105,9 @@ async function _getLastReleaseDate({
  * @param {Object} options.github - GitHub API client for making API calls
  * @param {Object} options.context - GitHub Actions context containing repository information
  * @param {Object} options.core - GitHub Actions Core API for logging and output
- * @param {string} options.name - Name of the check
+ * @param {string} options.name - Name of the check (will be prefixed with workflow name)
  * @param {string} [options.conclusion='success'] - Conclusion of the check run
+ * @param {string} [options.status='completed'] - Status of the check run
  * @returns {Promise<void>}
  */
 async function createCheckRun({
@@ -114,18 +115,20 @@ async function createCheckRun({
   context,
   core,
   name,
-  conclusion = 'success'
+  conclusion = 'success',
+  status = 'completed'
 }) {
   try {
     core.info(`Creating '${name}' check run for ${context.sha}...`);
     await github.rest.checks.create({
+      completed_at: new Date().toISOString(),
+      conclusion,
+      details_url: `${context.payload.repository.html_url}/actions/runs/${context.runId}`,
+      head_sha: context.sha,
+      name: `${context.workflow} / ${name}`,
       owner: context.repo.owner,
       repo: context.repo.repo,
-      head_sha: context.sha,
-      name: name,
-      status: 'completed',
-      conclusion: conclusion,
-      completed_at: new Date().toISOString()
+      status
     });
     core.info(`Successfully created '${name}' check run`);
   } catch (error) {
