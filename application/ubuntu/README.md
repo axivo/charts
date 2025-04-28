@@ -10,7 +10,7 @@ ArgoCD application for a minimal Ubuntu `24.04` LTS container, deployed into AXI
 
 - Kubernetes cluster (1.19+)
 - Helm 3.0+
-- ArgoCD
+- ArgoCD installed
 
 ### Application Deployment
 
