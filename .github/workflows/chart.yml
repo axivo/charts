@@ -50,7 +50,7 @@ jobs:
         with:
           script: |
             const { configureGitRepository } = require('./.github/scripts/utils.js');
-            await configureGitRepository({ github, context, core, exec });
+            await configureGitRepository({ core, exec });
 
       - name: Update repository issue labels
         uses: actions/github-script@v7
