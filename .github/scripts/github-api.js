@@ -230,6 +230,7 @@ async function checkWorkflowRunStatus({
     const hasWarnings = logsResponse.data.includes('::warning::');
     return hasFailures || hasWarnings;
   } catch (error) {
+    if (error.status === 404) return false;
     utils.handleError(error, core, 'check workflow run status', false);
     return true;
   }
