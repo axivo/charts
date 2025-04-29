@@ -338,7 +338,6 @@ async function _generateChartRelease({
 }) {
   try {
     core.info(`Generating release content for '${chartType}/${chartName}' chart...`);
-    await fs.mkdir('./_dist', { recursive: true });
     try {
       await fs.access(releaseTemplate);
     } catch (accessError) {
@@ -455,12 +454,7 @@ async function _generateFrontpage({
       RepoURL: repoUrl,
       Branch: defaultBranchName
     });
-    const frontpageRoot = './index.md';
-    const frontpageDist = './_dist/index.md';
-    const frontpageDir = path.dirname(frontpageDist);
-    await fs.mkdir(frontpageDir, { recursive: true });
-    await fs.writeFile(frontpageRoot, newContent, 'utf8');
-    await fs.writeFile(frontpageDist, newContent, 'utf8');
+    await fs.writeFile('./index.md', newContent, 'utf8');
     core.info(`Successfully generated index content with ${newContent.length} bytes`);
     return true;
   } catch (error) {
@@ -558,7 +552,6 @@ async function processReleases({
       core.info('No new charts releases found');
       return;
     }
-    const repositoryIndexDist = './_dist/index.yaml';
     const releasePackages = './.cr-release-packages';
     core.info(`Creating ${releasePackages} directory...`);
     await fs.mkdir(releasePackages, { recursive: true });
@@ -583,7 +576,7 @@ async function processReleases({
       exec,
       core,
       packagesPath: releasePackages,
-      distRoot: './_dist',
+      distRoot: './',
       charts
     });
     if (config('repository').oci.enabled) {
