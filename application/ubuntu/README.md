@@ -23,7 +23,7 @@ The application can be deployed from ArgoCD UI, or terminal:
 $ kubectl apply -f application/ubuntu/application.yaml
 ```
 
-Alternatively, deploy using Helm directly:
+Alternatively, the chart can be deployed using Helm directly:
 
 ```shell
 $ helm repo add axivo https://axivo.github.io/charts

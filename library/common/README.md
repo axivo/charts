@@ -29,7 +29,3 @@ See the chart values, listed below.
 | global.domain | string | "noty.cc" | Primary domain used across applications |
 | global.externalDns.acmeServer | string | "production" | ACME server environment, `production` or `staging` |
 | global.externalDns.provider | string | "cloudflare" | DNS provider for external-dns |
-
-### Development
-
-The library should be tested thoroughly with dependent application charts, to ensure backward compatibility and proper functionality.

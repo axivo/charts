@@ -221,9 +221,16 @@ async function checkWorkflowRunStatus({
     if (errorConclusions.includes(workflowRun.conclusion)) {
       core.info(`Workflow run concluded with ${workflowRun.conclusion}`);
     }
-    const hasIssues = !successConclusions.includes(workflowRun.conclusion);
-    return hasIssues;
+    const hasFailures = !successConclusions.includes(workflowRun.conclusion);
+    const logsResponse = await github.rest.actions.downloadWorkflowRunLogs({
+      owner: context.repo.owner,
+      repo: context.repo.repo,
+      run_id: parseInt(runId, 10)
+    });
+    const hasWarnings = logsResponse.data.includes('::warning::');
+    return hasFailures || hasWarnings;
   } catch (error) {
+    if (error.status === 404) return false;
     utils.handleError(error, core, 'check workflow run status', false);
     return true;
   }
