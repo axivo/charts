@@ -197,7 +197,11 @@ async function _updateLockFiles({
           }
         }
       } catch (error) {
-        utils.handleError(error, core, `update dependency lock file for '${chartDir}' chart`, false);
+        if (error.message.includes('index.yaml') && error.message.includes('404 Not Found')) {
+          core.info(`Skipping dependency lock file update for '${chartDir}' chart...`);
+        } else {
+          utils.handleError(error, core, `update dependency lock file for '${chartDir}' chart`, false);
+        }
       }
     }));
     if (lockFiles.length > 0) {
