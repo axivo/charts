@@ -8,9 +8,9 @@ ArgoCD application for a minimal Ubuntu `{{ template "chart.appVersion" . }}` LT
 
 ### Prerequisites
 
-- Kubernetes cluster (1.19+)
-- Helm 3.0+
-- ArgoCD
+- Kubernetes v1.22+
+- Helm v3.0+
+- ArgoCD v7.5+
 
 ### Application Deployment
 
@@ -52,10 +52,12 @@ $ kubectl exec -itn default ubuntu-6589cf5fb4-p9z2b -- /bin/bash
 root@ubuntu-6589cf5fb4-p9z2b:/#
 ```
 
-You can also use this shorter form for accessing the shell:
+Compact form example of container shell login:
 
 ```shell
-$ kubectl exec -it -n default $(kubectl get pods -n default -l app=ubuntu -o name | head -n 1) -- /bin/bash
+$ kubectl exec -itn default $(
+  kubectl get pods -n default -l app.kubernetes.io/name=ubuntu -o jsonpath='{.items[*].metadata.name}'
+) -- /bin/bash
 ```
 
 End-user will have `root` access to a minimal Ubuntu `{{ template "chart.appVersion" . }}` LTS container, connected to the Kubernetes cluster network. Common tools may require manual installation via `apt-get`.
@@ -65,5 +67,5 @@ End-user will have `root` access to a minimal Ubuntu `{{ template "chart.appVers
 If the pod doesn't start, check its status and events:
 
 ```shell
-$ kubectl describe pod -n default -l app=ubuntu
+$ kubectl describe pod -n default -l app.kubernetes.io/name=ubuntu
 ```
