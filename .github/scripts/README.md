@@ -191,13 +191,6 @@ Centralizes configuration settings for all GitHub Actions workflows in the repos
 
 Provides functions for Helm chart management and repository maintenance.
 
-#### Internal Functions
-
-- `_performGitCommit` - Handles the complete process of committing changes to the repository
-- `_updateAppFiles` - Updates application files to reference specific chart version tags
-- `_updateIssueTemplates` - Updates issue templates with current chart options
-- `_updateLockFiles` - Refreshes Chart.lock files with latest dependency versions
-
 #### Exported Functions
 
 - `updateCharts` - Orchestrates the complete chart repository maintenance process
@@ -208,7 +201,6 @@ Provides utilities for automating chart documentation updates.
 
 #### Exported Functions
 
-- `installHelmDocs` - Installs the helm-docs package for generating Helm chart documentation
 - `updateDocumentation` - Generates and commits updated documentation for charts
 
 ### `github-api.js`
@@ -218,33 +210,36 @@ Provides centralized functions for interacting with the GitHub API.
 #### Internal Functions
 
 - `_getLastReleaseDate` - Gets the date of the last release for a chart
+- `_getReleases` - Fetches GitHub releases based on specified query parameters
 
 #### Exported Functions
 
-- `checkWorkflowRunStatus` - Checks if a workflow run has any warnings or errors
+- `checkWorkflowRunStatus` - Checks if a workflow run has any warnings or errors using GraphQL API
 - `createRelease` - Creates a new GitHub release
 - `createSignedCommit` - Creates a verified commit through GitHub's GraphQL API
 - `getReleaseByTag` - Checks if a GitHub release with the specified tag exists
+- `getReleasesByPrefix` - Gets all GitHub releases that match a specific tag prefix
 - `getReleaseIssues` - Fetches issues related to a specific chart since the last release
 - `getUpdatedFiles` - Gets the list of files changed in a pull request or push
 - `uploadReleaseAsset` - Uploads an asset to a GitHub release
 
 ### `release.js`
 
-Handles Helm chart releases and GitHub Pages generation.
+Provides functions for Helm chart management, releases, and GitHub Pages generation.
 
 #### Internal Functions
 
 - `_buildChartRelease` - Creates a GitHub release for a chart and uploads its package
 - `_createChartReleases` - Processes chart packages and creates GitHub releases
-- `_generateChartIndex` - Creates the Helm repository index.yaml and landing page
-- `_generateChartRelease` - Generates release notes content using the template
-- `_generateHelmIndex` - Generates the Helm repository index file
+- `_generateChartsIndex` - Generates Helm repository index files for specific charts
+- `_generateChartRelease` - Generates release content using the template file
+- `_generateFrontpage` - Generates repository index frontpage
+- `_processOciReleases` - Processes chart releases for OCI registry publishing
 
 #### Exported Functions
 
-- `processReleases` - Handles the complete Helm chart release process
-- `setupBuildEnvironment` - Prepares the environment for GitHub Pages site generation
+- `processReleases` - Processes chart releases for affected charts
+- `setupBuildEnvironment` - Setup the build environment for generating the static site
 
 ### `utils.js`
 

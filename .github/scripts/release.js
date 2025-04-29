@@ -196,102 +196,104 @@ async function _createChartReleases({
 }
 
 /**
- * Generates charts index page from index.yaml file
+ * Generates a Helm repository index file for specific charts
  * 
- * This function creates the Helm repository index.yaml file that describes all available
- * charts, along with generating a formatted index page for the GitHub Pages site. The process:
- * 
- * 1. Scans all application and library directories to find valid charts
- * 2. Extracts metadata from each chart's Chart.yaml file
- * 3. Builds a structured index object with entries for each chart
- * 4. Generates the index.yaml file for Helm repository consumption
- * 5. Creates a markdown index page using the Handlebars template
- * 
- * The index page serves as the landing page for the GitHub Pages site and provides
- * a human-readable overview of all available charts in the repository.
+ * This function creates chart-specific index.yaml files in their respective
+ * directories to support direct dependencies. It uses GitHub releases as the
+ * source of truth for chart version history.
  * 
  * @private
  * @param {Object} params - Function parameters
+ * @param {Object} params.github - GitHub API client for making API calls
  * @param {Object} params.context - GitHub Actions context containing repository information
+ * @param {Object} params.exec - GitHub Actions exec helpers for running commands
  * @param {Object} params.core - GitHub Actions Core API for logging and output
- * @returns {Promise<boolean>} - True if successfully generated, false otherwise
+ * @param {string} params.packagesPath - Directory where packaged charts are stored
+ * @param {string} params.distRoot - Root directory for distribution files
+ * @param {Object} params.charts - Object containing application and library chart paths to process
+ * @returns {Promise<void>}
  */
-async function _generateChartIndex({
+async function _generateChartsIndex({
+  github,
   context,
-  core
+  core,
+  exec,
+  packagesPath,
+  distRoot,
+  charts
 }) {
   try {
-    const repositoryIndexDist = './_dist/index.yaml';
-    const frontpageDist = './_dist/index.md';
-    const frontpageTemplate = config('theme').frontpage.template;
-    const frontpageRoot = './index.md';
-    const chartDirs = await utils.findCharts({
-      core,
-      appDir: config('repository').chart.type.application,
-      libDir: config('repository').chart.type.library
-    });
-    const chartEntries = {};
-    const allChartDirs = [...chartDirs.application, ...chartDirs.library];
-    await Promise.all(allChartDirs.map(async (chartDir) => {
-      try {
-        const chartName = path.basename(chartDir);
-        const chartType = chartDir.startsWith(config('repository').chart.type.application) ? 'application' : 'library';
-        const chartYamlPath = path.join(chartDir, 'Chart.yaml');
-        const chartContent = await fs.readFile(chartYamlPath, 'utf8');
-        const chartYaml = yaml.load(chartContent);
-        Object.assign(chartEntries, {
-          [chartName]: {
-            description: chartYaml.description || '',
-            type: chartType,
-            version: chartYaml.version || ''
-          }
-        });
-      } catch (error) {
-        utils.handleError(error, core, `read chart metadata for ${chartDir} directory`, false);
+    core.info('Generating repository charts index...');
+    const appType = config('repository').chart.type.application;
+    const libType = config('repository').chart.type.library;
+    const indexPackagesDir = './.cr-index-packages';
+    await fs.mkdir(indexPackagesDir, { recursive: true });
+    const processChart = async (chartDir, chartType) => {
+      const chartName = path.basename(chartDir);
+      const chartPath = path.join(distRoot, chartType, chartName);
+      await fs.mkdir(chartPath, { recursive: true });
+      const tempDir = path.join(indexPackagesDir, chartName);
+      await fs.mkdir(tempDir, { recursive: true });
+      const files = await fs.readdir(packagesPath);
+      const titlePrefix = config('release').title
+        .replace('{{ .Name }}', chartName)
+        .replace('{{ .Version }}', '');
+      const chartPackages = files.filter(file =>
+        file.endsWith('.tgz') && file.replace('.tgz', '').startsWith(titlePrefix)
+      );
+      if (!chartPackages.length) {
+        core.info(`No packages found for '${chartType}/${chartName}' chart, skipping index generation`);
+        return;
       }
-    }));
-    const index = {
-      apiVersion: 'v1',
-      entries: chartEntries,
-      generated: new Date().toISOString()
+      await Promise.all(chartPackages.map(pkg =>
+        fs.copyFile(path.join(packagesPath, pkg), path.join(tempDir, pkg))
+      ));
+      const tagPrefix = titlePrefix.replace('-', '');
+      const releases = await api.getReleasesByPrefix({
+        github,
+        context,
+        core,
+        tagPrefix
+      });
+      if (releases.length > 0) {
+        for (const release of releases) {
+          const isCurrentRelease = chartPackages.some(pkg =>
+            pkg.includes(release.tag_name.replace(tagPrefix, ''))
+          );
+          if (!isCurrentRelease) {
+            const assets = release.assets || [];
+            const packageAsset = assets.find(asset => asset.name.endsWith('.tgz'));
+            if (packageAsset) {
+              try {
+                const assetUrl = packageAsset.browser_download_url;
+                const packagePath = path.join(tempDir, packageAsset.name);
+                await exec.exec('curl', [
+                  '--silent',
+                  '--location',
+                  '--output', packagePath,
+                  assetUrl
+                ]);
+                core.info(`Downloaded historical release ${packageAsset.name} for chart ${chartName}`);
+              } catch (error) {
+                utils.handleError(error, core, `download release asset for ${chartName}`, false);
+              }
+            }
+          }
+        }
+      }
+      const url = [config('repository').url, chartType, chartName].join('/');
+      await exec.exec('helm', ['repo', 'index', tempDir, '--url', url]);
+      const indexPath = path.join(chartPath, 'index.yaml');
+      await fs.copyFile(path.join(tempDir, 'index.yaml'), indexPath);
+      core.info(`Successfully generated index for '${chartType}/${chartName}' chart`);
     };
-    const indexContent = yaml.dump(index);
-    const repositoryDir = path.dirname(repositoryIndexDist);
-    await fs.mkdir(repositoryDir, { recursive: true });
-    await fs.writeFile(repositoryIndexDist, indexContent, 'utf8');
-    const template = await fs.readFile(frontpageTemplate, 'utf8');
-    const repoUrl = context.payload.repository.html_url;
-    const defaultBranchName = context.payload.repository.default_branch;
-    const Handlebars = utils.registerHandlebarsHelpers(repoUrl);
-    const charts = Object.entries(index.entries)
-      .sort(([sourceName, sourceData], [targetName, targetData]) => {
-        return sourceData.type.localeCompare(targetData.type) || sourceName.localeCompare(targetName);
-      })
-      .map(([name, data]) => {
-        if (!data) return null;
-        return {
-          Description: data.description || '',
-          Name: name,
-          Type: data.type || 'application',
-          Version: data.version || ''
-        };
-      })
-      .filter(Boolean);
-    const compiledTemplate = Handlebars.compile(template);
-    const newContent = compiledTemplate({
-      Charts: charts,
-      RepoURL: repoUrl,
-      Branch: defaultBranchName
-    });
-    core.info(`Successfully generated index content with ${newContent.length} bytes`);
-    const frontpageDir = path.dirname(frontpageDist);
-    await fs.mkdir(frontpageDir, { recursive: true });
-    core.info(`Creating index page into root directory and ${frontpageDist}...`);
-    await fs.writeFile(frontpageRoot, newContent, 'utf8');
-    await fs.writeFile(frontpageDist, newContent, 'utf8');
-    return true;
+    await Promise.all([
+      ...charts.application.map(chartDir => processChart(chartDir, appType)),
+      ...charts.library.map(chartDir => processChart(chartDir, libType))
+    ]);
+    core.info('Successfully generated repository index for updated charts');
   } catch (error) {
-    utils.handleError(error, core, 'create index frontpage');
+    utils.handleError(error, core, 'generate repository index', false);
   }
 }
 
@@ -374,44 +376,95 @@ async function _generateChartRelease({
 }
 
 /**
- * Generates the Helm repository index file
+ * Generates repository index frontpage
  * 
- * This function creates or updates the Helm repository index.yaml file that contains
- * metadata about all charts in the repository. It uses the Helm CLI to generate an
- * index file with proper structure, including chart versions, descriptions, and URLs
- * for downloading the packaged charts.
+ * This function creates the Helm repository index.yaml file that describes all available
+ * charts, along with generating a formatted index page for the GitHub Pages site. The process:
  * 
- * The index.yaml file is the heart of a Helm chart repository, allowing Helm clients
- * to search and install charts through commands like 'helm repo add' and 'helm install'.
+ * 1. Scans all application and library directories to find valid charts
+ * 2. Extracts metadata from each chart's Chart.yaml file
+ * 3. Builds a structured index object with entries for each chart
+ * 4. Generates the index.yaml file for Helm repository consumption
+ * 5. Creates a markdown index page using the Handlebars template
+ * 
+ * The index page serves as the landing page for the GitHub Pages site and provides
+ * a human-readable overview of all available charts in the repository.
  * 
  * @private
  * @param {Object} params - Function parameters
- * @param {Object} params.exec - GitHub Actions exec helpers for running commands
+ * @param {Object} params.context - GitHub Actions context containing repository information
  * @param {Object} params.core - GitHub Actions Core API for logging and output
- * @param {string} params.packagesPath - Directory containing packaged chart .tgz files
- * @param {string} params.indexPath - Output path for the index.yaml file
- * @param {string} params.repoUrl - Base URL of the Helm repository (for chart download URLs)
- * @returns {Promise<void>}
+ * @returns {Promise<boolean>} - True if successfully generated, false otherwise
  */
-async function _generateHelmIndex({
-  exec,
-  core,
-  packagesPath,
-  indexPath,
-  repoUrl
+async function _generateFrontpage({
+  context,
+  core
 }) {
   try {
-    core.info('Generating Helm repository index...');
-    const indexDir = path.dirname(indexPath);
-    await fs.mkdir(indexDir, { recursive: true });
-    await exec.exec('helm', ['repo', 'index', packagesPath, '--url', repoUrl]);
-    await fs.copyFile(
-      path.join(packagesPath, './index.yaml'),
-      indexPath
-    );
-    core.info(`Successfully generated ${indexPath} repository index`);
+    const chartDirs = await utils.findCharts({
+      core,
+      appDir: config('repository').chart.type.application,
+      libDir: config('repository').chart.type.library
+    });
+    const chartEntries = {};
+    const allChartDirs = [...chartDirs.application, ...chartDirs.library];
+    await Promise.all(allChartDirs.map(async (chartDir) => {
+      try {
+        const chartName = path.basename(chartDir);
+        const chartType = chartDir.startsWith(config('repository').chart.type.application) ? 'application' : 'library';
+        const chartYamlPath = path.join(chartDir, 'Chart.yaml');
+        const chartContent = await fs.readFile(chartYamlPath, 'utf8');
+        const chartYaml = yaml.load(chartContent);
+        Object.assign(chartEntries, {
+          [chartName]: {
+            description: chartYaml.description || '',
+            type: chartType,
+            version: chartYaml.version || ''
+          }
+        });
+      } catch (error) {
+        utils.handleError(error, core, `read chart metadata for ${chartDir} directory`, false);
+      }
+    }));
+    const index = {
+      apiVersion: 'v1',
+      entries: chartEntries,
+      generated: new Date().toISOString()
+    };
+    const template = await fs.readFile(config('theme').frontpage.template, 'utf8');
+    const repoUrl = context.payload.repository.html_url;
+    const defaultBranchName = context.payload.repository.default_branch;
+    const Handlebars = utils.registerHandlebarsHelpers(repoUrl);
+    const charts = Object.entries(index.entries)
+      .sort(([sourceName, sourceData], [targetName, targetData]) => {
+        return sourceData.type.localeCompare(targetData.type) || sourceName.localeCompare(targetName);
+      })
+      .map(([name, data]) => {
+        if (!data) return null;
+        return {
+          Description: data.description || '',
+          Name: name,
+          Type: data.type || 'application',
+          Version: data.version || ''
+        };
+      })
+      .filter(Boolean);
+    const compiledTemplate = Handlebars.compile(template);
+    const newContent = compiledTemplate({
+      Charts: charts,
+      RepoURL: repoUrl,
+      Branch: defaultBranchName
+    });
+    const frontpageRoot = './index.md';
+    const frontpageDist = './_dist/index.md';
+    const frontpageDir = path.dirname(frontpageDist);
+    await fs.mkdir(frontpageDir, { recursive: true });
+    await fs.writeFile(frontpageRoot, newContent, 'utf8');
+    await fs.writeFile(frontpageDist, newContent, 'utf8');
+    core.info(`Successfully generated index content with ${newContent.length} bytes`);
+    return true;
   } catch (error) {
-    utils.handleError(error, core, 'generate Helm repository index');
+    utils.handleError(error, core, 'create index frontpage');
   }
 }
 
@@ -524,12 +577,14 @@ async function processReleases({
     core.info(`Successfully packaged ${chartDirs.length} charts`);
     await _createChartReleases({ github, context, core, packagesPath: releasePackages });
     const repoUrl = config('repository').url;
-    await _generateHelmIndex({
+    await _generateChartsIndex({
+      github,
+      context,
       exec,
       core,
       packagesPath: releasePackages,
-      indexPath: repositoryIndexDist,
-      repoUrl
+      distRoot: './_dist',
+      charts
     });
     if (config('repository').oci.enabled) {
       core.info('Setting up OCI registry authentication...');
@@ -590,7 +645,7 @@ async function setupBuildEnvironment({
   core
 }) {
   core.info(`Setting up build environment for '${config('release').deployment}' deployment`);
-  await _generateChartIndex({ context, core });
+  await _generateFrontpage({ context, core });
   try {
     core.info(`Copying Jekyll theme config to ./_config.yml...`);
     await fs.copyFile(config('theme').configuration.file, './_config.yml');

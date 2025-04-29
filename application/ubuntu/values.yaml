@@ -2,20 +2,34 @@
 # @default -- 1
 replicaCount: 1
 
+# Global values for all charts
+global:
+  # -- (string) Global image registry
+  # @default -- ""
+  imageRegistry: ""
+  # -- (list) Global image pull secrets
+  # @default -- []
+  imagePullSecrets: []
+
 image:
+  # -- (string) Image digest (overrides tag when specified)
+  # @default -- ""
+  digest: ""
+  # -- (string) Image pull policy
+  # @default -- IfNotPresent
+  pullPolicy: IfNotPresent
+  # -- (list) Image pull secrets
+  # @default -- []
+  pullSecrets: []
+  # -- (string) Image registry
+  # @default -- ""
+  registry: ""
   # -- (string) Image repository
   # @default -- "ubuntu"
   repository: ubuntu
   # -- (string) Image tag, defaults to Chart.AppVersion if not set
   # @default -- ""
   tag: ""
-  # -- (string) Image pull policy
-  # @default -- IfNotPresent
-  pullPolicy: IfNotPresent
-
-# -- (list) Image pull secrets
-# @default -- []
-imagePullSecrets: []
 # -- (string) Override the chart name
 # @default -- ""
 nameOverride: ""

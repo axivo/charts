@@ -5,8 +5,8 @@ global:
 
   certManager:
     # -- (string) Default cert-manager cluster issuer
-    # @default -- "cloudflare-cluster-issuer"
-    clusterIssuer: cloudflare-cluster-issuer
+    # @default -- "cluster-issuer"
+    clusterIssuer: cluster-issuer
 
   externalDns:
     # -- (string) DNS provider for external-dns

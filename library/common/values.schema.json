@@ -23,7 +23,7 @@
             "clusterIssuer": {
               "description": "Default cert-manager cluster issuer",
               "type": "string",
-              "default": "cloudflare-cluster-issuer"
+              "default": "cluster-issuer"
             }
           }
         },
@@ -40,7 +40,10 @@
             "acmeServer": {
               "description": "ACME server environment, `production` or `staging`",
               "type": "string",
-              "enum": ["production", "staging"],
+              "enum": [
+                "production",
+                "staging"
+              ],
               "default": "production"
             }
           }

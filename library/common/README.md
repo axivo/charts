@@ -10,16 +10,14 @@ Common library used for ArgoCD applications, deployed into AXIVO [K3s Cluster](h
 
 This library chart provides a set of reusable Helm templates that simplify the creation of Kubernetes resources with consistent configuration and best practices. It contains helpers for deployments, services, ingress resources, and standard label patterns used across ArgoCD applications.
 
-To use this library chart, include it as a dependency in your `Chart.yaml` file:
+The library can be included as dependency, into `Chart.yaml` file:
 
 ```yaml
 dependencies:
   - name: common
-    version: 1.0.0
     repository: https://axivo.github.io/charts
+    version: 1.0.0
 ```
-
-Then, include the templates needed into related application chart.
 
 ### Chart Values
 
@@ -27,11 +25,11 @@ See the chart values, listed below.
 
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
-| global.certManager.clusterIssuer | string | "cloudflare-cluster-issuer" | Default cert-manager cluster issuer |
+| global.certManager.clusterIssuer | string | "cluster-issuer" | Default cert-manager cluster issuer |
 | global.domain | string | "noty.cc" | Primary domain used across applications |
 | global.externalDns.acmeServer | string | "production" | ACME server environment, `production` or `staging` |
 | global.externalDns.provider | string | "cloudflare" | DNS provider for external-dns |
 
-## Development
+### Development
 
-When developing this library chart, test it thoroughly with dependent application charts to ensure backward compatibility and proper functionality.
+The library should be tested thoroughly with dependent application charts, to ensure backward compatibility and proper functionality.

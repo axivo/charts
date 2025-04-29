@@ -2,15 +2,15 @@
 
 <img align="right" width="250" height="250" src="https://raw.githubusercontent.com/axivo/charts/main/application/sealed-secrets/icon.png" alt="sealed-secrets" />
 
-![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square)  ![Version: 1.0.0](https://img.shields.io/badge/Version-1.0.0-informational?style=flat-square)  ![AppVersion: 2.17.2](https://img.shields.io/badge/AppVersion-2.17.2-informational?style=flat-square)
+![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square)  ![Version: 1.0.0](https://img.shields.io/badge/Version-1.0.0-informational?style=flat-square)  ![AppVersion: 1.0.0](https://img.shields.io/badge/AppVersion-1.0.0-informational?style=flat-square)
 
-ArgoCD application for `sealed-secrets` [chart](https://github.com/bitnami-labs/sealed-secrets/blob/helm-v2.17.2/helm/sealed-secrets), deployed into AXIVO [K3s Cluster](https://github.com/axivo/k3s-cluster). Review the cluster [documentation](https://axivo.com/k3s-cluster/), for additional details. The application deployment is also compatible with a generic Kubernetes cluster.
+ArgoCD application for `sealed-secrets` [chart](https://github.com/bitnami-labs/sealed-secrets/blob/helm-v1.0.0/helm/sealed-secrets), deployed into AXIVO [K3s Cluster](https://github.com/axivo/k3s-cluster). Review the cluster [documentation](https://axivo.com/k3s-cluster/), for additional details. The application deployment is also compatible with a generic Kubernetes cluster.
 
 ### Prerequisites
 
-- Kubernetes cluster (1.19+)
-- Helm 3.0+
-- ArgoCD
+- Kubernetes v1.22+
+- Helm v3.0+
+- ArgoCD v7.5+
 - CLI tool `kubeseal`, for client-side usage
 
 ### Application Deployment
@@ -40,6 +40,8 @@ See the chart values, listed below.
 
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
+| global.imagePullSecrets | list | [] | Global image pull secrets |
+| global.imageRegistry | string | "" | Global image registry |
 | sealed-secrets.fullnameOverride | string | "sealed-secrets-controller" | Fully overrides the controller fullname |
 | sealed-secrets.keyrenewperiod | string | "" | Specifies key renewal period, e.g., 720h0m (30 days) |
 | sealed-secrets.metrics.dashboards.annotations | map | {} | Annotations added to Grafana dashboard ConfigMap |
