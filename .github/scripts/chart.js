@@ -144,8 +144,6 @@ async function _updateAppFiles({
   }
 }
 
-
-
 /**
  * Updates dependency lock files for charts in a pull request
  * 

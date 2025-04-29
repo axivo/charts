@@ -80,6 +80,106 @@ async function _getLastReleaseDate({
 }
 
 /**
+ * Fetches GitHub releases based on specified query parameters
+ * 
+ * This private utility function provides a consistent interface for fetching releases
+ * through GraphQL, supporting both exact tag matches and tag prefix filtering with proper pagination.
+ * 
+ * @private
+ * @param {Object} params - Function parameters
+ * @param {Object} params.github - GitHub API client for making API calls
+ * @param {Object} params.context - GitHub Actions context containing repository information
+ * @param {Object} params.core - GitHub Actions Core API for logging and output
+ * @param {Object} params.options - Query options
+ * @param {string} [params.options.tagName] - Exact tag name to match (exclusive with tagPrefix)
+ * @param {string} [params.options.tagPrefix] - Tag name prefix to match (exclusive with tagName)
+ * @param {number} [params.options.limit=0] - Maximum number of releases to return (0 for all)
+ * @returns {Promise<Array>} - Array of matching release objects or empty array if none found
+ */
+async function _getReleases({
+  github,
+  context,
+  core,
+  options = {}
+}) {
+  try {
+    const { tagName, tagPrefix, limit = 0 } = options;
+    const message = tagName
+      ? `release with '${tagName}' tag`
+      : tagPrefix
+        ? `releases with '${tagPrefix}' tag prefix`
+        : 'all repository releases';
+    core.info(`Getting ${message}...`);
+    const query = `
+      query($owner: String!, $repo: String!, $cursor: String) {
+        repository(owner: $owner, name: $repo) {
+          releases(first: 100, after: $cursor, orderBy: {field: CREATED_AT, direction: DESC}) {
+            pageInfo { hasNextPage endCursor }
+            nodes {
+              databaseId tagName name description createdAt
+              isDraft isPrerelease url
+              releaseAssets(first: 10) {
+                nodes { name downloadUrl }
+              }
+            }
+          }
+        }
+      }
+    `;
+    let allReleases = [];
+    let hasNextPage = true;
+    let endCursor = null;
+    while (hasNextPage) {
+      const result = await github.graphql(query, {
+        owner: context.repo.owner,
+        repo: context.repo.repo,
+        cursor: endCursor
+      });
+      const releases = result.repository.releases.nodes;
+      const filteredReleases = tagName
+        ? releases.filter(release => release.tagName === tagName)
+        : tagPrefix
+          ? releases.filter(release => release.tagName.startsWith(tagPrefix))
+          : releases;
+      const newReleases = filteredReleases.map(release => ({
+        id: release.databaseId,
+        name: release.name,
+        tag_name: release.tagName,
+        body: release.description,
+        created_at: release.createdAt,
+        draft: release.isDraft,
+        prerelease: release.isPrerelease,
+        html_url: release.url,
+        assets: release.releaseAssets.nodes.map(asset => ({
+          name: asset.name,
+          browser_download_url: asset.downloadUrl
+        }))
+      }));
+      allReleases = allReleases.concat(newReleases);
+      if (tagName && allReleases.length > 0) break;
+      if (limit > 0 && allReleases.length >= limit) {
+        allReleases = allReleases.slice(0, limit);
+        break;
+      }
+      const pageInfo = result.repository.releases.pageInfo;
+      hasNextPage = pageInfo.hasNextPage;
+      endCursor = pageInfo.endCursor;
+    }
+    const word = allReleases.length === 1 ? 'release' : 'releases';
+    core.info(allReleases.length > 0 ? `Found ${allReleases.length} ${word}` : 'No releases found');
+    return allReleases;
+  } catch (error) {
+    const context = tagName
+      ? `fetch release with tag ${tagName}`
+      : tagPrefix
+        ? `fetch releases with tag prefix ${tagPrefix}`
+        : 'fetch repository releases';
+    utils.handleError(error, core, context, false);
+    return [];
+  }
+}
+
+/**
  * Checks if a workflow run has any warnings or errors using GraphQL API
  * 
  * Analyzes a specific workflow run by its run ID to determine if it encountered any issues,
@@ -279,11 +379,11 @@ async function createSignedCommit({
  * The function returns detailed information about the release in a standardized format
  * if found, or null if no matching release exists.
  * 
- * @param {Object} options - Function parameters
- * @param {Object} options.github - GitHub API client for making API calls
- * @param {Object} options.context - GitHub Actions context containing repository information
- * @param {Object} options.core - GitHub Actions Core API for logging and output
- * @param {string} options.tagName - The tag name to check for
+ * @param {Object} params - Function parameters
+ * @param {Object} params.github - GitHub API client for making API calls
+ * @param {Object} params.context - GitHub Actions context containing repository information
+ * @param {Object} params.core - GitHub Actions Core API for logging and output
+ * @param {string} params.tagName - The tag name to check for
  * @returns {Promise<Object|null>} - Standardized release data if found, null if not found
  */
 async function getReleaseByTag({
@@ -293,50 +393,48 @@ async function getReleaseByTag({
   tagName
 }) {
   try {
-    core.info(`Checking for release with '${tagName}' tag...`);
-    const query = `
-      query($owner: String!, $repo: String!, $tagName: String!) {
-        repository(owner: $owner, name: $repo) {
-          release(tagName: $tagName) {
-            id
-            databaseId
-            name
-            description
-            tagName
-            createdAt
-            isDraft
-            isPrerelease
-            url
-          }
-        }
-      }
-    `;
-    const variables = {
-      owner: context.repo.owner,
-      repo: context.repo.repo,
-      tagName: tagName
-    };
-    const result = await github.graphql(query, variables);
-    if (result.repository.release) {
-      core.info(`Found existing release with '${tagName}' tag...`);
-      return {
-        id: result.repository.release.databaseId,
-        name: result.repository.release.name,
-        body: result.repository.release.description,
-        tag_name: result.repository.release.tagName,
-        created_at: result.repository.release.createdAt,
-        draft: result.repository.release.isDraft,
-        prerelease: result.repository.release.isPrerelease,
-        html_url: result.repository.release.url
-      };
-    }
-    return null;
+    const releases = await _getReleases({
+      github,
+      context,
+      core,
+      options: { tagName }
+    });
+    return releases.length > 0 ? releases[0] : null;
   } catch (error) {
     if (error.errors && error.errors.some(e => e.type === 'NOT_FOUND')) {
       return null;
     }
     utils.handleError(error, core, `check for release with tag ${tagName}`);
   }
+}
+
+/**
+ * Gets all GitHub releases that match a specific tag prefix
+ * 
+ * This function retrieves all GitHub releases where the tag_name starts with
+ * the specified prefix, which is useful for finding all releases of a specific chart.
+ * 
+ * @param {Object} params - Function parameters
+ * @param {Object} params.github - GitHub API client for making API calls
+ * @param {Object} params.context - GitHub Actions context containing repository information
+ * @param {Object} params.core - GitHub Actions Core API for logging and output
+ * @param {string} params.tagPrefix - Prefix to match for tag names
+ * @param {number} [params.limit=0] - Maximum number of releases to return (0 for all)
+ * @returns {Promise<Array>} - Array of matching release objects or empty array if none found
+ */
+async function getReleasesByPrefix({
+  github,
+  context,
+  core,
+  tagPrefix,
+  limit = 0
+}) {
+  return _getReleases({
+    github,
+    context,
+    core,
+    options: { tagPrefix, limit }
+  });
 }
 
 /**
@@ -590,6 +688,7 @@ module.exports = {
   createRelease,
   createSignedCommit,
   getReleaseByTag,
+  getReleasesByPrefix,
   getReleaseIssues,
   getUpdatedFiles,
   uploadReleaseAsset

@@ -476,10 +476,10 @@ const CONFIG = {
      * site where the packaged charts and index.yaml are hosted.
      * 
      * @type {string}
-     * @default 'https://axivo.github.io/charts/'
-     * @see _generateHelmIndex - Function in release.js that uses this URL in the repository index
+     * @default 'https://axivo.github.io/charts'
+     * @see _generateChartsIndex - Function in release.js that uses this URL in the repository index
      */
-    url: 'https://axivo.github.io/charts/'
+    url: 'https://axivo.github.io/charts'
   },
 
   /**
@@ -521,7 +521,7 @@ const CONFIG = {
      */
     frontpage: {
       /**
-       * Path to the Handlebars template for the repository index page
+       * Path to the Handlebars template for the repository index frontpage
        * 
        * This template defines the structure and content of the main landing page
        * for the chart repository. It's processed with chart data to generate
@@ -529,7 +529,7 @@ const CONFIG = {
        * 
        * @type {string}
        * @default '.github/templates/index.md.hbs'
-       * @see _generateChartIndex - Function in release.js that uses this template to create the index page
+       * @see _generateFrontpage - Function in release.js that uses this template to create the index frontpage
        */
       template: '.github/templates/index.md.hbs'
     },
