@@ -136,12 +136,7 @@ async function _getReleases({
         cursor: endCursor
       });
       const releases = result.repository.releases.nodes;
-      const filteredReleases = tagName
-        ? releases.filter(release => release.tagName === tagName)
-        : tagPrefix
-          ? releases.filter(release => release.tagName.startsWith(tagPrefix))
-          : releases;
-      const newReleases = filteredReleases.map(release => ({
+      const newReleases = releases.map(release => ({
         id: release.databaseId,
         name: release.name,
         tag_name: release.tagName,
@@ -152,11 +147,17 @@ async function _getReleases({
         html_url: release.url,
         assets: release.releaseAssets.nodes.map(asset => ({
           name: asset.name,
-          browser_download_url: asset.downloadUrl
+          browser_download_url: asset.downloadUrl,
+          content_type: asset.contentType
         }))
       }));
       allReleases = allReleases.concat(newReleases);
-      if (tagName && allReleases.length > 0) break;
+      if (tagName) {
+        allReleases = allReleases.filter(release => release.tag_name === tagName);
+        if (allReleases.length > 0) break;
+      } else if (tagPrefix) {
+        allReleases = allReleases.filter(release => release.tag_name.startsWith(tagPrefix));
+      }
       if (limit > 0 && allReleases.length >= limit) {
         allReleases = allReleases.slice(0, limit);
         break;
@@ -416,20 +417,22 @@ async function getReleaseByTag({
 }
 
 /**
- * Gets all GitHub releases that match a specific tag prefix
+ * Gets GitHub releases with optional tag prefix filtering
  * 
- * This function retrieves all GitHub releases where the tag_name starts with
- * the specified prefix, which is useful for finding all releases of a specific chart.
+ * This function retrieves GitHub releases with flexible filtering options:
+ * - When tagPrefix is provided, it returns releases where tag_name starts with that prefix
+ * - When tagPrefix is omitted, it returns all repository releases
+ * - The limit parameter can be used to restrict the number of results
  * 
  * @param {Object} params - Function parameters
  * @param {Object} params.github - GitHub API client for making API calls
  * @param {Object} params.context - GitHub Actions context containing repository information
  * @param {Object} params.core - GitHub Actions Core API for logging and output
- * @param {string} params.tagPrefix - Prefix to match for tag names
+ * @param {string} [params.tagPrefix] - Optional prefix to match for tag names
  * @param {number} [params.limit=0] - Maximum number of releases to return (0 for all)
  * @returns {Promise<Array>} - Array of matching release objects or empty array if none found
  */
-async function getReleasesByPrefix({
+async function getReleases({
   github,
   context,
   core,
@@ -440,7 +443,7 @@ async function getReleasesByPrefix({
     github,
     context,
     core,
-    options: { tagPrefix, limit }
+    options: tagPrefix ? { tagPrefix, limit } : { limit }
   });
 }
 
@@ -695,7 +698,7 @@ module.exports = {
   createRelease,
   createSignedCommit,
   getReleaseByTag,
-  getReleasesByPrefix,
+  getReleases,
   getReleaseIssues,
   getUpdatedFiles,
   uploadReleaseAsset

@@ -208,7 +208,6 @@ async function _createChartReleases({
  * @param {Object} params.context - GitHub Actions context containing repository information
  * @param {Object} params.exec - GitHub Actions exec helpers for running commands
  * @param {Object} params.core - GitHub Actions Core API for logging and output
- * @param {string} params.packagesPath - Directory where packaged charts are stored
  * @param {string} params.distRoot - Root directory for distribution files
  * @param {Object} params.charts - Object containing application and library chart paths to process
  * @returns {Promise<void>}
@@ -218,82 +217,63 @@ async function _generateChartsIndex({
   context,
   core,
   exec,
-  packagesPath,
   distRoot,
   charts
 }) {
   try {
-    core.info('Generating repository charts index...');
+    core.info('Generating chart repository indices...');
     const appType = config('repository').chart.type.application;
     const libType = config('repository').chart.type.library;
-    const indexPackagesDir = './.cr-index-packages';
-    await fs.mkdir(indexPackagesDir, { recursive: true });
-    const processChart = async (chartDir, chartType) => {
-      const chartName = path.basename(chartDir);
-      const chartPath = path.join(distRoot, chartType, chartName);
-      await fs.mkdir(chartPath, { recursive: true });
-      const tempDir = path.join(indexPackagesDir, chartName);
-      await fs.mkdir(tempDir, { recursive: true });
-      const files = await fs.readdir(packagesPath);
-      const titlePrefix = config('release').title
-        .replace('{{ .Name }}', chartName)
-        .replace('{{ .Version }}', '');
-      const chartPackages = files.filter(file =>
-        file.endsWith('.tgz') && file.replace('.tgz', '').startsWith(titlePrefix)
-      );
-      if (!chartPackages.length) {
-        core.info(`No packages found for '${chartType}/${chartName}' chart, skipping index generation`);
-        return;
-      }
-      await Promise.all(chartPackages.map(pkg =>
-        fs.copyFile(path.join(packagesPath, pkg), path.join(tempDir, pkg))
-      ));
-      const tagPrefix = titlePrefix.replace('-', '');
-      const releases = await api.getReleasesByPrefix({
-        github,
-        context,
-        core,
-        tagPrefix
-      });
-      if (releases.length > 0) {
-        for (const release of releases) {
-          const isCurrentRelease = chartPackages.some(pkg =>
-            pkg.includes(release.tag_name.replace(tagPrefix, ''))
-          );
-          if (!isCurrentRelease) {
-            const assets = release.assets || [];
-            const packageAsset = assets.find(asset => asset.name.endsWith('.tgz'));
-            if (packageAsset) {
-              try {
-                const assetUrl = packageAsset.browser_download_url;
-                const packagePath = path.join(tempDir, packageAsset.name);
-                await exec.exec('curl', [
-                  '--silent',
-                  '--location',
-                  '--output', packagePath,
-                  assetUrl
-                ]);
-                core.info(`Downloaded historical release ${packageAsset.name} for chart ${chartName}`);
-              } catch (error) {
-                utils.handleError(error, core, `download release asset for ${chartName}`, false);
-              }
-            }
+    const chartDirs = [...charts.application, ...charts.library];
+    const tempDir = path.join('_dist');
+    await fs.mkdir(tempDir, { recursive: true });
+    await fs.mkdir(path.join(tempDir, appType), { recursive: true });
+    await fs.mkdir(path.join(tempDir, libType), { recursive: true });
+    core.info('Fetching all repository releases...');
+    const allReleases = await api.getReleases({
+      github,
+      context,
+      core
+    });
+    core.info(`Found ${allReleases.length} releases in repository`);
+    await Promise.all(chartDirs.map(async (chartDir) => {
+      try {
+        const chartName = path.basename(chartDir);
+        const chartType = charts.application.includes(chartDir) ? appType : libType;
+        const chartOutputDir = path.join(distRoot, chartType, chartName);
+        await fs.mkdir(chartOutputDir, { recursive: true });
+        const chartTempDir = path.join(tempDir, chartType);
+        const titlePrefix = config('release').title
+          .replace('{{ .Name }}', chartName)
+          .replace('{{ .Version }}', '');
+        const chartReleases = allReleases.filter(release => release.tag_name.startsWith(titlePrefix));
+        core.info(`Found ${chartReleases.length} releases for '${chartType}/${chartName}' chart`);
+        if (!chartReleases.length) {
+          core.info(`No releases found for '${chartType}/${chartName}' chart, skipping index generation`);
+          return;
+        }
+        const indexPath = path.join(chartOutputDir, 'index.yaml');
+        if (!await utils.fileExists(indexPath)) {
+          const url = [config('repository').url, chartType, chartName].join('/');
+          await exec.exec('helm', ['repo', 'index', chartOutputDir, '--url', url]);
+        }
+        for (const release of chartReleases) {
+          const asset = release.assets.find(a => a.content_type === 'application/x-gzip');
+          if (asset) {
+            const chartFile = path.join(chartTempDir, path.basename(asset.browser_download_url));
+            const url = [config('repository').url, chartType, chartName].join('/');
+            await exec.exec('curl', ['-sSL', asset.browser_download_url, '-o', chartFile]);
+            await exec.exec('helm', ['repo', 'index', chartTempDir, '--url', url, '--merge', indexPath]);
           }
         }
+        core.info(` Successfully generated '${chartType}/${chartName}' index`);
+      } catch (error) {
+        utils.handleError(error, core, `generate '${chartType}/${chartName}' index`, false);
       }
-      const url = [config('repository').url, chartType, chartName].join('/');
-      await exec.exec('helm', ['repo', 'index', tempDir, '--url', url]);
-      const indexPath = path.join(chartPath, 'index.yaml');
-      await fs.copyFile(path.join(tempDir, 'index.yaml'), indexPath);
-      core.info(`Successfully generated index for '${chartType}/${chartName}' chart`);
-    };
-    await Promise.all([
-      ...charts.application.map(chartDir => processChart(chartDir, appType)),
-      ...charts.library.map(chartDir => processChart(chartDir, libType))
-    ]);
-    core.info('Successfully generated repository index for updated charts');
+    }));
+    core.info('Successfully generated per-chart repository indexes');
   } catch (error) {
-    utils.handleError(error, core, 'generate repository index', false);
+    utils.handleError(error, core, 'generate repository indexes', false);
   }
 }
 
@@ -400,10 +380,12 @@ async function _generateFrontpage({
   core
 }) {
   try {
+    const appDir = config('repository').chart.type.application;
+    const libDir = config('repository').chart.type.library;
     const chartDirs = await utils.findCharts({
       core,
-      appDir: config('repository').chart.type.application,
-      libDir: config('repository').chart.type.library
+      appDir,
+      libDir
     });
     const chartEntries = {};
     const allChartDirs = [...chartDirs.application, ...chartDirs.library];
@@ -575,7 +557,6 @@ async function processReleases({
       context,
       exec,
       core,
-      packagesPath: releasePackages,
       distRoot: './',
       charts
     });
