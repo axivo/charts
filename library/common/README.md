@@ -2,7 +2,7 @@
 
 <img align="right" width="250" height="250" src="https://raw.githubusercontent.com/axivo/charts/main/library/common/icon.png" alt="common" />
 
-![Type: library](https://img.shields.io/badge/Type-library-informational?style=flat-square)  ![Version: 1.0.2](https://img.shields.io/badge/Version-1.0.2-informational?style=flat-square)
+![Type: library](https://img.shields.io/badge/Type-library-informational?style=flat-square)  ![Version: 1.0.3](https://img.shields.io/badge/Version-1.0.3-informational?style=flat-square)
 
 Common library used for ArgoCD applications, deployed into AXIVO [K3s Cluster](https://github.com/axivo/k3s-cluster). Review the cluster [documentation](https://axivo.com/k3s-cluster/), for additional details. The library chart is also compatible with a generic Kubernetes cluster.
 
@@ -16,7 +16,7 @@ The library can be included as dependency, into `Chart.yaml` file:
 dependencies:
   - name: common
     repository: https://axivo.github.io/charts
-    version: 1.0.2
+    version: 1.0.3
 ```
 
 ### Chart Values
