@@ -253,6 +253,7 @@ async function _generateChartsIndex({
           return;
         }
         const indexPath = path.join(chartOutputDir, 'index.yaml');
+        const tempIndexPath = path.join(chartTempDir, 'index.yaml');
         for (const release of chartReleases) {
           // DEBUG START
           core.info(`Processing release ${release.tag_name} for ${chartType}/${chartName} to output dir ${chartOutputDir}`);
@@ -273,17 +274,25 @@ async function _generateChartsIndex({
             // DEBUG END
             await exec.exec('curl', ['-sSL', url, '-o', chartFile]);
             // DEBUG START
-            core.info(`Running: helm repo index ${chartOutputDir} --url ${baseUrl}${exists ? ' --merge ' + indexPath : ''}`);
+            core.info(`Running: helm repo index ${chartTempDir} --url ${baseUrl}${exists ? ' --merge ' + indexPath : ''}`);
             core.info(`DEBUG: About to execute helm repo index command for ${chartName}`);
             core.info(`DEBUG: Working directory: ${process.cwd()}`);
             // DEBUG END
             
             // Only add --merge flag if the index file already exists
-            const args = ['repo', 'index', chartOutputDir, '--url', baseUrl];
+            const args = ['repo', 'index', chartTempDir, '--url', baseUrl];
             if (exists) {
               args.push('--merge', indexPath);
             }
             await exec.exec('helm', args);
+            
+            // Copy the index.yaml from temp dir to output dir
+            try {
+              await fs.copyFile(tempIndexPath, indexPath);
+              core.info(`Copied index.yaml from ${tempIndexPath} to ${indexPath}`);
+            } catch (copyError) {
+              core.error(`Error copying index.yaml: ${copyError.message}`);
+            }
             
             // DEBUG START
             try {
