@@ -257,13 +257,10 @@ async function _generateChartsIndex({
           const asset = release.assets.find(a => a.content_type === 'application/x-gzip');
           if (asset) {
             const url = asset.browser_download_url;
+            const baseUrl = [config('repository').url, chartType, chartName].join('/');
             const chartFile = path.join(chartTempDir, path.basename(url));
             await exec.exec('curl', ['-sSL', url, '-o', chartFile]);
-            if (!await utils.fileExists(indexPath)) {
-              const baseUrl = url.substring(0, url.lastIndexOf('/'));
-              await exec.exec('helm', ['repo', 'index', chartOutputDir, '--url', baseUrl]);
-            }
-            await exec.exec('helm', ['repo', 'index', chartTempDir, '--url', url, '--merge', indexPath]);
+            await exec.exec('helm', ['repo', 'index', chartOutputDir, '--url', baseUrl, '--merge', indexPath]);
           }
         }
         core.info(` Successfully generated '${chartType}/${chartName}' index`);
