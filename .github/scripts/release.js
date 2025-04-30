@@ -259,6 +259,10 @@ async function _generateChartsIndex({
             const url = asset.browser_download_url;
             const chartFile = path.join(chartTempDir, path.basename(url));
             await exec.exec('curl', ['-sSL', url, '-o', chartFile]);
+            if (!await utils.fileExists(indexPath)) {
+              const baseUrl = url.substring(0, url.lastIndexOf('/'));
+              await exec.exec('helm', ['repo', 'index', chartOutputDir, '--url', baseUrl]);
+            }
             await exec.exec('helm', ['repo', 'index', chartTempDir, '--url', url, '--merge', indexPath]);
           }
         }
