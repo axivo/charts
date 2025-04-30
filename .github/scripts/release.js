@@ -221,11 +221,11 @@ async function _generateChartsIndex({
   charts
 }) {
   try {
-    core.info('Generating chart repository indices...');
+    core.info('Generating charts index...');
     const appType = config('repository').chart.type.application;
     const libType = config('repository').chart.type.library;
     const chartDirs = [...charts.application, ...charts.library];
-    const tempDir = path.join('_dist');
+    const tempDir = '_dist';
     await fs.mkdir(tempDir, { recursive: true });
     await fs.mkdir(path.join(tempDir, appType), { recursive: true });
     await fs.mkdir(path.join(tempDir, libType), { recursive: true });
@@ -235,7 +235,7 @@ async function _generateChartsIndex({
       context,
       core
     });
-    core.info(`Found ${allReleases.length} releases in repository`);
+    core.info(`Found ${allReleases.length} releases`);
     await Promise.all(chartDirs.map(async (chartDir) => {
       try {
         const chartName = path.basename(chartDir);
@@ -253,16 +253,12 @@ async function _generateChartsIndex({
           return;
         }
         const indexPath = path.join(chartOutputDir, 'index.yaml');
-        if (!await utils.fileExists(indexPath)) {
-          const url = [config('repository').url, chartType, chartName].join('/');
-          await exec.exec('helm', ['repo', 'index', chartOutputDir, '--url', url]);
-        }
         for (const release of chartReleases) {
           const asset = release.assets.find(a => a.content_type === 'application/x-gzip');
           if (asset) {
-            const chartFile = path.join(chartTempDir, path.basename(asset.browser_download_url));
-            const url = [config('repository').url, chartType, chartName].join('/');
-            await exec.exec('curl', ['-sSL', asset.browser_download_url, '-o', chartFile]);
+            const url = asset.browser_download_url;
+            const chartFile = path.join(chartTempDir, path.basename(url));
+            await exec.exec('curl', ['-sSL', url, '-o', chartFile]);
             await exec.exec('helm', ['repo', 'index', chartTempDir, '--url', url, '--merge', indexPath]);
           }
         }
@@ -271,9 +267,9 @@ async function _generateChartsIndex({
         utils.handleError(error, core, `generate '${chartType}/${chartName}' index`, false);
       }
     }));
-    core.info('Successfully generated per-chart repository indexes');
+    core.info('Successfully generated charts index');
   } catch (error) {
-    utils.handleError(error, core, 'generate repository indexes', false);
+    utils.handleError(error, core, 'generate charts index', false);
   }
 }
 
