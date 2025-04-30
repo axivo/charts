@@ -255,21 +255,30 @@ async function _generateChartsIndex({
         const indexPath = path.join(chartOutputDir, 'index.yaml');
         for (const release of chartReleases) {
           // DEBUG START
-          core.info(`Processing release ${release.tag_name} for ${chartType}/${chartName}`);
+          core.info(`Processing release ${release.tag_name} for ${chartType}/${chartName} to output dir ${chartOutputDir}`);
           // DEBUG END
           const asset = release.assets.find(a => a.content_type === 'application/x-gzip');
           if (asset) {
             const url = asset.browser_download_url;
             const baseUrl = [config('repository').url, chartType, chartName].join('/');
             const chartFile = path.join(chartTempDir, path.basename(url));
+            const exists = await utils.fileExists(indexPath);
+            
             // DEBUG START
+            core.info(`Index file ${indexPath} ${exists ? 'exists' : 'does not exist'}`);
             core.info(`Downloading chart from ${url} to ${chartFile}`);
             // DEBUG END
             await exec.exec('curl', ['-sSL', url, '-o', chartFile]);
             // DEBUG START
-            core.info(`Running: helm repo index ${chartOutputDir} --url ${baseUrl} --merge ${indexPath}`);
+            core.info(`Running: helm repo index ${chartOutputDir} --url ${baseUrl}${exists ? ' --merge ' + indexPath : ''}`);
             // DEBUG END
-            await exec.exec('helm', ['repo', 'index', chartOutputDir, '--url', baseUrl, '--merge', indexPath]);
+            
+            // Only add --merge flag if the index file already exists
+            const args = ['repo', 'index', chartOutputDir, '--url', baseUrl];
+            if (exists) {
+              args.push('--merge', indexPath);
+            }
+            await exec.exec('helm', args);
             
             // DEBUG START
             try {
