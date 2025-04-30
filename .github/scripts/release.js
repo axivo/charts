@@ -256,6 +256,7 @@ async function _generateChartsIndex({
         for (const release of chartReleases) {
           // DEBUG START
           core.info(`Processing release ${release.tag_name} for ${chartType}/${chartName} to output dir ${chartOutputDir}`);
+          core.info(`DEBUG: Full output directory path: ${path.resolve(chartOutputDir)}`);
           // DEBUG END
           const asset = release.assets.find(a => a.content_type === 'application/x-gzip');
           if (asset) {
@@ -266,11 +267,15 @@ async function _generateChartsIndex({
             
             // DEBUG START
             core.info(`Index file ${indexPath} ${exists ? 'exists' : 'does not exist'}`);
+            core.info(`DEBUG: Full index.yaml path: ${path.resolve(indexPath)}`);
             core.info(`Downloading chart from ${url} to ${chartFile}`);
+            core.info(`DEBUG: Full chart file path: ${path.resolve(chartFile)}`);
             // DEBUG END
             await exec.exec('curl', ['-sSL', url, '-o', chartFile]);
             // DEBUG START
             core.info(`Running: helm repo index ${chartOutputDir} --url ${baseUrl}${exists ? ' --merge ' + indexPath : ''}`);
+            core.info(`DEBUG: About to execute helm repo index command for ${chartName}`);
+            core.info(`DEBUG: Working directory: ${process.cwd()}`);
             // DEBUG END
             
             // Only add --merge flag if the index file already exists
@@ -285,10 +290,29 @@ async function _generateChartsIndex({
               await fs.access(indexPath);
               const stats = await fs.stat(indexPath);
               core.info(`Index file exists at ${indexPath} with size ${stats.size} bytes`);
+              core.info(`DEBUG: index.yaml permissions: ${stats.mode.toString(8)}`);
+              
+              // Read and log some of the content
+              try {
+                const indexContent = await fs.readFile(indexPath, 'utf8');
+                core.info(`DEBUG: index.yaml content length: ${indexContent.length} bytes`);
+                core.info(`DEBUG: First 100 chars: ${indexContent.substring(0, 100)}`);
+              } catch (readError) {
+                core.error(`DEBUG: Error reading index.yaml content: ${readError.message}`);
+              }
               
               // List the contents of chartOutputDir to see what files are actually there
               const files = await fs.readdir(chartOutputDir);
               core.info(`Files in ${chartOutputDir}: ${files.join(', ')}`);
+              
+              // Check parent directory
+              const parentDir = path.dirname(chartOutputDir);
+              try {
+                const parentFiles = await fs.readdir(parentDir);
+                core.info(`DEBUG: Parent directory ${parentDir} contains: ${parentFiles.join(', ')}`);
+              } catch (parentError) {
+                core.error(`DEBUG: Error reading parent directory: ${parentError.message}`);
+              }
             } catch (error) {
               core.error(`Index file check failed: ${error.message}`);
             }
@@ -684,10 +708,85 @@ async function setupBuildEnvironment({
   core
 }) {
   core.info(`Setting up build environment for '${config('release').deployment}' deployment`);
+  
+  // DEBUG START
+  core.info(`DEBUG: Current working directory: ${process.cwd()}`);
+  core.info(`DEBUG: Listing directory contents before Jekyll processing:`);
+  try {
+    const dirContents = await fs.readdir('.');
+    core.info(`DEBUG: Root directory contains: ${dirContents.join(', ')}`);
+    
+    const appDir = config('repository').chart.type.application;
+    const libDir = config('repository').chart.type.library;
+    
+    if (await utils.fileExists(appDir)) {
+      const appCharts = await fs.readdir(appDir);
+      core.info(`DEBUG: ${appDir} directory contains: ${appCharts.join(', ')}`);
+      
+      for (const chartName of appCharts) {
+        const chartDir = path.join(appDir, chartName);
+        if ((await fs.stat(chartDir)).isDirectory()) {
+          const indexPath = path.join(chartDir, 'index.yaml');
+          if (await utils.fileExists(indexPath)) {
+            const stats = await fs.stat(indexPath);
+            core.info(`DEBUG: ${indexPath} exists with size ${stats.size} bytes and permissions ${stats.mode.toString(8)}`);
+            
+            // Read and log the index.yaml content
+            try {
+              const indexContent = await fs.readFile(indexPath, 'utf8');
+              core.info(`DEBUG: Index.yaml content for ${chartName}:\n${indexContent}`);
+            } catch (readError) {
+              core.error(`DEBUG: Error reading index.yaml content for ${chartName}: ${readError.message}`);
+            }
+          } else {
+            core.info(`DEBUG: ${indexPath} does not exist`);
+          }
+        }
+      }
+    }
+    
+    if (await utils.fileExists(libDir)) {
+      const libCharts = await fs.readdir(libDir);
+      core.info(`DEBUG: ${libDir} directory contains: ${libCharts.join(', ')}`);
+      
+      for (const chartName of libCharts) {
+        const chartDir = path.join(libDir, chartName);
+        if ((await fs.stat(chartDir)).isDirectory()) {
+          const indexPath = path.join(chartDir, 'index.yaml');
+          if (await utils.fileExists(indexPath)) {
+            const stats = await fs.stat(indexPath);
+            core.info(`DEBUG: ${indexPath} exists with size ${stats.size} bytes and permissions ${stats.mode.toString(8)}`);
+            
+            // Read and log the index.yaml content
+            try {
+              const indexContent = await fs.readFile(indexPath, 'utf8');
+              core.info(`DEBUG: Index.yaml content for ${chartName}:\n${indexContent}`);
+            } catch (readError) {
+              core.error(`DEBUG: Error reading index.yaml content for ${chartName}: ${readError.message}`);
+            }
+          } else {
+            core.info(`DEBUG: ${indexPath} does not exist`);
+          }
+        }
+      }
+    }
+  } catch (error) {
+    core.error(`DEBUG: Error listing directories: ${error.message}`);
+  }
+  // DEBUG END
   await _generateFrontpage({ context, core });
   try {
     core.info(`Copying Jekyll theme config to ./_config.yml...`);
     await fs.copyFile(config('theme').configuration.file, './_config.yml');
+    
+    // DEBUG START
+    try {
+      const configContent = await fs.readFile('./_config.yml', 'utf8');
+      core.info(`DEBUG: _config.yml content:\n${configContent}`);
+    } catch (readError) {
+      core.error(`DEBUG: Error reading _config.yml: ${readError.message}`);
+    }
+    // DEBUG END
   } catch (error) {
     utils.handleError(error, core, 'copy Jekyll theme config');
   }
@@ -717,6 +816,46 @@ async function setupBuildEnvironment({
   const private = context.payload.repository.private === true;
   const publish = !private && config('release').deployment === 'production';
   core.setOutput('publish', publish);
+  
+  // DEBUG START
+  core.info(`DEBUG: Final state before Jekyll processing`);
+  core.info(`DEBUG: publish output value set to: ${publish}`);
+  try {
+    const finalDirContents = await fs.readdir('.');
+    core.info(`DEBUG: Final root directory contains: ${finalDirContents.join(', ')}`);
+    
+    const appDir = config('repository').chart.type.application;
+    const libDir = config('repository').chart.type.library;
+    
+    if (await utils.fileExists(appDir)) {
+      const appCharts = await fs.readdir(appDir);
+      
+      for (const chartName of appCharts) {
+        const chartDir = path.join(appDir, chartName);
+        if ((await fs.stat(chartDir)).isDirectory()) {
+          const indexPath = path.join(chartDir, 'index.yaml');
+          if (await utils.fileExists(indexPath)) {
+            const stats = await fs.stat(indexPath);
+            core.info(`DEBUG: Final check - ${indexPath} exists with size ${stats.size} bytes`);
+            
+            // Read and log the index.yaml content
+            try {
+              const indexContent = await fs.readFile(indexPath, 'utf8');
+              core.info(`DEBUG: Final index.yaml content for ${chartName}:\n${indexContent}`);
+            } catch (readError) {
+              core.error(`DEBUG: Error reading final index.yaml content for ${chartName}: ${readError.message}`);
+            }
+          } else {
+            core.info(`DEBUG: Final check - ${indexPath} does not exist`);
+          }
+        }
+      }
+    }
+  } catch (error) {
+    core.error(`DEBUG: Error in final state check: ${error.message}`);
+  }
+  // DEBUG END
+  
   core.info(`Successfully completed setup for '${config('release').deployment}' deployment`);
 }
 
