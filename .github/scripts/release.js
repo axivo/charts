@@ -254,13 +254,36 @@ async function _generateChartsIndex({
         }
         const indexPath = path.join(chartOutputDir, 'index.yaml');
         for (const release of chartReleases) {
+          // DEBUG START
+          core.info(`Processing release ${release.tag_name} for ${chartType}/${chartName}`);
+          // DEBUG END
           const asset = release.assets.find(a => a.content_type === 'application/x-gzip');
           if (asset) {
             const url = asset.browser_download_url;
             const baseUrl = [config('repository').url, chartType, chartName].join('/');
             const chartFile = path.join(chartTempDir, path.basename(url));
+            // DEBUG START
+            core.info(`Downloading chart from ${url} to ${chartFile}`);
+            // DEBUG END
             await exec.exec('curl', ['-sSL', url, '-o', chartFile]);
+            // DEBUG START
+            core.info(`Running: helm repo index ${chartOutputDir} --url ${baseUrl} --merge ${indexPath}`);
+            // DEBUG END
             await exec.exec('helm', ['repo', 'index', chartOutputDir, '--url', baseUrl, '--merge', indexPath]);
+            
+            // DEBUG START
+            try {
+              await fs.access(indexPath);
+              const stats = await fs.stat(indexPath);
+              core.info(`Index file exists at ${indexPath} with size ${stats.size} bytes`);
+              
+              // List the contents of chartOutputDir to see what files are actually there
+              const files = await fs.readdir(chartOutputDir);
+              core.info(`Files in ${chartOutputDir}: ${files.join(', ')}`);
+            } catch (error) {
+              core.error(`Index file check failed: ${error.message}`);
+            }
+            // DEBUG END
           }
         }
         core.info(` Successfully generated '${chartType}/${chartName}' index`);
@@ -268,6 +291,42 @@ async function _generateChartsIndex({
         utils.handleError(error, core, `generate '${chartType}/${chartName}' index`, false);
       }
     }));
+    // DEBUG START
+    // Check the final directory structure to verify index files
+    try {
+      const appDir = path.join(distRoot, appType);
+      const libDir = path.join(distRoot, libType);
+      
+      if (await utils.fileExists(appDir)) {
+        const appCharts = await fs.readdir(appDir);
+        core.info(`Application charts: ${appCharts.join(', ')}`);
+        
+        for (const chartName of appCharts) {
+          const chartDir = path.join(appDir, chartName);
+          if ((await fs.stat(chartDir)).isDirectory()) {
+            const files = await fs.readdir(chartDir);
+            core.info(`Files in ${chartDir}: ${files.join(', ')}`);
+          }
+        }
+      }
+      
+      if (await utils.fileExists(libDir)) {
+        const libCharts = await fs.readdir(libDir);
+        core.info(`Library charts: ${libCharts.join(', ')}`);
+        
+        for (const chartName of libCharts) {
+          const chartDir = path.join(libDir, chartName);
+          if ((await fs.stat(chartDir)).isDirectory()) {
+            const files = await fs.readdir(chartDir);
+            core.info(`Files in ${chartDir}: ${files.join(', ')}`);
+          }
+        }
+      }
+    } catch (error) {
+      core.error(`Directory structure debug failed: ${error.message}`);
+    }
+    // DEBUG END
+    
     core.info('Successfully generated charts index');
   } catch (error) {
     utils.handleError(error, core, 'generate charts index', false);
