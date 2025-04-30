@@ -253,48 +253,49 @@ async function _generateChartsIndex({
           return;
         }
         const indexPath = path.join(chartOutputDir, 'index.yaml');
-        const tempIndexPath = path.join(chartTempDir, 'index.yaml');
         for (const release of chartReleases) {
-          // DEBUG START
+          // DEBUG START - REMOVE AFTER DEBUGGING
           core.info(`Processing release ${release.tag_name} for ${chartType}/${chartName} to output dir ${chartOutputDir}`);
           core.info(`DEBUG: Full output directory path: ${path.resolve(chartOutputDir)}`);
-          // DEBUG END
+          // DEBUG END - REMOVE AFTER DEBUGGING
           const asset = release.assets.find(a => a.content_type === 'application/x-gzip');
           if (asset) {
             const url = asset.browser_download_url;
             const baseUrl = [config('repository').url, chartType, chartName].join('/');
-            const chartFile = path.join(chartTempDir, path.basename(url));
             const exists = await utils.fileExists(indexPath);
             
-            // DEBUG START
+            // DEBUG START - REMOVE AFTER DEBUGGING
             core.info(`Index file ${indexPath} ${exists ? 'exists' : 'does not exist'}`);
             core.info(`DEBUG: Full index.yaml path: ${path.resolve(indexPath)}`);
-            core.info(`Downloading chart from ${url} to ${chartFile}`);
-            core.info(`DEBUG: Full chart file path: ${path.resolve(chartFile)}`);
-            // DEBUG END
-            await exec.exec('curl', ['-sSL', url, '-o', chartFile]);
-            // DEBUG START
-            core.info(`Running: helm repo index ${chartTempDir} --url ${baseUrl}${exists ? ' --merge ' + indexPath : ''}`);
+            core.info(`DEBUG: Will download chart from ${url} to subdirectory`);
+            // DEBUG END - REMOVE AFTER DEBUGGING
+            // DEBUG START - REMOVE AFTER DEBUGGING
+            core.info(`Running: helm repo index ${chartTempNameDir} --url ${baseUrl}${exists ? ' --merge ' + indexPath : ''}`);
             core.info(`DEBUG: About to execute helm repo index command for ${chartName}`);
             core.info(`DEBUG: Working directory: ${process.cwd()}`);
-            // DEBUG END
+            // DEBUG END - REMOVE AFTER DEBUGGING
             
-            // Only add --merge flag if the index file already exists
-            const args = ['repo', 'index', chartTempDir, '--url', baseUrl];
+            // Create a subdirectory in the temp dir specifically for this chart
+            const chartTempNameDir = path.join(chartTempDir, chartName);
+            await fs.mkdir(chartTempNameDir, { recursive: true });
+            
+            // Download the chart file directly to the chart-specific temp directory
+            const chartFileInTempDir = path.join(chartTempNameDir, path.basename(url));
+            await exec.exec('curl', ['-sSL', url, '-o', chartFileInTempDir]);
+            
+            // Run helm repo index on the chart-specific temp directory
+            const args = ['repo', 'index', chartTempNameDir, '--url', baseUrl];
             if (exists) {
               args.push('--merge', indexPath);
             }
             await exec.exec('helm', args);
             
-            // Copy the index.yaml from temp dir to output dir
-            try {
-              await fs.copyFile(tempIndexPath, indexPath);
-              core.info(`Copied index.yaml from ${tempIndexPath} to ${indexPath}`);
-            } catch (copyError) {
-              core.error(`Error copying index.yaml: ${copyError.message}`);
-            }
+            // Copy the generated index.yaml from temp dir to output dir
+            const tempIndexPath = path.join(chartTempNameDir, 'index.yaml');
+            await fs.copyFile(tempIndexPath, indexPath);
+            core.info(`Copied index.yaml from ${tempIndexPath} to ${indexPath}`);
             
-            // DEBUG START
+            // DEBUG START - REMOVE AFTER DEBUGGING
             try {
               await fs.access(indexPath);
               const stats = await fs.stat(indexPath);
@@ -325,7 +326,7 @@ async function _generateChartsIndex({
             } catch (error) {
               core.error(`Index file check failed: ${error.message}`);
             }
-            // DEBUG END
+            // DEBUG END - REMOVE AFTER DEBUGGING
           }
         }
         core.info(` Successfully generated '${chartType}/${chartName}' index`);
@@ -333,7 +334,7 @@ async function _generateChartsIndex({
         utils.handleError(error, core, `generate '${chartType}/${chartName}' index`, false);
       }
     }));
-    // DEBUG START
+    // DEBUG START - REMOVE AFTER DEBUGGING
     // Check the final directory structure to verify index files
     try {
       const appDir = path.join(distRoot, appType);
@@ -367,7 +368,7 @@ async function _generateChartsIndex({
     } catch (error) {
       core.error(`Directory structure debug failed: ${error.message}`);
     }
-    // DEBUG END
+    // DEBUG END - REMOVE AFTER DEBUGGING
     
     core.info('Successfully generated charts index');
   } catch (error) {
@@ -718,7 +719,7 @@ async function setupBuildEnvironment({
 }) {
   core.info(`Setting up build environment for '${config('release').deployment}' deployment`);
   
-  // DEBUG START
+  // DEBUG START - REMOVE AFTER DEBUGGING
   core.info(`DEBUG: Current working directory: ${process.cwd()}`);
   core.info(`DEBUG: Listing directory contents before Jekyll processing:`);
   try {
@@ -782,20 +783,20 @@ async function setupBuildEnvironment({
   } catch (error) {
     core.error(`DEBUG: Error listing directories: ${error.message}`);
   }
-  // DEBUG END
+  // DEBUG END - REMOVE AFTER DEBUGGING
   await _generateFrontpage({ context, core });
   try {
     core.info(`Copying Jekyll theme config to ./_config.yml...`);
     await fs.copyFile(config('theme').configuration.file, './_config.yml');
     
-    // DEBUG START
+    // DEBUG START - REMOVE AFTER DEBUGGING
     try {
       const configContent = await fs.readFile('./_config.yml', 'utf8');
       core.info(`DEBUG: _config.yml content:\n${configContent}`);
     } catch (readError) {
       core.error(`DEBUG: Error reading _config.yml: ${readError.message}`);
     }
-    // DEBUG END
+    // DEBUG END - REMOVE AFTER DEBUGGING
   } catch (error) {
     utils.handleError(error, core, 'copy Jekyll theme config');
   }
@@ -826,7 +827,7 @@ async function setupBuildEnvironment({
   const publish = !private && config('release').deployment === 'production';
   core.setOutput('publish', publish);
   
-  // DEBUG START
+  // DEBUG START - REMOVE AFTER DEBUGGING
   core.info(`DEBUG: Final state before Jekyll processing`);
   core.info(`DEBUG: publish output value set to: ${publish}`);
   try {
@@ -863,7 +864,7 @@ async function setupBuildEnvironment({
   } catch (error) {
     core.error(`DEBUG: Error in final state check: ${error.message}`);
   }
-  // DEBUG END
+  // DEBUG END - REMOVE AFTER DEBUGGING
   
   core.info(`Successfully completed setup for '${config('release').deployment}' deployment`);
 }
