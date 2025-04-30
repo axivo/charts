@@ -3,10 +3,10 @@ name: Chart
 on:
   pull_request:
     paths:
-      - application/*/Chart.yaml
+      - application/*/Chart.*
       - application/*/README.md.gotmpl
       - application/*/values.yaml
-      - library/*/Chart.yaml
+      - library/*/Chart.*
       - library/*/README.md.gotmpl
       - library/*/values.yaml
 
