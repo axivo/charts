@@ -1,11 +1,28 @@
 {{- define "chart.appVersionBadge" -}}
-{{- $version := (index .Dependencies 0).Version -}}
+{{- $version := "" -}}
+{{- range .Dependencies -}}
+{{- if eq .Name "sealed-secrets" -}}
+{{- $version = .Version -}}
+{{- end -}}
+{{- end -}}
 ![AppVersion: {{ $version }}](https://img.shields.io/badge/AppVersion-{{ $version | replace "-" "--" }}-informational?style=flat-square)
 {{- end -}}
 {{- define "chart.url" -}}
-{{- $source := (index .Sources 0) -}}
-{{- $version := (index .Dependencies 0).Version -}}
+{{- $version := "" -}}
+{{- range .Dependencies -}}
+{{- if eq .Name "sealed-secrets" -}}
+{{- $version = .Version -}}
+{{- end -}}
+{{- end -}}
+{{- $source := "" -}}
+{{- range .Sources -}}
+{{- if contains "sealed-secrets" . -}}
+{{- $source = . -}}
+{{- end -}}
+{{- end -}}
+{{- if $source -}}
 {{- printf "%s/blob/helm-v%s/helm/%s" $source $version .Name -}}
+{{- end -}}
 {{- end -}}
 # {{ template "chart.name" . }}
 
