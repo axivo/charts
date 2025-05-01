@@ -207,7 +207,7 @@ async function _createChartReleases({
           chartMetadata,
           iconExists,
           chartPath,
-          packageName: pkg
+          packageName: pkg.file
         });
       } catch (error) {
         utils.handleError(error, core, `create ${chartName} v${chartVersion} release`, false);
