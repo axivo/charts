@@ -277,7 +277,7 @@ async function _generateChartsIndex({
           if (!asset) continue;
           const url = asset.browser_download_url;
           const baseUrl = [context.payload.repository.html_url, 'releases', 'download', release.tag_name].join('/');
-          const exists = await utils.fileExists(indexPath);
+          const indexExists = await utils.fileExists(indexPath);
           const packagedFile = path.join(packageDir, path.basename(url));
           if (!await utils.fileExists(packagedFile)) {
             core.info(`Downloading chart file to ${packagedFile}`);
@@ -285,10 +285,9 @@ async function _generateChartsIndex({
           }
           try {
             const cmdArgs = ['repo', 'index', chartOutputDir, '--url', baseUrl];
-            if (exists) {
+            if (indexExists) {
               cmdArgs.push('--merge', indexPath);
             }
-            cmdArgs.push(packagedFile);
             await exec.exec('helm', cmdArgs);
             core.info(`Successfully created index file at ${indexPath}`);
           } catch (indexError) {
