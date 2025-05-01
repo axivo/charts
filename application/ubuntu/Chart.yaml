@@ -16,3 +16,7 @@ sources:
 maintainers:
   - name: AXIVO
     url: https://axivo.com
+dependencies:
+  - name: common
+    repository: https://axivo.github.io/charts/library/common
+    version: 1.0.0
