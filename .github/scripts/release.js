@@ -275,7 +275,7 @@ async function _generateChartsIndex({
         }
         const indexPath = path.join(chartOutputDir, 'index.yaml');
         for (const release of chartReleases) {
-          const asset = release.assets.find(a => a.content_type === 'application/x-gzip');
+          const asset = release.assets.find(a => a.name.endsWith('.tgz'));
           core.info(`Debug: Release ${release.tag_name}, asset exists: ${!!asset}`);
           if (asset) {
             const url = asset.browser_download_url;
