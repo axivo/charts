@@ -284,11 +284,15 @@ async function _generateChartsIndex({
             await exec.exec('curl', ['-sSL', url, '-o', packagedFile]);
           }
           try {
+            const chartFilename = path.basename(packagedFile);
+            const chartInOutputDir = path.join(chartOutputDir, chartFilename);
+            await fs.copyFile(packagedFile, chartInOutputDir);
             const cmdArgs = ['repo', 'index', chartOutputDir, '--url', baseUrl];
             if (indexExists) {
               cmdArgs.push('--merge', indexPath);
             }
             await exec.exec('helm', cmdArgs);
+            await fs.unlink(chartInOutputDir);
             core.info(`Successfully created index file at ${indexPath}`);
           } catch (indexError) {
             core.error(`Failed to generate index file: ${indexError.message}`);
