@@ -10,8 +10,6 @@ github:
   repository_url: https://github.com/axivo/charts
   show_downloads: false
 exclude:
-  - application/*/README.md
-  - library/*/README.md
+  - '**/README.md'
   - node_modules
   - script
-  - README.md
