@@ -356,7 +356,7 @@ const CONFIG = {
      * @default '.cr-release-packages'
      * @see processReleases - Function in release.js that creates this directory
      * @see _generateChartsIndex - Function in release.js that uses charts from this directory
-     * @see _createChartReleases - Function in release.js that uploads charts from this directory
+     * @see _publishChartReleases - Function in release.js that uploads charts from this directory
      */
     packages: '.cr-release-packages',
 
@@ -416,12 +416,64 @@ const CONFIG = {
        */
       icon: 'icon.png',
 
+      /**
+       * Configuration for packaged chart repository
+       * 
+       * Settings for publishing charts to a traditional Helm repository using
+       * packaged .tgz files and an index.yaml file. This is the standard Helm
+       * repository format used before the introduction of OCI.
+       * 
+       * @type {Object}
+       */
+      packages: {
+        /**
+         * Whether traditional packaged chart repository publishing is enabled
+         * 
+         * When true, charts are published as packaged .tgz files with an index.yaml file,
+         * following the standard Helm repository format. When false, only OCI publishing
+         * occurs (if enabled).
+         * 
+         * @type {boolean}
+         * @default true
+         * @see processReleases - Function in release.js that checks this setting
+         */
+        enabled: true,
+
+        /**
+         * Maximum number of versions to retain per chart in the index.yaml file
+         * 
+         * Limits the number of versions kept in the index to prevent the file from 
+         * growing too large. Only the most recent N versions of each chart will be included.
+         * Set to 0 for no retention limit (all versions are kept).
+         * 
+         * @type {number}
+         * @default 10
+         * @see _generateChartsIndex - Function in release.js that applies this retention policy
+         */
+        retention: 10
+      },
+
+      /**
+       * Configuration for chart redirection in GitHub Pages
+       * 
+       * Contains settings related to redirecting chart-specific URLs to their
+       * proper locations in the Helm repository structure. This is used to create
+       * user-friendly landing pages for individual charts.
+       * 
+       * @type {Object}
+       */
       redirect: {
         /**
          * Path to the Handlebars template for chart redirection
          * 
+         * This template defines the HTML content that redirects users from
+         * chart-specific URLs to the appropriate chart index location. It supports
+         * variables for repository URL, chart type, and chart name that are replaced
+         * during processing.
+         * 
          * @type {string}
          * @default '.github/templates/redirect.html.hbs'
+         * @see _generateChartsIndex - Function in release.js that applies this template for each chart
          */
         template: '.github/templates/redirect.html.hbs'
       },

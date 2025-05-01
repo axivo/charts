@@ -106,35 +106,6 @@ Handle different event contexts appropriately to ensure your code works in all s
 - Functions that work with GitHub event contexts should handle different payload structures appropriately
 - Be aware of the differences between `pull_request`, `push` and other event context structures
 
-## Error Handling
-
-All functions should use the standardized error handling utility `utils.handleError` which provides:
-
-- Consistent error message formatting
-- Integration with GitHub Actions Core API for logging
-- Configurable fatal vs. non-fatal error handling
-- Better error propagation
-
-Example usage:
-
-```javascript
-try {
-  // function implementation
-} catch (error) {
-  utils.handleError(error, core, 'operation description', false); // false = non-fatal (warning)
-}
-```
-
-For fatal errors (default behavior), the utility will:
-
-- Log the error using `core.setFailed`
-- Throw a new error with a standardized message
-
-For non-fatal errors (when `fatal = false`), the utility will:
-
-- Log the error using `core.warning`
-- Allow execution to continue
-
 ## Function Parameters
 
 Most functions in these modules accept a destructured object with the following common parameters:
@@ -144,6 +115,39 @@ Most functions in these modules accept a destructured object with the following 
 - `core` - GitHub Actions Core API for logging and output
 - `exec` - GitHub Actions exec helpers for running commands
 - `fs` - Node.js fs/promises module for file operations
+
+## OCI Registry Integration
+
+The repository supports publishing charts to OCI (Open Container Initiative) registries, such as GitHub Container Registry. This provides an alternative to the traditional Helm repository approach.
+
+### Configuration
+
+OCI registry settings are controlled via the following settings in `config.js`:
+
+```javascript
+repository: {
+  oci: {
+    enabled: false, // Enable/disable OCI publishing
+    registry: 'ghcr.io/axivo' // OCI registry URL without protocol
+  }
+}
+```
+
+### Key Functions
+
+- `_processOciReleases` in `release.js`: Handles pushing chart packages to OCI registries and deletion of existing packages
+
+### Deployment Process
+
+When OCI publishing is enabled:
+
+1. The system authenticates with the OCI registry using the GitHub token
+2. For each chart package:
+   - Any existing package with the same name-version is deleted from the registry
+   - The chart package is pushed to the registry using `helm push`
+3. Charts become accessible via `oci://[registry]/[chartname]:[version]` syntax
+
+OCI publishing can be used alongside traditional Helm repository publishing, giving users multiple options for chart installation.
 
 ## Centralized Configuration
 
@@ -177,7 +181,36 @@ The scripts support two deployment types controlled by the `config('release').de
 
 The deployment type is made available as an output from the `setupBuildEnvironment` function, which can be accessed in workflows as `steps.setup.outputs.deployment`. This allows conditional execution of deployment steps based on the deployment environment.
 
-## Scripts Overview
+## Error Handling
+
+All functions should use the standardized error handling utility `utils.handleError` which provides:
+
+- Consistent error message formatting
+- Integration with GitHub Actions Core API for logging
+- Configurable fatal vs. non-fatal error handling
+- Better error propagation
+
+Example usage:
+
+```javascript
+try {
+  // function implementation
+} catch (error) {
+  utils.handleError(error, core, 'operation description', false); // false = non-fatal (warning)
+}
+```
+
+For fatal errors (default behavior), the utility will:
+
+- Log the error using `core.setFailed`
+- Throw a new error with a standardized message
+
+For non-fatal errors (when `fatal = false`), the utility will:
+
+- Log the error using `core.warning`
+- Allow execution to continue
+
+## Scripts and Functions Reference
 
 ### `config.js`
 
@@ -191,7 +224,13 @@ Centralizes configuration settings for all GitHub Actions workflows in the repos
 
 Provides functions for Helm chart management and repository maintenance.
 
-#### Exported Functions
+#### Internal Functions
+
+- `_performGitCommit` - Performs a Git commit for the specified files
+- `_updateAppFiles` - Updates application files content with latest chart versions
+- `_updateLockFiles` - Updates dependency lock files for charts in a pull request
+
+#### Exported Function
 
 - `updateCharts` - Orchestrates the complete chart repository maintenance process
 
@@ -201,6 +240,7 @@ Provides utilities for automating chart documentation updates.
 
 #### Exported Functions
 
+- `installHelmDocs` - Installs the helm-docs package for generating Helm chart documentation 
 - `updateDocumentation` - Generates and commits updated documentation for charts
 
 ### `github-api.js`
@@ -217,8 +257,9 @@ Provides centralized functions for interacting with the GitHub API.
 - `checkWorkflowRunStatus` - Checks if a workflow run has any warnings or errors using GraphQL API
 - `createRelease` - Creates a new GitHub release
 - `createSignedCommit` - Creates a verified commit through GitHub's GraphQL API
+
 - `getReleaseByTag` - Checks if a GitHub release with the specified tag exists
-- `getReleasesByPrefix` - Gets all GitHub releases that match a specific tag prefix
+- `getReleases` - Gets GitHub releases with optional tag prefix filtering
 - `getReleaseIssues` - Fetches issues related to a specific chart since the last release
 - `getUpdatedFiles` - Gets the list of files changed in a pull request or push
 - `uploadReleaseAsset` - Uploads an asset to a GitHub release
@@ -230,7 +271,7 @@ Provides functions for Helm chart management, releases, and GitHub Pages generat
 #### Internal Functions
 
 - `_buildChartRelease` - Creates a GitHub release for a chart and uploads its package
-- `_createChartReleases` - Processes chart packages and creates GitHub releases
+- `_publishChartReleases` - Processes chart packages and creates GitHub releases
 - `_generateChartsIndex` - Generates Helm repository index files for specific charts
 - `_generateChartRelease` - Generates release content using the template file
 - `_generateFrontpage` - Generates repository index frontpage
@@ -241,6 +282,22 @@ Provides functions for Helm chart management, releases, and GitHub Pages generat
 - `processReleases` - Processes chart releases for affected charts
 - `setupBuildEnvironment` - Setup the build environment for generating the static site
 
+### `release-local.js`
+
+Provides functions for local Helm chart validation and testing.
+
+#### Internal Functions
+
+- `_checkDependencies` - Checks if all required dependencies are installed
+- `_generateLocalIndex` - Generates a local Helm repository index
+- `_packageChart` - Packages a chart after updating its dependencies
+- `_validateChart` - Validates a chart using helm lint, template rendering, and kubectl validation
+- `_validateIcon` - Validates chart's icon.png file
+
+#### Exported Function
+
+- `processLocalReleases` - Processes chart releases for local development environment
+
 ### `utils.js`
 
 Provides utility functions for GitHub Actions workflows.
@@ -249,6 +306,7 @@ Provides utility functions for GitHub Actions workflows.
 
 - `addLabel` - Adds a label to a repository if it doesn't exist
 - `configureGitRepository` - Configures Git with GitHub Actions bot identity
+- `deleteOciReleases` - Deletes OCI releases from GitHub Container Registry
 - `fileExists` - Checks if a file exists without throwing exceptions
 - `findCharts` - Finds deployed charts in application and library paths
 - `getGitStagedChanges` - Prepares file additions and deletions for commit

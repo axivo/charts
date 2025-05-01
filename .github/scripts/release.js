@@ -119,107 +119,6 @@ async function _buildChartRelease({
 }
 
 /**
- * Creates GitHub releases for packaged charts and uploads the chart packages as release assets
- * 
- * This function processes all chart packages in the specified directory, creating GitHub
- * releases for each one. For each package, it:
- * 
- * 1. Extracts the chart name and version from the package filename
- * 2. Determines if it's an application or library chart
- * 3. Loads the chart metadata from Chart.yaml
- * 4. Checks if an icon exists for the chart
- * 5. Calls _buildChartRelease to create the release and upload the package
- * 
- * The function processes each chart independently, handling errors for individual
- * charts as non-fatal so that other charts can still be released if one fails.
- * 
- * @private
- * @param {Object} params - Function parameters
- * @param {Object} params.github - GitHub API client for making API calls
- * @param {Object} params.context - GitHub Actions context containing repository information
- * @param {Object} params.core - GitHub Actions Core API for logging and output
- * @param {string} params.packagesPath - Directory containing packaged chart .tgz files
- * @returns {Promise<void>}
- */
-async function _createChartReleases({
-  github,
-  context,
-  core,
-  packagesPath
-}) {
-  try {
-    const appType = config('repository').chart.type.application;
-    const libType = config('repository').chart.type.library;
-    const appPackagesDir = path.join(packagesPath, appType);
-    const libPackagesDir = path.join(packagesPath, libType);
-    let appFiles = [];
-    let libFiles = [];
-    try {
-      if (await utils.fileExists(appPackagesDir)) {
-        const files = await fs.readdir(appPackagesDir);
-        appFiles = files.filter(file => file.endsWith('.tgz'))
-          .map(file => ({ file, type: appType }));
-      }
-    } catch (error) {
-      utils.handleError(error, core, `read application packages directory`, false);
-    }
-    try {
-      if (await utils.fileExists(libPackagesDir)) {
-        const files = await fs.readdir(libPackagesDir);
-        libFiles = files.filter(file => file.endsWith('.tgz'))
-          .map(file => ({ file, type: libType }));
-      }
-    } catch (error) {
-      utils.handleError(error, core, `read library packages directory`, false);
-    }
-    const packages = [...appFiles, ...libFiles];
-    const word = packages.length === 1 ? 'package' : 'packages'
-    core.info(`Preparing ${packages.length} chart ${word} to release...`);
-    await Promise.all(packages.map(async (pkg) => {
-      try {
-        const chartPath = path.join(packagesPath, pkg.type, pkg.file);
-        const chartNameWithVersion = pkg.file.replace('.tgz', '');
-        const lastDashIndex = chartNameWithVersion.lastIndexOf('-');
-        const chartName = chartNameWithVersion.substring(0, lastDashIndex);
-        const chartVersion = chartNameWithVersion.substring(lastDashIndex + 1);
-        const appChartDir = path.join(config('repository').chart.type.application, chartName);
-        const libChartDir = path.join(config('repository').chart.type.library, chartName);
-        const libChartExists = await utils.fileExists(libChartDir);
-        const chartType = libChartExists ? 'library' : 'application';
-        const chartDir = chartType === 'library' ? libChartDir : appChartDir;
-        let chartMetadata = {};
-        const chartYamlPath = path.join(chartDir, 'Chart.yaml');
-        try {
-          const chartYamlContent = await fs.readFile(chartYamlPath, 'utf8');
-          chartMetadata = yaml.load(chartYamlContent);
-          core.info(`Successfully loaded '${chartDir}' chart metadata`);
-        } catch (error) {
-          utils.handleError(error, core, `load '${chartDir}' chart metadata`, false);
-        }
-        const iconPath = path.join(chartDir, config('repository').chart.icon);
-        const iconExists = await utils.fileExists(iconPath);
-        await _buildChartRelease({
-          github,
-          context,
-          core,
-          chartName,
-          chartVersion,
-          chartType,
-          chartMetadata,
-          iconExists,
-          chartPath,
-          packageName: pkg.file
-        });
-      } catch (error) {
-        utils.handleError(error, core, `create ${chartName} v${chartVersion} release`, false);
-      }
-    }));
-  } catch (error) {
-    utils.handleError(error, core, 'create chart releases');
-  }
-}
-
-/**
  * Generates a Helm repository index file for specific charts
  * 
  * This function creates chart-specific index.yaml files in their respective
@@ -269,6 +168,14 @@ async function _generateChartsIndex({
           core.info(`No releases found for '${chartType}/${chartName}' chart, skipping index generation`);
           return;
         }
+        const retention = config('repository').chart.packages.retention;
+        if (retention > 0 && chartReleases.length > retention) {
+          chartReleases.sort((older, newer) => new Date(newer.created_at) - new Date(older.created_at));
+          const retainedReleases = chartReleases.slice(0, retention);
+          core.info(`Keeping ${retainedReleases.length} of ${chartReleases.length} releases for '${chartType}/${chartName}' chart...`);
+          chartReleases.length = 0;
+          chartReleases.push(...retainedReleases);
+        }
         const indexPath = path.join(chartOutputDir, 'index.yaml');
         const packageDir = path.join(config('release').packages, chartType);
         await fs.mkdir(packageDir, { recursive: true });
@@ -277,14 +184,23 @@ async function _generateChartsIndex({
           if (!asset) continue;
           const url = asset.browser_download_url;
           const baseUrl = [context.payload.repository.html_url, 'releases', 'download', release.tag_name].join('/');
-          const packagedFile = path.join(packageDir, path.basename(url));
-          if (!await utils.fileExists(packagedFile)) {
-            core.info(`Downloading chart file to ${packagedFile}`);
-            await exec.exec('curl', ['-sSL', url, '-o', packagedFile]);
-          }
+          const packageName = path.basename(url);
+          const packageFile = path.join(packageDir, packageName);
           try {
-            const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'helm-index'));
-            await fs.copyFile(packagedFile, path.join(tempDir, path.basename(packagedFile)));
+            const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'helm-packages-'));
+            const tempPackageFile = path.join(tempDir, packageName);
+            try {
+              if (!await utils.fileExists(packageFile)) {
+                core.info(`Downloading '${packageName}' chart package to ${tempDir} directory...`);
+                await exec.exec('curl', ['-sSL', url, '-o', tempPackageFile]);
+              } else {
+                core.info(`Copying '${packageName}' chart package to ${tempDir} directory...`);
+                await fs.copyFile(packageFile, tempPackageFile);
+              }
+            } catch (fileError) {
+              utils.handleError(fileError, core, `prepare '${packageName}' chart package`, false);
+              continue;
+            }
             const cmdArgs = ['repo', 'index', tempDir, '--url', baseUrl];
             if (await utils.fileExists(indexPath)) {
               cmdArgs.push('--merge', indexPath);
@@ -499,28 +415,157 @@ async function _generateFrontpage({
 }
 
 /**
- * Processes chart releases for OCI registry publishing
+ * Publishes GitHub releases for packaged charts and uploads the chart packages as release assets
+ * 
+ * This function processes all chart packages in the specified directory, creating GitHub
+ * releases for each one. For each package, it:
+ * 
+ * 1. Extracts the chart name and version from the package filename
+ * 2. Determines if it's an application or library chart
+ * 3. Loads the chart metadata from Chart.yaml
+ * 4. Checks if an icon exists for the chart
+ * 5. Calls _buildChartRelease to create the release and upload the package
+ * 
+ * The function handles application and library chart types separately, processing
+ * all eligible .tgz files found in their respective directories. It works with the
+ * naming conventions defined in the configuration to properly parse chart names and versions.
+ * 
+ * Any errors during the process are handled as non-fatal, allowing other charts
+ * to be released even if one fails, in accordance with the configuration settings.
+ * 
+ * @private
+ * @param {Object} params - Function parameters
+ * @param {Object} params.github - GitHub API client for making API calls
+ * @param {Object} params.context - GitHub Actions context containing repository information
+ * @param {Object} params.core - GitHub Actions Core API for logging and output
+ * @param {string} params.packagesPath - Directory containing packaged chart .tgz files
+ * @returns {Promise<void>}
+ */
+async function _publishChartReleases({
+  github,
+  context,
+  core,
+  packagesPath
+}) {
+  try {
+    const appType = config('repository').chart.type.application;
+    const libType = config('repository').chart.type.library;
+    const appPackagesDir = path.join(packagesPath, appType);
+    const libPackagesDir = path.join(packagesPath, libType);
+    let appFiles = [];
+    let libFiles = [];
+    try {
+      if (await utils.fileExists(appPackagesDir)) {
+        const files = await fs.readdir(appPackagesDir);
+        appFiles = files.filter(file => file.endsWith('.tgz'))
+          .map(file => ({ file, type: appType }));
+      }
+    } catch (error) {
+      utils.handleError(error, core, `read application packages directory`, false);
+    }
+    try {
+      if (await utils.fileExists(libPackagesDir)) {
+        const files = await fs.readdir(libPackagesDir);
+        libFiles = files.filter(file => file.endsWith('.tgz'))
+          .map(file => ({ file, type: libType }));
+      }
+    } catch (error) {
+      utils.handleError(error, core, `read library packages directory`, false);
+    }
+    const packages = [...appFiles, ...libFiles];
+    const word = packages.length === 1 ? 'package' : 'packages'
+    core.info(`Preparing ${packages.length} chart ${word} to release...`);
+    await Promise.all(packages.map(async (package) => {
+      try {
+        const chartPath = path.join(packagesPath, package.type, package.file);
+        const chartNameWithVersion = package.file.replace('.tgz', '');
+        const lastDashIndex = chartNameWithVersion.lastIndexOf('-');
+        const chartName = chartNameWithVersion.substring(0, lastDashIndex);
+        const chartVersion = chartNameWithVersion.substring(lastDashIndex + 1);
+        const appChartDir = path.join(config('repository').chart.type.application, chartName);
+        const libChartDir = path.join(config('repository').chart.type.library, chartName);
+        const libChartExists = await utils.fileExists(libChartDir);
+        const chartType = libChartExists ? 'library' : 'application';
+        const chartDir = chartType === 'library' ? libChartDir : appChartDir;
+        let chartMetadata = {};
+        const chartYamlPath = path.join(chartDir, 'Chart.yaml');
+        try {
+          const chartYamlContent = await fs.readFile(chartYamlPath, 'utf8');
+          chartMetadata = yaml.load(chartYamlContent);
+          core.info(`Successfully loaded '${chartDir}' chart metadata`);
+        } catch (error) {
+          utils.handleError(error, core, `load '${chartDir}' chart metadata`, false);
+        }
+        const iconPath = path.join(chartDir, config('repository').chart.icon);
+        const iconExists = await utils.fileExists(iconPath);
+        await _buildChartRelease({
+          github,
+          context,
+          core,
+          chartName,
+          chartVersion,
+          chartType,
+          chartMetadata,
+          iconExists,
+          chartPath,
+          packageName: package.file
+        });
+      } catch (error) {
+        utils.handleError(error, core, `create ${chartName} v${chartVersion} release`, false);
+      }
+    }));
+  } catch (error) {
+    utils.handleError(error, core, 'create chart releases');
+  }
+}
+
+/**
+ * Publishes charts to OCI registry
  * 
  * This function publishes charts to an OCI registry (GitHub Container Registry)
  * in addition to the traditional Helm repository. This provides users with
  * multiple installation options and better integration with container workflows.
  * 
+ * The function handles the entire OCI publishing process:
+ * 1. Authenticates with the OCI registry
+ * 2. Deletes existing packages with the same name-version to avoid conflicts
+ * 3. Publishes new chart packages to the registry
+ * 
  * @private
  * @param {Object} params - Function parameters
  * @param {Object} params.core - GitHub Actions Core API for logging and output
  * @param {Object} params.exec - GitHub Actions exec helpers for running commands
+ * @param {Object} params.context - GitHub Actions context containing repository information
  * @param {string} params.packagesPath - Directory containing packaged chart .tgz files
  * @returns {Promise<void>}
  */
-async function _processOciReleases({
+async function _publishOciReleases({
   core,
   exec,
+  context,
   packagesPath
 }) {
   try {
     const ociRegistry = config('repository').oci.registry;
     if (!config('repository').oci.enabled) {
       core.info('OCI publishing is disabled');
+      return;
+    }
+    core.info('Setting up OCI registry authentication...');
+    const token = process.env.GITHUB_TOKEN;
+    try {
+      await exec.exec('helm', [
+        'registry',
+        'login',
+        ociRegistry,
+        '--username',
+        context.actor,
+        '--password',
+        token
+      ]);
+      core.info('Successfully authenticated with OCI registry');
+    } catch (authError) {
+      utils.handleError(authError, core, 'authenticate with OCI registry', false);
       return;
     }
     const appType = config('repository').chart.type.application;
@@ -544,19 +589,48 @@ async function _processOciReleases({
       core.info('No chart packages found for OCI publishing');
       return;
     }
-    const word = packages.length === 1 ? 'package' : 'packages'
+    const word = packages.length === 1 ? 'package' : 'packages';
+    packages = packages.map(package => {
+      const nameVersion = package.file.replace('.tgz', '');
+      return { ...package, nameVersion };
+    });
+    try {
+      core.info(`Deleting ${packages.length} OCI ${word} from '${ociRegistry}' registry...`);
+      for (const package of packages) {
+        try {
+          const separator = config('release').title.substring(
+            config('release').title.indexOf('{{ .Name }}') + '{{ .Name }}'.length,
+            config('release').title.indexOf('{{ .Version }}')
+          );
+          const [name, version] = package.nameVersion.split(separator);
+          if (!name || !version) {
+            core.warning(`Package '${package.nameVersion}' doesn't match the configured pattern format`);
+            continue;
+          }
+          const fullRef = `${ociRegistry}/${name}:${version}`;
+          core.info(`Deleting '${fullRef}' OCI package...`);
+          await exec.exec('helm', ['registry', 'remove', fullRef]);
+          core.info(`Successfully deleted '${fullRef}' OCI package`);
+        } catch (pkgError) {
+          utils.handleError(pkgError, core, `delete '${package.nameVersion}' OCI package`, false);
+        }
+      }
+      core.info(`Successfully deleted ${packages.length} OCI ${word}`);
+    } catch (deleteError) {
+      utils.handleError(deleteError, core, 'process OCI packages deletion', false);
+    }
     core.info(`Publishing ${packages.length} chart ${word} to '${ociRegistry}' OCI registry...`);
-    for (const pkg of packages) {
-      const chartPath = path.join(pkg.dir, pkg.file);
+    for (const package of packages) {
+      const chartPath = path.join(package.dir, package.file);
       try {
-        core.info(`Pushing '${pkg.file}' to OCI registry...`);
+        core.info(`Pushing '${package.file}' to OCI registry...`);
         await exec.exec('helm', ['push', chartPath, `oci://${ociRegistry}`]);
-        core.info(`Successfully pushed '${pkg.file}' to OCI registry`);
+        core.info(`Successfully pushed '${package.file}' to OCI registry`);
       } catch (error) {
-        utils.handleError(error, core, `push '${pkg.file}' to OCI registry`, false);
+        utils.handleError(error, core, `push '${package.file}' to OCI registry`, false);
       }
     }
-    core.info('Successfully completed OCI chart publishing');
+    core.info(`Successfully published ${packages.length} OCI ${word}`);
   } catch (error) {
     utils.handleError(error, core, 'push chart packages to OCI registry');
   }
@@ -621,41 +695,27 @@ async function processReleases({
       }
     }));
     core.info(`Successfully packaged ${chartDirs.length} charts`);
-    await _createChartReleases({
+    await _publishChartReleases({
       github,
       context,
       core,
       packagesPath: releasePackages
     });
-    await _generateChartsIndex({
-      github,
-      context,
-      exec,
-      core,
-      distRoot: './',
-      charts
-    });
+    if (config('repository').chart.packages.enabled) {
+      await _generateChartsIndex({
+        github,
+        context,
+        exec,
+        core,
+        distRoot: './',
+        charts
+      });
+    }
     if (config('repository').oci.enabled) {
-      core.info('Setting up OCI registry authentication...');
-      const token = process.env.GITHUB_TOKEN;
-      try {
-        await exec.exec('helm', [
-          'registry',
-          'login',
-          config('repository').oci.registry,
-          '--username',
-          context.actor,
-          '--password',
-          token
-        ]);
-        core.info('Successfully authenticated with OCI registry');
-      } catch (error) {
-        utils.handleError(error, core, 'authenticate with OCI registry', false);
-        return;
-      }
-      await _processOciReleases({
+      await _publishOciReleases({
         core,
         exec,
+        context,
         packagesPath: releasePackages
       });
     }

@@ -64,7 +64,9 @@ async function _getLastReleaseDate({
     };
     const result = await github.graphql(query, variables);
     const releases = result.repository.releases.nodes;
-    const titlePattern = config('release').title.replace('{{ .Name }}', chartName).replace('{{ .Version }}', '');
+    const titlePattern = config('release').title
+      .replace('{{ .Name }}', chartName)
+      .replace('{{ .Version }}', '');
     const tagPrefix = titlePattern.substring(0, titlePattern.indexOf('{{ .Version }}'));
     const chartReleases = releases.filter(release =>
       release.tagName.startsWith(tagPrefix)
