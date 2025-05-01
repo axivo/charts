@@ -228,8 +228,8 @@ async function checkWorkflowRunStatus({
       repo: context.repo.repo,
       run_id: parseInt(runId, 10)
     });
-    const warningRegex = /(^|:)warning:/i;
-    const hasWarnings = warningRegex.test(logsResponse.data);
+    const regex = /(^|:)warning:/i;
+    const hasWarnings = regex.test(logsResponse.data);
     return hasFailures || hasWarnings;
   } catch (error) {
     if (error.status === 404) return false;
