@@ -283,7 +283,7 @@ async function _generateChartsIndex({
             await exec.exec('curl', ['-sSL', url, '-o', packagedFile]);
           }
           try {
-            const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), ''));
+            const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'helm-index'));
             await fs.copyFile(packagedFile, path.join(tempDir, path.basename(packagedFile)));
             const cmdArgs = ['repo', 'index', tempDir, '--url', baseUrl];
             if (await utils.fileExists(indexPath)) {
