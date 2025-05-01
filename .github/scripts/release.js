@@ -14,6 +14,7 @@
  */
 
 const fs = require('fs/promises');
+const os = require('os');
 const path = require('path');
 const yaml = require('js-yaml');
 const api = require('./github-api');
@@ -269,33 +270,49 @@ async function _generateChartsIndex({
           return;
         }
         const indexPath = path.join(chartOutputDir, 'index.yaml');
-        const releasePackages = config('release').packages;
-        const packageDir = path.join(releasePackages, chartType);
+        const packageDir = path.join(config('release').packages, chartType);
         await fs.mkdir(packageDir, { recursive: true });
         for (const release of chartReleases) {
           const asset = release.assets.find(file => file.name.endsWith('.tgz'));
           if (!asset) continue;
           const url = asset.browser_download_url;
           const baseUrl = [context.payload.repository.html_url, 'releases', 'download', release.tag_name].join('/');
-          const indexExists = await utils.fileExists(indexPath);
           const packagedFile = path.join(packageDir, path.basename(url));
           if (!await utils.fileExists(packagedFile)) {
             core.info(`Downloading chart file to ${packagedFile}`);
             await exec.exec('curl', ['-sSL', url, '-o', packagedFile]);
           }
           try {
-            const chartFilename = path.basename(packagedFile);
-            const chartInOutputDir = path.join(chartOutputDir, chartFilename);
-            await fs.copyFile(packagedFile, chartInOutputDir);
-            const cmdArgs = ['repo', 'index', chartOutputDir, '--url', baseUrl];
-            if (indexExists) {
+            const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), ''));
+            await fs.copyFile(packagedFile, path.join(tempDir, path.basename(packagedFile)));
+            const cmdArgs = ['repo', 'index', tempDir, '--url', baseUrl];
+            if (await utils.fileExists(indexPath)) {
               cmdArgs.push('--merge', indexPath);
             }
             await exec.exec('helm', cmdArgs);
-            await fs.unlink(chartInOutputDir);
-            core.info(`Successfully created index file at ${indexPath}`);
+            const tempIndexPath = path.join(tempDir, 'index.yaml');
+            await fs.copyFile(tempIndexPath, indexPath);
+            core.info(`Successfully created ${indexPath} index file`);
+            try {
+              const redirectTemplate = config('repository').chart.redirect.template;
+              const redirectContent = await fs.readFile(redirectTemplate, 'utf8');
+              const repoUrl = config('repository').url;
+              const Handlebars = utils.registerHandlebarsHelpers(repoUrl);
+              const template = Handlebars.compile(redirectContent);
+              const redirectContext = {
+                RepoURL: repoUrl,
+                Type: chartType,
+                Name: chartName
+              };
+              const redirectHtml = template(redirectContext);
+              const redirectPath = path.join(chartOutputDir, 'index.html');
+              await fs.writeFile(redirectPath, redirectHtml);
+              core.info(`Successfully created ${redirectPath} redirect file`);
+            } catch (redirectError) {
+              utils.handleError(redirectError, core, 'create redirect file', false);
+            }
           } catch (indexError) {
-            core.error(`Failed to generate index file: ${indexError.message}`);
+            utils.handleError(indexError, core, 'generate index file', false);
           }
         }
         core.info(`Successfully generated '${chartType}/${chartName}' index`);
@@ -610,7 +627,6 @@ async function processReleases({
       core,
       packagesPath: releasePackages
     });
-    const repoUrl = config('repository').url;
     await _generateChartsIndex({
       github,
       context,
