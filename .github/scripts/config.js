@@ -345,6 +345,22 @@ const CONFIG = {
     deployment: 'production',
 
     /**
+     * Path to the chart packages directory
+     * 
+     * This directory is used to store packaged chart files (.tgz) during the release process.
+     * The charts are packaged here first before being uploaded to GitHub Releases.
+     * It also serves as a cache for chart downloads when generating index.yaml files.
+     * The directory follows a structure of [packages]/[type]/[chart-name-version.tgz].
+     * 
+     * @type {string}
+     * @default '.cr-release-packages'
+     * @see processReleases - Function in release.js that creates this directory
+     * @see _generateChartsIndex - Function in release.js that uses charts from this directory
+     * @see _createChartReleases - Function in release.js that uploads charts from this directory
+     */
+    packages: '.cr-release-packages',
+
+    /**
      * Path to the Handlebars template for GitHub release notes
      * 
      * This template defines the structure and content of release notes

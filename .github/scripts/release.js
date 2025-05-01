@@ -147,14 +147,37 @@ async function _createChartReleases({
   packagesPath
 }) {
   try {
-    const files = await fs.readdir(packagesPath);
-    const packages = files.filter(file => file.endsWith('.tgz'));
+    const appType = config('repository').chart.type.application;
+    const libType = config('repository').chart.type.library;
+    const appPackagesDir = path.join(packagesPath, appType);
+    const libPackagesDir = path.join(packagesPath, libType);
+    let appFiles = [];
+    let libFiles = [];
+    try {
+      if (await utils.fileExists(appPackagesDir)) {
+        const files = await fs.readdir(appPackagesDir);
+        appFiles = files.filter(file => file.endsWith('.tgz'))
+          .map(file => ({ file, type: appType }));
+      }
+    } catch (error) {
+      utils.handleError(error, core, `read application packages directory`, false);
+    }
+    try {
+      if (await utils.fileExists(libPackagesDir)) {
+        const files = await fs.readdir(libPackagesDir);
+        libFiles = files.filter(file => file.endsWith('.tgz'))
+          .map(file => ({ file, type: libType }));
+      }
+    } catch (error) {
+      utils.handleError(error, core, `read library packages directory`, false);
+    }
+    const packages = [...appFiles, ...libFiles];
     const word = packages.length === 1 ? 'package' : 'packages'
     core.info(`Preparing ${packages.length} chart ${word} to release...`);
     await Promise.all(packages.map(async (pkg) => {
       try {
-        const chartPath = path.join(packagesPath, pkg);
-        const chartNameWithVersion = pkg.replace('.tgz', '');
+        const chartPath = path.join(packagesPath, pkg.type, pkg.file);
+        const chartNameWithVersion = pkg.file.replace('.tgz', '');
         const lastDashIndex = chartNameWithVersion.lastIndexOf('-');
         const chartName = chartNameWithVersion.substring(0, lastDashIndex);
         const chartVersion = chartNameWithVersion.substring(lastDashIndex + 1);
@@ -225,10 +248,6 @@ async function _generateChartsIndex({
     const appType = config('repository').chart.type.application;
     const libType = config('repository').chart.type.library;
     const chartDirs = [...charts.application, ...charts.library];
-    const tempDir = '_dist';
-    await fs.mkdir(tempDir, { recursive: true });
-    await fs.mkdir(path.join(tempDir, appType), { recursive: true });
-    await fs.mkdir(path.join(tempDir, libType), { recursive: true });
     core.info('Fetching all repository releases...');
     const allReleases = await api.getReleases({
       github,
@@ -242,7 +261,6 @@ async function _generateChartsIndex({
         const chartType = charts.application.includes(chartDir) ? appType : libType;
         const chartOutputDir = path.join(distRoot, chartType, chartName);
         await fs.mkdir(chartOutputDir, { recursive: true });
-        const chartTempDir = path.join(tempDir, chartType);
         const titlePrefix = config('release').title
           .replace('{{ .Name }}', chartName)
           .replace('{{ .Version }}', '');
@@ -254,79 +272,32 @@ async function _generateChartsIndex({
         }
         const indexPath = path.join(chartOutputDir, 'index.yaml');
         for (const release of chartReleases) {
-          // DEBUG START - REMOVE AFTER DEBUGGING
-          core.info(`Processing release ${release.tag_name} for ${chartType}/${chartName} to output dir ${chartOutputDir}`);
-          core.info(`DEBUG: Full output directory path: ${path.resolve(chartOutputDir)}`);
-          // DEBUG END - REMOVE AFTER DEBUGGING
           const asset = release.assets.find(a => a.content_type === 'application/x-gzip');
           if (asset) {
             const url = asset.browser_download_url;
-            const baseUrl = [config('repository').url, chartType, chartName].join('/');
+            const baseUrl = [context.payload.repository.html_url, 'releases', 'download', asset.tag_name].join('/');
             const exists = await utils.fileExists(indexPath);
-            
-            // DEBUG START - REMOVE AFTER DEBUGGING
-            core.info(`Index file ${indexPath} ${exists ? 'exists' : 'does not exist'}`);
-            core.info(`DEBUG: Full index.yaml path: ${path.resolve(indexPath)}`);
-            core.info(`DEBUG: Will download chart from ${url} to subdirectory`);
-            // DEBUG END - REMOVE AFTER DEBUGGING
-            // DEBUG START - REMOVE AFTER DEBUGGING
-            core.info(`Running: helm repo index ${chartTempNameDir} --url ${baseUrl}${exists ? ' --merge ' + indexPath : ''}`);
-            core.info(`DEBUG: About to execute helm repo index command for ${chartName}`);
-            core.info(`DEBUG: Working directory: ${process.cwd()}`);
-            // DEBUG END - REMOVE AFTER DEBUGGING
-            
-            // Create a subdirectory in the temp dir specifically for this chart
-            const chartTempNameDir = path.join(chartTempDir, chartName);
-            await fs.mkdir(chartTempNameDir, { recursive: true });
-            
-            // Download the chart file directly to the chart-specific temp directory
-            const chartFileInTempDir = path.join(chartTempNameDir, path.basename(url));
-            await exec.exec('curl', ['-sSL', url, '-o', chartFileInTempDir]);
-            
-            // Run helm repo index on the chart-specific temp directory
-            const args = ['repo', 'index', chartTempNameDir, '--url', baseUrl];
-            if (exists) {
-              args.push('--merge', indexPath);
+            const chartFile = path.join(chartOutputDir, path.basename(url));
+            const releasePackages = config('release').packages;
+            const packagedFile = path.join(releasePackages, chartType, path.basename(url));
+            if (await utils.fileExists(packagedFile)) {
+              await fs.copyFile(packagedFile, chartFile);
+            } else {
+              await exec.exec('curl', ['-sSL', url, '-o', chartFile]);
             }
-            await exec.exec('helm', args);
-            
-            // Copy the generated index.yaml from temp dir to output dir
-            const tempIndexPath = path.join(chartTempNameDir, 'index.yaml');
-            await fs.copyFile(tempIndexPath, indexPath);
-            core.info(`Copied index.yaml from ${tempIndexPath} to ${indexPath}`);
-            
-            // DEBUG START - REMOVE AFTER DEBUGGING
+            const outputFile = path.join(chartOutputDir, 'index.yaml');
             try {
-              await fs.access(indexPath);
-              const stats = await fs.stat(indexPath);
-              core.info(`Index file exists at ${indexPath} with size ${stats.size} bytes`);
-              core.info(`DEBUG: index.yaml permissions: ${stats.mode.toString(8)}`);
-              
-              // Read and log some of the content
-              try {
-                const indexContent = await fs.readFile(indexPath, 'utf8');
-                core.info(`DEBUG: index.yaml content length: ${indexContent.length} bytes`);
-                core.info(`DEBUG: First 100 chars: ${indexContent.substring(0, 100)}`);
-              } catch (readError) {
-                core.error(`DEBUG: Error reading index.yaml content: ${readError.message}`);
+              const cmdArgs = ['repo', 'index', chartOutputDir, '--url', baseUrl];
+              if (exists) {
+                cmdArgs.push('--merge', indexPath);
               }
-              
-              // List the contents of chartOutputDir to see what files are actually there
-              const files = await fs.readdir(chartOutputDir);
-              core.info(`Files in ${chartOutputDir}: ${files.join(', ')}`);
-              
-              // Check parent directory
-              const parentDir = path.dirname(chartOutputDir);
-              try {
-                const parentFiles = await fs.readdir(parentDir);
-                core.info(`DEBUG: Parent directory ${parentDir} contains: ${parentFiles.join(', ')}`);
-              } catch (parentError) {
-                core.error(`DEBUG: Error reading parent directory: ${parentError.message}`);
-              }
-            } catch (error) {
-              core.error(`Index file check failed: ${error.message}`);
+              await exec.exec('helm', cmdArgs);
+              await fs.access(outputFile);
+              core.info(`Successfully created index file at ${outputFile}`);
+              await fs.unlink(chartFile);
+            } catch (indexError) {
+              core.error(`Failed to generate index file: ${indexError.message}`);
             }
-            // DEBUG END - REMOVE AFTER DEBUGGING
           }
         }
         core.info(` Successfully generated '${chartType}/${chartName}' index`);
@@ -334,42 +305,6 @@ async function _generateChartsIndex({
         utils.handleError(error, core, `generate '${chartType}/${chartName}' index`, false);
       }
     }));
-    // DEBUG START - REMOVE AFTER DEBUGGING
-    // Check the final directory structure to verify index files
-    try {
-      const appDir = path.join(distRoot, appType);
-      const libDir = path.join(distRoot, libType);
-      
-      if (await utils.fileExists(appDir)) {
-        const appCharts = await fs.readdir(appDir);
-        core.info(`Application charts: ${appCharts.join(', ')}`);
-        
-        for (const chartName of appCharts) {
-          const chartDir = path.join(appDir, chartName);
-          if ((await fs.stat(chartDir)).isDirectory()) {
-            const files = await fs.readdir(chartDir);
-            core.info(`Files in ${chartDir}: ${files.join(', ')}`);
-          }
-        }
-      }
-      
-      if (await utils.fileExists(libDir)) {
-        const libCharts = await fs.readdir(libDir);
-        core.info(`Library charts: ${libCharts.join(', ')}`);
-        
-        for (const chartName of libCharts) {
-          const chartDir = path.join(libDir, chartName);
-          if ((await fs.stat(chartDir)).isDirectory()) {
-            const files = await fs.readdir(chartDir);
-            core.info(`Files in ${chartDir}: ${files.join(', ')}`);
-          }
-        }
-      }
-    } catch (error) {
-      core.error(`Directory structure debug failed: ${error.message}`);
-    }
-    // DEBUG END - REMOVE AFTER DEBUGGING
-    
     core.info('Successfully generated charts index');
   } catch (error) {
     utils.handleError(error, core, 'generate charts index', false);
@@ -427,7 +362,13 @@ async function _generateChartRelease({
     const Handlebars = utils.registerHandlebarsHelpers(repoUrl);
     const template = Handlebars.compile(templateContent);
     const chartSources = chartMetadata.sources || [];
-    const issues = await api.getReleaseIssues({ github, context, core, chartType, chartName });
+    const issues = await api.getReleaseIssues({
+      github,
+      context,
+      core,
+      chartType,
+      chartName
+    });
     const templateContext = {
       AppVersion: chartMetadata.appVersion || '',
       Branch: context.payload.repository.default_branch,
@@ -552,16 +493,12 @@ async function _generateFrontpage({
  * 
  * @private
  * @param {Object} params - Function parameters
- * @param {Object} params.github - GitHub API client for making API calls
- * @param {Object} params.context - GitHub Actions context containing repository information
  * @param {Object} params.core - GitHub Actions Core API for logging and output
  * @param {Object} params.exec - GitHub Actions exec helpers for running commands
  * @param {string} params.packagesPath - Directory containing packaged chart .tgz files
  * @returns {Promise<void>}
  */
 async function _processOciReleases({
-  github,
-  context,
   core,
   exec,
   packagesPath
@@ -572,8 +509,23 @@ async function _processOciReleases({
       core.info('OCI publishing is disabled');
       return;
     }
-    const files = await fs.readdir(packagesPath);
-    const packages = files.filter(file => file.endsWith('.tgz'));
+    const appType = config('repository').chart.type.application;
+    const libType = config('repository').chart.type.library;
+    const appPackagesDir = path.join(packagesPath, appType);
+    const libPackagesDir = path.join(packagesPath, libType);
+    let packages = [];
+    if (await utils.fileExists(appPackagesDir)) {
+      const appFiles = await fs.readdir(appPackagesDir);
+      packages.push(...appFiles
+        .filter(file => file.endsWith('.tgz'))
+        .map(file => ({ file, dir: appPackagesDir })));
+    }
+    if (await utils.fileExists(libPackagesDir)) {
+      const libFiles = await fs.readdir(libPackagesDir);
+      packages.push(...libFiles
+        .filter(file => file.endsWith('.tgz'))
+        .map(file => ({ file, dir: libPackagesDir })));
+    }
     if (!packages.length) {
       core.info('No chart packages found for OCI publishing');
       return;
@@ -581,13 +533,13 @@ async function _processOciReleases({
     const word = packages.length === 1 ? 'package' : 'packages'
     core.info(`Publishing ${packages.length} chart ${word} to '${ociRegistry}' OCI registry...`);
     for (const pkg of packages) {
-      const chartPath = path.join(packagesPath, pkg);
+      const chartPath = path.join(pkg.dir, pkg.file);
       try {
-        core.info(`Pushing '${pkg}' to OCI registry...`);
+        core.info(`Pushing '${pkg.file}' to OCI registry...`);
         await exec.exec('helm', ['push', chartPath, `oci://${ociRegistry}`]);
-        core.info(`Successfully pushed '${pkg}' to OCI registry`);
+        core.info(`Successfully pushed '${pkg.file}' to OCI registry`);
       } catch (error) {
-        utils.handleError(error, core, `push '${pkg}' to OCI registry`, false);
+        utils.handleError(error, core, `push '${pkg.file}' to OCI registry`, false);
       }
     }
     core.info('Successfully completed OCI chart publishing');
@@ -633,9 +585,13 @@ async function processReleases({
       core.info('No new charts releases found');
       return;
     }
-    const releasePackages = './.cr-release-packages';
+    const releasePackages = config('release').packages;
     core.info(`Creating ${releasePackages} directory...`);
     await fs.mkdir(releasePackages, { recursive: true });
+    const appPackagesDir = path.join(releasePackages, appChartType);
+    const libPackagesDir = path.join(releasePackages, libChartType);
+    await fs.mkdir(appPackagesDir, { recursive: true });
+    await fs.mkdir(libPackagesDir, { recursive: true });
     core.info(`Successfully created ${releasePackages} directory`);
     const chartDirs = [...charts.application, ...charts.library];
     await Promise.all(chartDirs.map(async (chartDir) => {
@@ -643,13 +599,20 @@ async function processReleases({
         core.info(`Packaging '${chartDir}' chart...`);
         core.info(`Updating dependencies for '${chartDir}' chart...`);
         await exec.exec('helm', ['dependency', 'update', chartDir]);
-        await exec.exec('helm', ['package', chartDir, '--destination', releasePackages]);
+        const isAppChartType = chartDir.startsWith(appChartType);
+        const packageDest = isAppChartType ? appPackagesDir : libPackagesDir;
+        await exec.exec('helm', ['package', chartDir, '--destination', packageDest]);
       } catch (error) {
         utils.handleError(error, core, `package ${chartDir} chart`, false);
       }
     }));
     core.info(`Successfully packaged ${chartDirs.length} charts`);
-    await _createChartReleases({ github, context, core, packagesPath: releasePackages });
+    await _createChartReleases({
+      github,
+      context,
+      core,
+      packagesPath: releasePackages
+    });
     const repoUrl = config('repository').url;
     await _generateChartsIndex({
       github,
@@ -678,8 +641,6 @@ async function processReleases({
         return;
       }
       await _processOciReleases({
-        github,
-        context,
         core,
         exec,
         packagesPath: releasePackages
@@ -718,85 +679,10 @@ async function setupBuildEnvironment({
   core
 }) {
   core.info(`Setting up build environment for '${config('release').deployment}' deployment`);
-  
-  // DEBUG START - REMOVE AFTER DEBUGGING
-  core.info(`DEBUG: Current working directory: ${process.cwd()}`);
-  core.info(`DEBUG: Listing directory contents before Jekyll processing:`);
-  try {
-    const dirContents = await fs.readdir('.');
-    core.info(`DEBUG: Root directory contains: ${dirContents.join(', ')}`);
-    
-    const appDir = config('repository').chart.type.application;
-    const libDir = config('repository').chart.type.library;
-    
-    if (await utils.fileExists(appDir)) {
-      const appCharts = await fs.readdir(appDir);
-      core.info(`DEBUG: ${appDir} directory contains: ${appCharts.join(', ')}`);
-      
-      for (const chartName of appCharts) {
-        const chartDir = path.join(appDir, chartName);
-        if ((await fs.stat(chartDir)).isDirectory()) {
-          const indexPath = path.join(chartDir, 'index.yaml');
-          if (await utils.fileExists(indexPath)) {
-            const stats = await fs.stat(indexPath);
-            core.info(`DEBUG: ${indexPath} exists with size ${stats.size} bytes and permissions ${stats.mode.toString(8)}`);
-            
-            // Read and log the index.yaml content
-            try {
-              const indexContent = await fs.readFile(indexPath, 'utf8');
-              core.info(`DEBUG: Index.yaml content for ${chartName}:\n${indexContent}`);
-            } catch (readError) {
-              core.error(`DEBUG: Error reading index.yaml content for ${chartName}: ${readError.message}`);
-            }
-          } else {
-            core.info(`DEBUG: ${indexPath} does not exist`);
-          }
-        }
-      }
-    }
-    
-    if (await utils.fileExists(libDir)) {
-      const libCharts = await fs.readdir(libDir);
-      core.info(`DEBUG: ${libDir} directory contains: ${libCharts.join(', ')}`);
-      
-      for (const chartName of libCharts) {
-        const chartDir = path.join(libDir, chartName);
-        if ((await fs.stat(chartDir)).isDirectory()) {
-          const indexPath = path.join(chartDir, 'index.yaml');
-          if (await utils.fileExists(indexPath)) {
-            const stats = await fs.stat(indexPath);
-            core.info(`DEBUG: ${indexPath} exists with size ${stats.size} bytes and permissions ${stats.mode.toString(8)}`);
-            
-            // Read and log the index.yaml content
-            try {
-              const indexContent = await fs.readFile(indexPath, 'utf8');
-              core.info(`DEBUG: Index.yaml content for ${chartName}:\n${indexContent}`);
-            } catch (readError) {
-              core.error(`DEBUG: Error reading index.yaml content for ${chartName}: ${readError.message}`);
-            }
-          } else {
-            core.info(`DEBUG: ${indexPath} does not exist`);
-          }
-        }
-      }
-    }
-  } catch (error) {
-    core.error(`DEBUG: Error listing directories: ${error.message}`);
-  }
-  // DEBUG END - REMOVE AFTER DEBUGGING
   await _generateFrontpage({ context, core });
   try {
     core.info(`Copying Jekyll theme config to ./_config.yml...`);
     await fs.copyFile(config('theme').configuration.file, './_config.yml');
-    
-    // DEBUG START - REMOVE AFTER DEBUGGING
-    try {
-      const configContent = await fs.readFile('./_config.yml', 'utf8');
-      core.info(`DEBUG: _config.yml content:\n${configContent}`);
-    } catch (readError) {
-      core.error(`DEBUG: Error reading _config.yml: ${readError.message}`);
-    }
-    // DEBUG END - REMOVE AFTER DEBUGGING
   } catch (error) {
     utils.handleError(error, core, 'copy Jekyll theme config');
   }
@@ -814,58 +700,9 @@ async function setupBuildEnvironment({
   } catch (error) {
     utils.handleError(error, core, 'copy Jekyll theme custom layout content', false);
   }
-  try {
-    const readmePath = './README.md';
-    if (await utils.fileExists(readmePath)) {
-      core.info(`Removing README.md file from root...`);
-      await fs.unlink(readmePath);
-    }
-  } catch (error) {
-    utils.handleError(error, core, 'remove README.md file');
-  }
   const private = context.payload.repository.private === true;
   const publish = !private && config('release').deployment === 'production';
   core.setOutput('publish', publish);
-  
-  // DEBUG START - REMOVE AFTER DEBUGGING
-  core.info(`DEBUG: Final state before Jekyll processing`);
-  core.info(`DEBUG: publish output value set to: ${publish}`);
-  try {
-    const finalDirContents = await fs.readdir('.');
-    core.info(`DEBUG: Final root directory contains: ${finalDirContents.join(', ')}`);
-    
-    const appDir = config('repository').chart.type.application;
-    const libDir = config('repository').chart.type.library;
-    
-    if (await utils.fileExists(appDir)) {
-      const appCharts = await fs.readdir(appDir);
-      
-      for (const chartName of appCharts) {
-        const chartDir = path.join(appDir, chartName);
-        if ((await fs.stat(chartDir)).isDirectory()) {
-          const indexPath = path.join(chartDir, 'index.yaml');
-          if (await utils.fileExists(indexPath)) {
-            const stats = await fs.stat(indexPath);
-            core.info(`DEBUG: Final check - ${indexPath} exists with size ${stats.size} bytes`);
-            
-            // Read and log the index.yaml content
-            try {
-              const indexContent = await fs.readFile(indexPath, 'utf8');
-              core.info(`DEBUG: Final index.yaml content for ${chartName}:\n${indexContent}`);
-            } catch (readError) {
-              core.error(`DEBUG: Error reading final index.yaml content for ${chartName}: ${readError.message}`);
-            }
-          } else {
-            core.info(`DEBUG: Final check - ${indexPath} does not exist`);
-          }
-        }
-      }
-    }
-  } catch (error) {
-    core.error(`DEBUG: Error in final state check: ${error.message}`);
-  }
-  // DEBUG END - REMOVE AFTER DEBUGGING
-  
   core.info(`Successfully completed setup for '${config('release').deployment}' deployment`);
 }
 
