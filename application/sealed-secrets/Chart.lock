@@ -1,6 +1,9 @@
 dependencies:
+- name: common
+  repository: https://axivo.github.io/charts/library/common
+  version: 1.0.0
 - name: sealed-secrets
   repository: https://bitnami-labs.github.io/sealed-secrets
   version: 2.17.2
-digest: sha256:8854980ded5007f9e4d22e8e0d1ebecfa9d9003633f0437313a93367e639d260
-generated: "2025-04-30T20:29:36.409965338Z"
+digest: sha256:8e5f6c37185e799d3cb16379a2f2b427a6661bb50c5e47a2a0fa3f99182e0897
+generated: "2025-05-01T02:50:39.220562964Z"

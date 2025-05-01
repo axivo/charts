@@ -1,0 +1,6 @@
+dependencies:
+- name: common
+  repository: https://axivo.github.io/charts/library/common
+  version: 1.0.0
+digest: sha256:83576dacf8fba934adaa4703c4a228247ccb978254cdaee8835de0db1dfc8a9a
+generated: "2025-05-01T02:50:39.21466889Z"
