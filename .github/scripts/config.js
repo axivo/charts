@@ -416,6 +416,16 @@ const CONFIG = {
        */
       icon: 'icon.png',
 
+      redirect: {
+        /**
+         * Path to the Handlebars template for chart redirection
+         * 
+         * @type {string}
+         * @default '.github/templates/redirect.html.hbs'
+         */
+        template: '.github/templates/redirect.html.hbs'
+      },
+
       /**
        * Directory names for different chart categories
        * 
