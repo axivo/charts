@@ -255,17 +255,20 @@ async function _generateChartsIndex({
       core
     });
     core.info(`Found ${allReleases.length} releases`);
+    core.info(`Debug: distRoot=${distRoot}, chartDirs=${JSON.stringify(chartDirs)}`);
     await Promise.all(chartDirs.map(async (chartDir) => {
       try {
         const chartName = path.basename(chartDir);
         const chartType = charts.application.includes(chartDir) ? appType : libType;
         const chartOutputDir = path.join(distRoot, chartType, chartName);
+        core.info(`Debug: Processing chart=${chartName}, type=${chartType}, outputDir=${chartOutputDir}`);
         await fs.mkdir(chartOutputDir, { recursive: true });
         const titlePrefix = config('release').title
           .replace('{{ .Name }}', chartName)
           .replace('{{ .Version }}', '');
         const chartReleases = allReleases.filter(release => release.tag_name.startsWith(titlePrefix));
         core.info(`Found ${chartReleases.length} releases for '${chartType}/${chartName}' chart`);
+        core.info(`Debug: titlePrefix=${titlePrefix}, chartReleases=${JSON.stringify(chartReleases.map(r => r.tag_name))}`);
         if (!chartReleases.length) {
           core.info(`No releases found for '${chartType}/${chartName}' chart, skipping index generation`);
           return;
@@ -273,17 +276,23 @@ async function _generateChartsIndex({
         const indexPath = path.join(chartOutputDir, 'index.yaml');
         for (const release of chartReleases) {
           const asset = release.assets.find(a => a.content_type === 'application/x-gzip');
+          core.info(`Debug: Release ${release.tag_name}, asset exists: ${!!asset}`);
           if (asset) {
             const url = asset.browser_download_url;
-            const baseUrl = [context.payload.repository.html_url, 'releases', 'download', asset.tag_name].join('/');
+            const baseUrl = [context.payload.repository.html_url, 'releases', 'download', release.tag_name].join('/');
+            core.info(`Debug: baseUrl=${baseUrl}, url=${url}`);
             const exists = await utils.fileExists(indexPath);
+            core.info(`Debug: indexPath=${indexPath}, exists=${exists}`);
             const chartFile = path.join(chartOutputDir, path.basename(url));
             const releasePackages = config('release').packages;
             const packagedFile = path.join(releasePackages, chartType, path.basename(url));
+            core.info(`Debug: chartFile=${chartFile}, packagedFile=${packagedFile}`);
             if (await utils.fileExists(packagedFile)) {
               await fs.copyFile(packagedFile, chartFile);
+              core.info(`Debug: Copied packagedFile to chartFile`);
             } else {
               await exec.exec('curl', ['-sSL', url, '-o', chartFile]);
+              core.info(`Debug: Downloaded url to chartFile`);
             }
             const outputFile = path.join(chartOutputDir, 'index.yaml');
             try {
@@ -291,16 +300,25 @@ async function _generateChartsIndex({
               if (exists) {
                 cmdArgs.push('--merge', indexPath);
               }
+              core.info(`Debug: Running helm with args=${JSON.stringify(cmdArgs)}`);
               await exec.exec('helm', cmdArgs);
+              try {
+                const indexContent = await fs.readFile(outputFile, 'utf8');
+                core.info(`Debug: Index file content (first 200 chars): ${indexContent.substring(0, 200)}`);
+              } catch (readErr) {
+                core.error(`Debug: Failed to read index file: ${readErr.message}`);
+              }
               await fs.access(outputFile);
               core.info(`Successfully created index file at ${outputFile}`);
               await fs.unlink(chartFile);
+              core.info(`Debug: Removed temporary chartFile`);
             } catch (indexError) {
               core.error(`Failed to generate index file: ${indexError.message}`);
             }
           }
         }
-        core.info(` Successfully generated '${chartType}/${chartName}' index`);
+        core.info(`Debug: Final check - indexPath=${indexPath}, exists=${await utils.fileExists(indexPath)}`);
+        core.info(`Successfully generated '${chartType}/${chartName}' index`);
       } catch (error) {
         utils.handleError(error, core, `generate '${chartType}/${chartName}' index`, false);
       }
