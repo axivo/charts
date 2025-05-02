@@ -137,7 +137,14 @@ async function _updateAppFiles({
     if (appFiles.length > 0) {
       const word = appFiles.length === 1 ? 'file' : 'files'
       core.info(`Successfully updated ${appFiles.length} application ${word}`);
-      await _performGitCommit({ github, context, core, exec, files: appFiles, type: `application ${word}` });
+      await _performGitCommit({
+        github,
+        context,
+        core,
+        exec,
+        files: appFiles,
+        type: `application ${word}`
+      });
     }
   } catch (error) {
     utils.handleError(error, core, 'update application files', false);
@@ -152,8 +159,13 @@ async function _updateAppFiles({
  * 1. Iterating through all application and library charts
  * 2. Calculating a hash of the existing lock file (if any) for change detection
  * 3. Running 'helm dependency update' to refresh dependencies for each chart
- * 4. Calculating a hash of the updated lock file to detect if changes occurred
+ * 4. Detecting if a Chart.lock file was created, updated, or deleted
  * 5. Adding changed lock files to a list for commit
+ * 
+ * The function handles three scenarios:
+ * - When dependencies are added: Chart.lock is created and committed
+ * - When dependencies are modified: Chart.lock is updated and committed
+ * - When dependencies are removed: Chart.lock deletion is tracked and committed
  * 
  * After processing all charts, it commits the changed lock files using _performGitCommit().
  * This ensures that all charts reference the correct and up-to-date dependency versions,
@@ -176,34 +188,47 @@ async function _updateLockFiles({
   charts
 }) {
   try {
+    core.info('Updating dependency lock files...');
     const lockFiles = [];
     const chartDirs = [...charts.application, ...charts.library];
     await Promise.all(chartDirs.map(async (chartDir) => {
       try {
-        const lockFilePath = path.join(chartDir, 'Chart.lock');
         let originalLockHash = null;
-        if (await utils.fileExists(lockFilePath)) {
+        const lockFilePath = path.join(chartDir, 'Chart.lock');
+        const originalExists = await utils.fileExists(lockFilePath);
+        if (originalExists) {
           const originalContent = await fs.readFile(lockFilePath);
           originalLockHash = crypto.createHash('sha256').update(originalContent).digest('hex');
         }
         await exec.exec('helm', ['dependency', 'update', chartDir]);
-        if (await utils.fileExists(lockFilePath)) {
+        const newExists = await utils.fileExists(lockFilePath);
+        if (originalExists && !newExists) {
+          lockFiles.push(lockFilePath);
+          core.info(`Successfully removed dependency lock file for '${chartDir}' chart`);
+        }
+        if (newExists) {
           const newContent = await fs.readFile(lockFilePath);
           const newHash = crypto.createHash('sha256').update(newContent).digest('hex');
-          if (originalLockHash !== newHash) {
-            core.info(`Updating dependency lock file for '${chartDir}' chart...`);
+          if (newHash !== originalLockHash) {
             lockFiles.push(lockFilePath);
             core.info(`Successfully updated dependency lock file for '${chartDir}' chart`);
           }
         }
       } catch (error) {
-        utils.handleError(error, core, `update dependency lock file for '${chartDir}' chart`, false);
+        utils.handleError(error, core, `process dependency lock file for '${chartDir}' chart`, false);
       }
     }));
     if (lockFiles.length > 0) {
-      const word = lockFiles.length === 1 ? 'file' : 'files'
-      core.info(`Successfully updated ${lockFiles.length} dependency lock ${word}`);
-      await _performGitCommit({ github, context, core, exec, files: lockFiles, type: `dependency lock ${word}` });
+      const word = lockFiles.length === 1 ? 'file' : 'files';
+      core.info(` Successfully updated ${lockFiles.length} dependency lock ${word}`);
+      await _performGitCommit({
+        github,
+        context,
+        core,
+        exec,
+        files: lockFiles,
+        type: `dependency lock ${word}`
+      });
     }
   } catch (error) {
     utils.handleError(error, core, 'update dependency lock files');
