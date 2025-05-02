@@ -458,7 +458,7 @@ async function _publishChartReleases({
       if (await utils.fileExists(appPackagesDir)) {
         const files = await fs.readdir(appPackagesDir);
         appFiles = files.filter(file => file.endsWith('.tgz'))
-          .map(file => ({ file, type: appType }));
+          .map(file => ({ file: `${appType}.tgz`, type: appType }));
       }
     } catch (error) {
       utils.handleError(error, core, `read application packages directory`, false);
@@ -467,7 +467,7 @@ async function _publishChartReleases({
       if (await utils.fileExists(libPackagesDir)) {
         const files = await fs.readdir(libPackagesDir);
         libFiles = files.filter(file => file.endsWith('.tgz'))
-          .map(file => ({ file, type: libType }));
+          .map(file => ({ file: `${libType}.tgz`, type: libType }));
       }
     } catch (error) {
       utils.handleError(error, core, `read library packages directory`, false);
