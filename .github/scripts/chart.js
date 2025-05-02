@@ -200,7 +200,7 @@ async function _updateLockFiles({
           const originalContent = await fs.readFile(lockFilePath);
           originalLockHash = crypto.createHash('sha256').update(originalContent).digest('hex');
         }
-        await exec.exec('helm', ['dependency', 'build', chartDir]);
+        await exec.exec('helm', ['dependency', 'update', chartDir]);
         const newExists = await utils.fileExists(lockFilePath);
         if (originalExists && !newExists) {
           lockFiles.push(lockFilePath);
