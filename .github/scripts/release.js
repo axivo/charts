@@ -686,7 +686,7 @@ async function processReleases({
       try {
         core.info(`Packaging '${chartDir}' chart...`);
         core.info(`Updating dependencies for '${chartDir}' chart...`);
-        await exec.exec('helm', ['dependency', 'build', chartDir]);
+        await exec.exec('helm', ['dependency', 'update', chartDir]);
         const isAppChartType = chartDir.startsWith(appChartType);
         const packageDest = isAppChartType ? appPackagesDir : libPackagesDir;
         await exec.exec('helm', ['package', chartDir, '--destination', packageDest]);
