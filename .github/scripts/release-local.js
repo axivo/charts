@@ -230,7 +230,7 @@ async function _packageChart({
   try {
     console.log(`Packaging '${chartDir}' chart for local testing...`);
     console.log(`Updating dependencies for '${chartDir}' chart...`);
-    await exec.exec('helm', ['dependency', 'update', chartDir], { silent: true });
+    await exec.exec('helm', ['dependency', 'build', chartDir], { silent: true });
     await exec.exec('helm', ['package', chartDir, '--destination', outputDir], { silent: true });
     return true;
   } catch (error) {

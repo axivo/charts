@@ -458,7 +458,7 @@ async function _publishChartReleases({
       if (await utils.fileExists(appPackagesDir)) {
         const files = await fs.readdir(appPackagesDir);
         appFiles = files.filter(file => file.endsWith('.tgz'))
-          .map(file => ({ file: `${appType}.tgz`, type: appType }));
+          .map(file => ({ file: `${appType}.tgz`, source: file, type: appType }));
       }
     } catch (error) {
       utils.handleError(error, core, `read application packages directory`, false);
@@ -467,7 +467,7 @@ async function _publishChartReleases({
       if (await utils.fileExists(libPackagesDir)) {
         const files = await fs.readdir(libPackagesDir);
         libFiles = files.filter(file => file.endsWith('.tgz'))
-          .map(file => ({ file: `${libType}.tgz`, type: libType }));
+          .map(file => ({ file: `${libType}.tgz`, source: file, type: libType }));
       }
     } catch (error) {
       utils.handleError(error, core, `read library packages directory`, false);
@@ -477,8 +477,8 @@ async function _publishChartReleases({
     core.info(`Preparing ${packages.length} chart ${word} to release...`);
     await Promise.all(packages.map(async (package) => {
       try {
-        const chartPath = path.join(packagesPath, package.type, package.file);
-        const chartNameWithVersion = package.file.replace('.tgz', '');
+        const chartPath = path.join(packagesPath, package.type, package.source);
+        const chartNameWithVersion = package.source.replace('.tgz', '');
         const lastDashIndex = chartNameWithVersion.lastIndexOf('-');
         const chartName = chartNameWithVersion.substring(0, lastDashIndex);
         const chartVersion = chartNameWithVersion.substring(lastDashIndex + 1);
@@ -686,7 +686,7 @@ async function processReleases({
       try {
         core.info(`Packaging '${chartDir}' chart...`);
         core.info(`Updating dependencies for '${chartDir}' chart...`);
-        await exec.exec('helm', ['dependency', 'update', chartDir]);
+        await exec.exec('helm', ['dependency', 'build', chartDir]);
         const isAppChartType = chartDir.startsWith(appChartType);
         const packageDest = isAppChartType ? appPackagesDir : libPackagesDir;
         await exec.exec('helm', ['package', chartDir, '--destination', packageDest]);
