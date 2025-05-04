@@ -30,6 +30,14 @@ $ helm repo add axivo https://axivo.github.io/charts
 $ helm install ubuntu axivo/ubuntu -n kube-system
 ```
 
+### Chart Dependencies
+
+See the chart dependencies, listed below.
+
+| Repository | Name | Version |
+|------------|------|---------|
+| https://axivo.github.io/charts/library/common | common | 1.0.0 |
+
 ### Chart Values
 
 See the chart values, listed below.

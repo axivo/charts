@@ -31,6 +31,15 @@ $ helm repo add axivo https://axivo.github.io/charts
 $ helm install sealed-secrets axivo/sealed-secrets -n kube-system
 ```
 
+### Chart Dependencies
+
+See the chart dependencies, listed below.
+
+| Repository | Name | Version |
+|------------|------|---------|
+| https://axivo.github.io/charts/library/common | common | 1.0.0 |
+| https://bitnami-labs.github.io/sealed-secrets | sealed-secrets | 2.17.2 |
+
 ### Chart Values
 
 See the chart values, listed below.
