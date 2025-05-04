@@ -27,8 +27,8 @@ $ kubectl apply -f application/sealed-secrets/application.yaml
 Alternatively, deploy using Helm directly:
 
 ```shell
-$ helm repo add axivo https://axivo.github.io/charts
-$ helm install sealed-secrets axivo/sealed-secrets -n kube-system
+$ helm repo add sealed-secrets https://axivo.github.io/charts/application/sealed-secrets
+$ helm install sealed-secrets sealed-secrets/sealed-secrets -n kube-system
 ```
 
 ### Chart Dependencies
