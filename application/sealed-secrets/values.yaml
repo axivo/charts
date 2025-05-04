@@ -1,4 +1,3 @@
-# Global values for all charts
 global:
   # -- (string) Global image registry
   # @default -- ""

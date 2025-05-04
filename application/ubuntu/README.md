@@ -26,8 +26,8 @@ $ kubectl apply -f application/ubuntu/application.yaml
 Alternatively, the chart can be deployed using Helm directly:
 
 ```shell
-$ helm repo add axivo https://axivo.github.io/charts
-$ helm install ubuntu axivo/ubuntu -n kube-system
+$ helm repo add ubuntu https://axivo.github.io/charts/application/ubuntu
+$ helm install ubuntu ubuntu/ubuntu -n kube-system
 ```
 
 ### Chart Dependencies

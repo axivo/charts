@@ -26,8 +26,8 @@ $ kubectl apply -f application/{{ template "chart.name" . }}/application.yaml
 Alternatively, the chart can be deployed using Helm directly:
 
 ```shell
-$ helm repo add axivo https://axivo.github.io/charts
-$ helm install {{ template "chart.name" . }} axivo/{{ template "chart.name" . }} -n kube-system
+$ helm repo add {{ template "chart.name" . }} https://axivo.github.io/charts/application/{{ template "chart.name" . }}
+$ helm install {{ template "chart.name" . }} {{ template "chart.name" . }}/{{ template "chart.name" . }} -n kube-system
 ```
 
 ### Chart Dependencies
