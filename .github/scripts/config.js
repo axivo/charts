@@ -36,7 +36,7 @@ const CONFIG = {
      * @see addLabel - Function in utils.js that checks this flag before creating labels
      * @see reportWorkflowIssue - Function in utils.js that uses this setting when creating issues
      */
-    createLabels: false,
+    createLabels: true,
 
     /**
      * Predefined issue label definitions used across the repository
