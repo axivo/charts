@@ -193,26 +193,38 @@ async function _updateLockFiles({
     const chartDirs = [...charts.application, ...charts.library];
     await Promise.all(chartDirs.map(async (chartDir) => {
       try {
-        let originalLockHash = null;
+        let originalHash = null;
+        let removeLockFile = false;
         const lockFilePath = path.join(chartDir, 'Chart.lock');
+        const yamlFilePath = path.join(chartDir, 'Chart.yaml');
         const originalExists = await utils.fileExists(lockFilePath);
         if (originalExists) {
           const originalContent = await fs.readFile(lockFilePath);
-          originalLockHash = crypto.createHash('sha256').update(originalContent).digest('hex');
+          originalHash = crypto.createHash('sha256').update(originalContent).digest('hex');
         }
+        const yamlFile = yaml.load(await fs.readFile(yamlFilePath, 'utf8'));
+        const hasDependencies = yamlFile.dependencies && yamlFile.dependencies.length > 0;
         await exec.exec('helm', ['dependency', 'update', chartDir]);
         const newExists = await utils.fileExists(lockFilePath);
-        if (originalExists && !newExists) {
-          lockFiles.push(lockFilePath);
-          core.info(`Successfully removed dependency lock file for '${chartDir}' chart`);
-        }
-        if (newExists) {
+        if (originalExists && !hasDependencies) {
+          removeLockFile = true;
+          await fs.unlink(lockFilePath);
+        } else if (originalExists && !newExists) {
+          removeLockFile = true;
+        } else if (newExists && originalHash) {
           const newContent = await fs.readFile(lockFilePath);
           const newHash = crypto.createHash('sha256').update(newContent).digest('hex');
-          if (newHash !== originalLockHash) {
+          if (newHash !== originalHash) {
             lockFiles.push(lockFilePath);
             core.info(`Successfully updated dependency lock file for '${chartDir}' chart`);
           }
+        } else {
+          lockFiles.push(lockFilePath);
+          core.info(`Successfully created dependency lock file for '${chartDir}' chart`);
+        }
+        if (removeLockFile) {
+          lockFiles.push(lockFilePath);
+          core.info(`Successfully removed dependency lock file for '${chartDir}' chart`);
         }
       } catch (error) {
         utils.handleError(error, core, `process dependency lock file for '${chartDir}' chart`, false);
@@ -220,7 +232,7 @@ async function _updateLockFiles({
     }));
     if (lockFiles.length > 0) {
       const word = lockFiles.length === 1 ? 'file' : 'files';
-      core.info(` Successfully updated ${lockFiles.length} dependency lock ${word}`);
+      core.info(`Successfully updated ${lockFiles.length} dependency lock ${word}`);
       await _performGitCommit({
         github,
         context,
