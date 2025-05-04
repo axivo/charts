@@ -16,7 +16,7 @@ maintainers:
     url: https://axivo.com
 dependencies:
   - name: common
-    repository: https://axivo.github.io/charts/library/common
+    repository: oci://ghcr.io/axivo/library
     version: 1.0.0
   - name: sealed-secrets
     repository: https://bitnami-labs.github.io/sealed-secrets

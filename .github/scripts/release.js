@@ -577,13 +577,13 @@ async function _publishOciReleases({
       const appFiles = await fs.readdir(appPackagesDir);
       packages.push(...appFiles
         .filter(file => file.endsWith('.tgz'))
-        .map(file => ({ file, dir: appPackagesDir })));
+        .map(file => ({ file: `${appType}.tgz`, source: file, type: appType })));
     }
     if (await utils.fileExists(libPackagesDir)) {
       const libFiles = await fs.readdir(libPackagesDir);
       packages.push(...libFiles
         .filter(file => file.endsWith('.tgz'))
-        .map(file => ({ file, dir: libPackagesDir })));
+        .map(file => ({ file: `${libType}.tgz`, source: file, type: libType })));
     }
     if (!packages.length) {
       core.info('No chart packages found for OCI publishing');
@@ -591,7 +591,7 @@ async function _publishOciReleases({
     }
     const word = packages.length === 1 ? 'package' : 'packages';
     packages = packages.map(package => {
-      const nameVersion = package.file.replace('.tgz', '');
+      const nameVersion = package.source.replace('.tgz', '');
       return { ...package, nameVersion };
     });
     try {
@@ -607,7 +607,7 @@ async function _publishOciReleases({
             core.warning(`Package '${package.nameVersion}' doesn't match the configured pattern format`);
             continue;
           }
-          const fullRef = `${ociRegistry}/${name}:${version}`;
+          const fullRef = [ociRegistry, package.type, [name, version].join(':')].join('/');
           core.info(`Deleting '${fullRef}' OCI package...`);
           await exec.exec('helm', ['registry', 'remove', fullRef]);
           core.info(`Successfully deleted '${fullRef}' OCI package`);
@@ -621,13 +621,19 @@ async function _publishOciReleases({
     }
     core.info(`Publishing ${packages.length} chart ${word} to '${ociRegistry}' OCI registry...`);
     for (const package of packages) {
-      const chartPath = path.join(package.dir, package.file);
+      const chartPath = path.join(package.dir, package.source);
       try {
-        core.info(`Pushing '${package.file}' to OCI registry...`);
-        await exec.exec('helm', ['push', chartPath, `oci://${ociRegistry}`]);
-        core.info(`Successfully pushed '${package.file}' to OCI registry`);
+        core.info(`Pushing '${package.source}' to OCI registry...`);
+        const separator = config('release').title.substring(
+          config('release').title.indexOf('{{ .Name }}') + '{{ .Name }}'.length,
+          config('release').title.indexOf('{{ .Version }}')
+        );
+        const [name, version] = package.nameVersion.split(separator);
+        const fullRef = ['oci:/', ociRegistry, package.type, [name, version].join(':')].join('/');
+        await exec.exec('helm', ['push', chartPath, fullRef]);
+        core.info(`Successfully pushed '${package.source}' to OCI registry`);
       } catch (error) {
-        utils.handleError(error, core, `push '${package.file}' to OCI registry`, false);
+        utils.handleError(error, core, `push '${package.source}' to OCI registry`, false);
       }
     }
     core.info(`Successfully published ${packages.length} OCI ${word}`);

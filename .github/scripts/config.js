@@ -430,14 +430,15 @@ const CONFIG = {
          * Whether traditional packaged chart repository publishing is enabled
          * 
          * When true, charts are published as packaged .tgz files with an index.yaml file,
-         * following the standard Helm repository format. When false, only OCI publishing
-         * occurs (if enabled).
+         * following the standard Helm repository format.
+         * When false, charts are published to the configured OCI registry during
+         * the release process (if enabled).
          * 
          * @type {boolean}
-         * @default true
+         * @default false
          * @see processReleases - Function in release.js that checks this setting
          */
-        enabled: true,
+        enabled: false,
 
         /**
          * Maximum number of versions to retain per chart in the index.yaml file
@@ -527,12 +528,13 @@ const CONFIG = {
        * Whether OCI publishing is enabled
        * 
        * When true, charts are published to the configured OCI registry during the release process.
-       * When false, only the traditional Helm repository publishing occurs.
+       * When false, charts are published as packaged .tgz files with an index.yaml file,
+       * following the standard Helm repository format (if enabled).
        * 
        * @type {boolean}
-       * @default false
+       * @default true
        */
-      enabled: false,
+      enabled: true,
 
       /**
        * OCI registry URL without protocol
