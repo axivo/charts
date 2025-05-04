@@ -1,8 +1,3 @@
-# -- (int) Number of replicas
-# @default -- 1
-replicaCount: 1
-
-# Global values for all charts
 global:
   # -- (string) Global image registry
   # @default -- ""
@@ -30,12 +25,18 @@ image:
   # -- (string) Image tag, defaults to Chart.AppVersion if not set
   # @default -- ""
   tag: ""
+
 # -- (string) Override the chart name
 # @default -- ""
 nameOverride: ""
+
 # -- (string) Override the full name of the chart
 # @default -- ""
 fullnameOverride: ""
+
+# -- (int) Number of replicas
+# @default -- 1
+replicaCount: 1
 
 serviceAccount:
   # -- (bool) Specifies whether a service account should be created
@@ -51,12 +52,15 @@ serviceAccount:
 # -- (map) Annotations to add to the pod
 # @default -- {}
 podAnnotations: {}
+
 # -- (map) Labels to add to the pod
 # @default -- {}
 podLabels: {}
+
 # -- (map) Pod security context
 # @default -- {}
 podSecurityContext: {}
+
 # -- (map) Container security context
 # @default -- {}
 securityContext: {}
@@ -104,15 +108,19 @@ resources:
 # -- (list) Additional volumes for the pod
 # @default -- []
 volumes: []
+
 # -- (list) Additional volume mounts for the container
 # @default -- []
 volumeMounts: []
+
 # -- (map) Node selector for pod assignment
 # @default -- {}
 nodeSelector: {}
+
 # -- (list) Tolerations for pod assignment
 # @default -- []
 tolerations: []
+
 # -- (map) Affinity rules for pod assignment
 # @default -- {}
 affinity: {}

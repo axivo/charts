@@ -4,9 +4,30 @@
   "description": "Schema for the values of the sealed-secrets Helm chart dependency.",
   "type": "object",
   "properties": {
+    "global": {
+      "type": "object",
+      "title": "Global configuration",
+      "properties": {
+        "imageRegistry": {
+          "type": "string",
+          "title": "Global Image Registry",
+          "description": "Global image registry",
+          "default": ""
+        },
+        "imagePullSecrets": {
+          "type": "array",
+          "title": "Global Image Pull Secrets",
+          "description": "Global image pull secrets",
+          "items": {
+            "type": "object"
+          },
+          "default": []
+        }
+      }
+    },
     "sealed-secrets": {
       "type": "object",
-      "title": "Sealed Secrets Configuration",
+      "title": "Sealed Secrets configuration",
       "properties": {
         "fullnameOverride": {
           "type": "string",
@@ -124,8 +145,12 @@
             },
             "minAvailable": {
               "oneOf": [
-                { "type": "integer" },
-                { "type": "string" }
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "string"
+                }
               ],
               "title": "Minimum Available Pods",
               "description": "Minimum number of available pods, mutually exclusive with maxUnavailable",
@@ -133,8 +158,12 @@
             },
             "maxUnavailable": {
               "oneOf": [
-                { "type": "integer" },
-                { "type": "string" }
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "string"
+                }
               ],
               "title": "Maximum Unavailable Pods",
               "description": "Maximum number of unavailable pods, mutually exclusive with minAvailable",
@@ -158,7 +187,8 @@
                   "description": "Memory limit",
                   "default": "128Mi"
                 }
-              }
+              },
+              "additionalProperties": true
             },
             "requests": {
               "type": "object",
@@ -177,11 +207,18 @@
                   "description": "Memory request",
                   "default": "128Mi"
                 }
-              }
+              },
+              "additionalProperties": true
             }
           }
         }
       }
+    },
+    "common": {
+      "type": "object",
+      "title": "Common Library Configuration",
+      "description": "Common library configuration",
+      "additionalProperties": true
     }
   }
 }
