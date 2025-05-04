@@ -30,6 +30,12 @@ $ helm repo add axivo https://axivo.github.io/charts
 $ helm install {{ template "chart.name" . }} axivo/{{ template "chart.name" . }} -n kube-system
 ```
 
+### Chart Dependencies
+
+See the chart dependencies, listed below.
+
+{{ template "chart.requirementsTable" . }}
+
 ### Chart Values
 
 See the chart values, listed below.
