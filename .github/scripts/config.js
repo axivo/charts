@@ -540,12 +540,12 @@ const CONFIG = {
        * OCI registry URL without protocol
        * 
        * The base registry URL where charts will be published using the OCI protocol.
-       * For GitHub Container Registry, this is typically 'ghcr.io/{org-name}'.
+       * For GitHub Container Registry, this is typically 'ghcr.io'.
        * 
        * @type {string}
-       * @default 'ghcr.io/axivo'
+       * @default 'ghcr.io'
        */
-      registry: 'ghcr.io/axivo'
+      registry: 'ghcr.io'
     },
 
     /**
@@ -559,7 +559,52 @@ const CONFIG = {
      * @default 'https://axivo.github.io/charts'
      * @see _generateChartsIndex - Function in release.js that uses this URL in the repository index
      */
-    url: 'https://axivo.github.io/charts'
+    url: 'https://axivo.github.io/charts',
+
+    /**
+     * Git user identity for automated operations
+     * 
+     * Contains the standard user identity used for Git operations in automated 
+     * workflows. This configuration ensures that commits and changes made by
+     * GitHub Actions are properly attributed to the GitHub Actions bot account
+     * rather than to any human user.
+     * 
+     * The GitHub Actions bot is a special system account that can make verified
+     * commits directly through the GitHub API without requiring personal access
+     * tokens. Using this identity ensures all automated commits are clearly
+     * distinguishable from human commits in the repository history.
+     * 
+     * @type {Object}
+     * @see configureGitRepository - Function in utils.js that applies this identity to Git operations
+     * @see _processOciReleases - Function in release.js that uses this identity for authentication
+     */
+    user: {
+      /**
+       * Email address for the GitHub Actions bot
+       * 
+       * Standard email address for the GitHub Actions bot account.
+       * This email is automatically recognized by GitHub as belonging
+       * to the Actions system account, which allows commits to be
+       * properly verified in the GitHub interface.
+       * 
+       * @type {string}
+       * @default '41898282+github-actions[bot]@users.noreply.github.com'
+       */
+      email: '41898282+github-actions[bot]@users.noreply.github.com',
+
+      /**
+       * Username for the GitHub Actions bot
+       * 
+       * Standard username for the GitHub Actions bot account.
+       * This username is displayed as the author/committer in Git commit
+       * history and in the GitHub interface, making it clear which changes
+       * were made by automated processes.
+       * 
+       * @type {string}
+       * @default 'github-actions[bot]'
+       */
+      name: 'github-actions[bot]'
+    }
   },
 
   /**

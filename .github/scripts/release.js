@@ -533,16 +533,16 @@ async function _publishChartReleases({
  * 
  * @private
  * @param {Object} params - Function parameters
+ * @param {Object} params.context - GitHub Actions context containing repository information
  * @param {Object} params.core - GitHub Actions Core API for logging and output
  * @param {Object} params.exec - GitHub Actions exec helpers for running commands
- * @param {Object} params.context - GitHub Actions context containing repository information
  * @param {string} params.packagesPath - Directory containing packaged chart .tgz files
  * @returns {Promise<void>}
  */
 async function _publishOciReleases({
+  context,
   core,
   exec,
-  context,
   packagesPath
 }) {
   try {
@@ -559,10 +559,12 @@ async function _publishOciReleases({
         'login',
         ociRegistry,
         '--username',
-        context.actor,
-        '--password',
-        token
-      ]);
+        context.repo.owner,
+        '--password-stdin'
+      ], {
+        input: Buffer.from(token),
+        silent: true
+      });
       core.info('Successfully authenticated with OCI registry');
     } catch (authError) {
       utils.handleError(authError, core, 'authenticate with OCI registry', false);
@@ -719,9 +721,9 @@ async function processReleases({
     }
     if (config('repository').oci.enabled) {
       await _publishOciReleases({
+        context,
         core,
         exec,
-        context,
         packagesPath: releasePackages
       });
     }
