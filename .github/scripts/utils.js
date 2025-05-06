@@ -103,8 +103,8 @@ async function configureGitRepository({
   try {
     core.info('Configuring Git repository...');
     await Promise.all([
-      runGit(['config', 'user.name', 'github-actions[bot]']),
-      runGit(['config', 'user.email', '41898282+github-actions[bot]@users.noreply.github.com'])
+      runGit(['config', 'user.email', config('repository').user.email]),
+      runGit(['config', 'user.name', config('repository').user.name])
     ]);
     core.info('Git repository configured with GitHub Actions bot identity');
     return runGit;
@@ -112,8 +112,6 @@ async function configureGitRepository({
     handleError(error, core, 'configure Git repository');
   }
 }
-
-
 
 /**
  * Checks if a file exists in the filesystem
