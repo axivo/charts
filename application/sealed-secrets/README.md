@@ -37,7 +37,6 @@ See the chart dependencies, listed below.
 | Repository | Name | Version |
 |------------|------|---------|
 | https://bitnami-labs.github.io/sealed-secrets | sealed-secrets | 2.17.2 |
-| oci://ghcr.io/axivo/library | common | 1.0.0 |
 
 ### Chart Values
 
