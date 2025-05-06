@@ -47,14 +47,7 @@ const utils = require('./utils');
  * @param {string} params.type - Type of files being committed (for log messages)
  * @returns {Promise<void>}
  */
-async function _performGitCommit({
-  github,
-  context,
-  core,
-  exec,
-  files,
-  type
-}) {
+async function _performGitCommit({ github, context, core, exec, files, type }) {
   try {
     const runGit = async (args) => (await exec.getExecOutput('git', args)).stdout.trim();
     const headRef = process.env.GITHUB_HEAD_REF;
@@ -66,10 +59,13 @@ async function _performGitCommit({
     if (additions.length + deletions.length > 0) {
       const currentHead = await runGit(['rev-parse', 'HEAD']);
       await api.createSignedCommit({
-        github, context, core,
+        github,
+        context,
+        core,
         branchName: headRef,
         expectedHeadOid: currentHead,
-        additions, deletions,
+        additions,
+        deletions,
         commitMessage: `chore(github-action): update ${type}`
       });
       core.info(`Successfully committed ${type}`);
@@ -104,13 +100,7 @@ async function _performGitCommit({
  * @param {Object} params.charts - Object containing application and library chart paths
  * @returns {Promise<string[]>} - Array of updated application file paths
  */
-async function _updateAppFiles({
-  github,
-  context,
-  core,
-  exec,
-  charts
-}) {
+async function _updateAppFiles({ github, context, core, exec, charts }) {
   try {
     core.info('Updating application files with chart versions...');
     const appFiles = [];
@@ -128,23 +118,16 @@ async function _updateAppFiles({
         if (appConfig.spec.source.targetRevision === tagName) return;
         appConfig.spec.source.targetRevision = tagName;
         await fs.writeFile(appYamlPath, yaml.dump(appConfig, { lineWidth: -1 }), 'utf8');
-        core.info(`Successfully updated '${tagName}' target revision in ${appYamlPath}`);
         appFiles.push(appYamlPath);
+        core.info(`Successfully updated '${tagName}' target revision in ${appYamlPath}`);
       } catch (error) {
         utils.handleError(error, core, `update application file for ${chartName}`, false);
       }
     }));
     if (appFiles.length > 0) {
       const word = appFiles.length === 1 ? 'file' : 'files'
+      await _performGitCommit({ github, context, core, exec, files: appFiles, type: `application ${word}` });
       core.info(`Successfully updated ${appFiles.length} application ${word}`);
-      await _performGitCommit({
-        github,
-        context,
-        core,
-        exec,
-        files: appFiles,
-        type: `application ${word}`
-      });
     }
   } catch (error) {
     utils.handleError(error, core, 'update application files', false);
@@ -180,51 +163,26 @@ async function _updateAppFiles({
  * @param {Object} params.charts - Object containing application and library chart paths
  * @returns {Promise<void>}
  */
-async function _updateLockFiles({
-  github,
-  context,
-  core,
-  exec,
-  charts
-}) {
+async function _updateLockFiles({ github, context, core, exec, charts }) {
   try {
     core.info('Updating dependency lock files...');
     const lockFiles = [];
     const chartDirs = [...charts.application, ...charts.library];
     await Promise.all(chartDirs.map(async (chartDir) => {
       try {
-        let originalHash = null;
-        let removeLockFile = false;
         const lockFilePath = path.join(chartDir, 'Chart.lock');
         const yamlFilePath = path.join(chartDir, 'Chart.yaml');
-        const originalExists = await utils.fileExists(lockFilePath);
-        if (originalExists) {
-          const originalContent = await fs.readFile(lockFilePath);
-          originalHash = crypto.createHash('sha256').update(originalContent).digest('hex');
-        }
         const yamlFile = yaml.load(await fs.readFile(yamlFilePath, 'utf8'));
-        const hasDependencies = yamlFile.dependencies && yamlFile.dependencies.length > 0;
-        await exec.exec('helm', ['dependency', 'update', chartDir]);
-        const newExists = await utils.fileExists(lockFilePath);
-        if (originalExists && !hasDependencies) {
-          removeLockFile = true;
-          await fs.unlink(lockFilePath);
-        } else if (originalExists && !newExists) {
-          removeLockFile = true;
-        } else if (newExists && originalHash) {
-          const newContent = await fs.readFile(lockFilePath);
-          const newHash = crypto.createHash('sha256').update(newContent).digest('hex');
-          if (newHash !== originalHash) {
-            lockFiles.push(lockFilePath);
-            core.info(`Successfully updated dependency lock file for '${chartDir}' chart`);
-          }
+        if (yamlFile.dependencies && yamlFile.dependencies.length > 0) {
+          await exec.exec('helm', ['dependency', 'update', chartDir]);
+          lockFiles.push(lockFilePath);
+          core.info(`Successfully updated dependency lock file for '${chartDir}' chart`);
         } else {
-          lockFiles.push(lockFilePath);
-          core.info(`Successfully created dependency lock file for '${chartDir}' chart`);
-        }
-        if (removeLockFile) {
-          lockFiles.push(lockFilePath);
-          core.info(`Successfully removed dependency lock file for '${chartDir}' chart`);
+          if (await utils.fileExists(lockFilePath)) {
+            await fs.unlink(lockFilePath);
+            lockFiles.push(lockFilePath);
+            core.info(`Successfully removed dependency lock file for '${chartDir}' chart`);
+          }
         }
       } catch (error) {
         utils.handleError(error, core, `process dependency lock file for '${chartDir}' chart`, false);
@@ -232,15 +190,8 @@ async function _updateLockFiles({
     }));
     if (lockFiles.length > 0) {
       const word = lockFiles.length === 1 ? 'file' : 'files';
+      await _performGitCommit({ github, context, core, exec, files: lockFiles, type: `dependency lock ${word}` });
       core.info(`Successfully updated ${lockFiles.length} dependency lock ${word}`);
-      await _performGitCommit({
-        github,
-        context,
-        core,
-        exec,
-        files: lockFiles,
-        type: `dependency lock ${word}`
-      });
     }
   } catch (error) {
     utils.handleError(error, core, 'update dependency lock files');
@@ -271,23 +222,13 @@ async function _updateLockFiles({
  * @param {Object} params.exec - GitHub Actions exec helpers for running commands
  * @returns {Promise<void>}
  */
-async function updateCharts({
-  github,
-  context,
-  core,
-  exec
-}) {
+async function updateCharts({ github, context, core, exec }) {
   let conclusion = 'success';
   try {
     const appChartType = config('repository').chart.type.application;
     const libChartType = config('repository').chart.type.library;
     const files = await api.getUpdatedFiles({ github, context, core });
-    const updatedCharts = await utils.findCharts({
-      core,
-      appDir: appChartType,
-      libDir: libChartType,
-      files
-    });
+    const updatedCharts = await utils.findCharts({ core, appDir: appChartType, libDir: libChartType, files });
     let updatedChartDirs = [];
     if (updatedCharts.application.length + updatedCharts.library.length > 0) {
       const allUpdatedCharts = [...updatedCharts.application, ...updatedCharts.library];
