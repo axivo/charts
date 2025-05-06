@@ -15,7 +15,7 @@ The library can be included as dependency, into `Chart.yaml` file:
 ```yaml
 dependencies:
   - name: common
-    repository: https://axivo.github.io/charts
+    repository: oci://ghcr.io/axivo/library
     version: 1.0.0
 ```
 
