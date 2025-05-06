@@ -559,7 +559,7 @@ async function _publishOciReleases({
         'registry',
         'login',
         ociRegistry,
-        '-u',
+        '--username',
         context.repo.owner,
         '--password-stdin'
       ], {
