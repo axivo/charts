@@ -135,24 +135,13 @@ async function _buildChartRelease({
  * @param {Object} params.charts - Object containing application and library chart paths to process
  * @returns {Promise<void>}
  */
-async function _generateChartsIndex({
-  github,
-  context,
-  core,
-  exec,
-  distRoot,
-  charts
-}) {
+async function _generateChartsIndex({ github, context, core, exec, distRoot, charts }) {
   try {
     core.info('Fetching all repository releases...');
     const appType = config('repository').chart.type.application;
     const libType = config('repository').chart.type.library;
     const chartDirs = [...charts.application, ...charts.library];
-    const allReleases = await api.getReleases({
-      github,
-      context,
-      core
-    });
+    const allReleases = await api.getReleases({ github, context, core });
     await Promise.all(chartDirs.map(async (chartDir) => {
       try {
         const chartName = path.basename(chartDir);
@@ -292,13 +281,7 @@ async function _generateChartRelease({
     const Handlebars = utils.registerHandlebarsHelpers(repoUrl);
     const template = Handlebars.compile(templateContent);
     const chartSources = chartMetadata.sources || [];
-    const issues = await api.getReleaseIssues({
-      github,
-      context,
-      core,
-      chartType,
-      chartName
-    });
+    const issues = await api.getReleaseIssues({ github, context, core, chartType, chartName });
     const templateContext = {
       AppVersion: chartMetadata.appVersion || '',
       Branch: context.payload.repository.default_branch,
@@ -345,18 +328,11 @@ async function _generateChartRelease({
  * @param {Object} params.core - GitHub Actions Core API for logging and output
  * @returns {Promise<boolean>} - True if successfully generated, false otherwise
  */
-async function _generateFrontpage({
-  context,
-  core
-}) {
+async function _generateFrontpage({ context, core }) {
   try {
     const appDir = config('repository').chart.type.application;
     const libDir = config('repository').chart.type.library;
-    const chartDirs = await utils.findCharts({
-      core,
-      appDir,
-      libDir
-    });
+    const chartDirs = await utils.findCharts({ core, appDir, libDir });
     const chartEntries = {};
     const allChartDirs = [...chartDirs.application, ...chartDirs.library];
     await Promise.all(allChartDirs.map(async (chartDir) => {
@@ -441,12 +417,7 @@ async function _generateFrontpage({
  * @param {string} params.packagesPath - Directory containing packaged chart .tgz files
  * @returns {Promise<void>}
  */
-async function _publishChartReleases({
-  github,
-  context,
-  core,
-  packagesPath
-}) {
+async function _publishChartReleases({ github, context, core, packagesPath }) {
   try {
     const appType = config('repository').chart.type.application;
     const libType = config('repository').chart.type.library;
