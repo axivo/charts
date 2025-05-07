@@ -533,7 +533,6 @@ async function _publishChartReleases({
  * 
  * @private
  * @param {Object} params - Function parameters
- * @param {Object} params.github - GitHub API client for making API calls
  * @param {Object} params.context - GitHub Actions context containing repository information
  * @param {Object} params.core - GitHub Actions Core API for logging and output
  * @param {Object} params.exec - GitHub Actions exec helpers for running commands
@@ -541,7 +540,6 @@ async function _publishChartReleases({
  * @returns {Promise<void>}
  */
 async function _publishOciReleases({
-  github,
   context,
   core,
   exec,
@@ -563,7 +561,7 @@ async function _publishOciReleases({
         context.repo.owner,
         '--password-stdin'
       ], {
-        input: Buffer.from(github.token),
+        input: Buffer.from(process.env.GITHUB_TOKEN),
         silent: true
       });
       core.info('Successfully authenticated with OCI registry');
@@ -722,7 +720,6 @@ async function processReleases({
     }
     if (config('repository').oci.enabled) {
       await _publishOciReleases({
-        github,
         context,
         core,
         exec,
