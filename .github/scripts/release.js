@@ -511,6 +511,7 @@ async function _publishChartReleases({ github, context, core, packagesPath }) {
  * @returns {Promise<void>}
  */
 async function _publishOciReleases({
+  github,
   context,
   core,
   exec,
@@ -528,6 +529,42 @@ async function _publishOciReleases({
       core.info('Debug: Checking available token sources');
       core.info(`Debug: process.env.GITHUB_TOKEN defined: ${!!process.env.GITHUB_TOKEN}`);
       core.info(`Debug: process.env.GITHUB_TOKEN type: ${typeof process.env.GITHUB_TOKEN}`);
+      
+      // Check for tokens at all possible locations
+      
+      // 1. Check for tokens in github object (including non-enumerable properties)
+      if (github) {
+        const githubProto = Object.getPrototypeOf(github);
+        core.info(`Debug: github prototype properties: ${Object.getOwnPropertyNames(githubProto).join(', ')}`);
+        
+        const allGithubProps = [...Object.getOwnPropertyNames(github), ...Object.getOwnPropertyNames(githubProto)];
+        const tokenProps = allGithubProps.filter(prop => prop.toLowerCase().includes('token'));
+        if (tokenProps.length > 0) {
+          core.info(`Debug: token-related properties on github object: ${tokenProps.join(', ')}`);
+        }
+      }
+      
+      // 2. Check non-enumerable properties on context
+      const contextProto = Object.getPrototypeOf(context);
+      core.info(`Debug: context prototype properties: ${Object.getOwnPropertyNames(contextProto).join(', ')}`);
+      
+      const allContextProps = [...Object.getOwnPropertyNames(context), ...Object.getOwnPropertyNames(contextProto)];
+      const contextTokenProps = allContextProps.filter(prop => prop.toLowerCase().includes('token'));
+      if (contextTokenProps.length > 0) {
+        core.info(`Debug: token-related properties on context object: ${contextTokenProps.join(', ')}`);
+      }
+      
+      // 3. Extract all environment variables that might contain tokens
+      const envVarNames = Object.keys(process.env);
+      const envTokenVars = envVarNames.filter(name => 
+        name.toLowerCase().includes('token') || 
+        name.toLowerCase().includes('auth') || 
+        name.toLowerCase().includes('secret')
+      );
+      
+      if (envTokenVars.length > 0) {
+        core.info(`Debug: environment variables that might contain tokens: ${envTokenVars.join(', ')}`);
+      }
       core.info(`Debug: context keys: ${Object.keys(context).join(', ')}`);
       if (context.payload) {
         core.info(`Debug: context.payload keys: ${Object.keys(context.payload).join(', ')}`);
@@ -704,6 +741,7 @@ async function processReleases({
     }
     if (config('repository').oci.enabled) {
       await _publishOciReleases({
+        github,
         context,
         core,
         exec,
