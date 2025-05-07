@@ -524,6 +524,19 @@ async function _publishOciReleases({
     }
     core.info('Setting up OCI registry authentication...');
     try {
+      // Debug output to understand what's available
+      core.info('Debug: Checking available token sources');
+      core.info(`Debug: process.env.GITHUB_TOKEN defined: ${!!process.env.GITHUB_TOKEN}`);
+      core.info(`Debug: process.env.GITHUB_TOKEN type: ${typeof process.env.GITHUB_TOKEN}`);
+      core.info(`Debug: context keys: ${Object.keys(context).join(', ')}`);
+      if (context.payload) {
+        core.info(`Debug: context.payload keys: ${Object.keys(context.payload).join(', ')}`);
+      }
+      if (context.repo) {
+        core.info(`Debug: context.repo keys: ${Object.keys(context.repo).join(', ')}`);
+        core.info(`Debug: context.repo.owner: ${context.repo.owner}`);
+      }
+      // End Debug
       await exec.exec('helm', [
         'registry',
         'login',
