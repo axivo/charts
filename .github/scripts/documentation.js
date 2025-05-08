@@ -34,11 +34,7 @@ const utils = require('./utils');
  * @param {string} [params.version] - Version of helm-docs to install (without v prefix)
  * @returns {Promise<void>}
  */
-async function installHelmDocs({
-  core,
-  exec,
-  version
-}) {
+async function installHelmDocs({ core, exec, version }) {
   try {
     const tmpDir = os.tmpdir();
     const packageFile = `helm-docs_${version}_Linux_x86_64.deb`;
@@ -78,13 +74,7 @@ async function installHelmDocs({
  * @param {Array<string>} [options.dirs=[]] - Optional array of chart directory paths to update
  * @returns {Promise<void>}
  */
-async function updateDocumentation({
-  github,
-  context,
-  core,
-  exec,
-  dirs = []
-}) {
+async function updateDocumentation({ github, context, core, exec, dirs = [] }) {
   try {
     const runGit = async (args) => (await exec.getExecOutput('git', args)).stdout.trim();
     const headRef = process.env.GITHUB_HEAD_REF;
