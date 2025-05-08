@@ -63,8 +63,9 @@ async function _buildChartRelease({ github, context, core, chart }) {
     }
     const body = await _generateChartRelease({ github, context, core, chart });
     const release = await api.createRelease({ github, context, core, name: tagName, body });
+    const assetName = [chart.type, 'tgz'].join('.');
     const assetData = await fs.readFile(chart.path);
-    await api.uploadReleaseAsset({ github, context, core, releaseId: release.id, assetName: chart.type, assetData });
+    await api.uploadReleaseAsset({ github, context, core, releaseId: release.id, assetName, assetData });
     core.info(`Successfully created '${tagName}' release`);
   } catch (error) {
     utils.handleError(error, core, `create '${tagName}' release`, false);
@@ -418,12 +419,12 @@ async function _publishChartReleases({ github, context, core, packagesPath }) {
           context,
           core,
           chart: {
-            name: chartName,
-            version: chartVersion,
-            type: chartType,
-            metadata: chartMetadata,
             icon: iconExists,
-            path: chartPath
+            metadata: chartMetadata,
+            name: chartName,
+            path: chartPath,
+            type: chartType,
+            version: chartVersion
           }
         });
       } catch (error) {
@@ -485,17 +486,11 @@ async function _publishOciReleases({ context, core, exec, packagesPath }) {
     const appPackagesDir = path.join(packagesPath, appType);
     const libPackagesDir = path.join(packagesPath, libType);
     let packages = [];
-    if (await utils.fileExists(appPackagesDir)) {
-      const appFiles = await fs.readdir(appPackagesDir);
-      packages.push(...appFiles
-        .filter(file => file.endsWith('.tgz'))
-        .map(file => ({ file: `${appType}.tgz`, source: file, type: appType })));
-    }
-    if (await utils.fileExists(libPackagesDir)) {
-      const libFiles = await fs.readdir(libPackagesDir);
-      packages.push(...libFiles
-        .filter(file => file.endsWith('.tgz'))
-        .map(file => ({ file: `${libType}.tgz`, source: file, type: libType })));
+    for (const [dir, type] of [[appPackagesDir, appType], [libPackagesDir, libType]]) {
+      if (await utils.fileExists(dir)) {
+        const files = await fs.readdir(dir);
+        packages.push(...files.filter(file => file.endsWith('.tgz')).map(file => ({ source: file, type })));
+      }
     }
     if (!packages.length) {
       core.info('No packages found for OCI registry publishing');
@@ -513,7 +508,7 @@ async function _publishOciReleases({ context, core, exec, packagesPath }) {
         const [name, version] = package.source.replace('.tgz', '').split(separator);
         const fullRef = [ociRegistry, package.type, [name, version].join(':')].join('/');
         const ociRef = ['oci:/', ociRegistry, package.type, [name, version].join(':')].join('/');
-        core.info(`Processing '${fullRef}' package...`);
+        core.info(`Processing '${package.source}' package...`);
         try {
           const result = await exec.getExecOutput('helm', [
             'registry',
@@ -525,16 +520,16 @@ async function _publishOciReleases({ context, core, exec, packagesPath }) {
           });
           if (result.exitCode === 0) {
             await exec.exec('helm', ['registry', 'remove', fullRef]);
-            core.info(`Successfully deleted '${fullRef}' package`);
+            core.info(`Successfully deleted '${package.source}' package`);
           }
         } catch (error) {
-          utils.handleError(error, core, `delete '${fullRef}' package`, false);
+          utils.handleError(error, core, `delete '${package.source}' package`, false);
         }
         core.info(`Pushing '${package.source}' package to OCI registry...`);
         await exec.exec('helm', ['push', chartPath, ociRef]);
         core.info(`Successfully pushed '${package.source}' package to OCI registry`);
       } catch (error) {
-        utils.handleError(error, core, `process '${fullRef}' package`, false);
+        utils.handleError(error, core, `process '${package.source}' package`, false);
       }
     }
     core.info(`Successfully published ${packages.length} ${word} to OCI registry`);
