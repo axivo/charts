@@ -648,10 +648,7 @@ async function processReleases({ github, context, core, exec }) {
  * @param {Object} params.core - GitHub Actions Core API for logging and output
  * @returns {Promise<void>}
  */
-async function setupBuildEnvironment({
-  context,
-  core
-}) {
+async function setupBuildEnvironment({ context, core }) {
   core.info(`Setting up build environment for '${config('release').deployment}' deployment`);
   await _generateFrontpage({ context, core });
   try {
