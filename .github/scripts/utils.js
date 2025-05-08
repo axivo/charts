@@ -291,7 +291,7 @@ function registerHandlebarsHelpers(repoUrl) {
 async function reportWorkflowIssue({ github, context, core }) {
   const api = require('./github-api');
   let hasIssues = await api.checkWorkflowRunStatus({ github, context, core, runId: context.runId });
-  if (config('issue').createLabels && context.workflow_ref.endsWith('chart.yml')) {
+  if (config('issue').createLabels && context.workflow === 'Chart') {
     core.warning('Set "createLabels: false" in config.js after initial setup, to optimize workflow performance.');
     hasIssues = true;
   }
