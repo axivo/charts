@@ -194,22 +194,21 @@ async function _getReleases({ github, context, core, options = {} }) {
 async function checkWorkflowRunStatus({ github, context, core, runId }) {
   try {
     core.info(`Checking workflow run ${runId} ID status...`);
-    const response = await github.rest.actions.getWorkflowRun({
+    let hasFailures = false;
+    const jobsResponse = await github.rest.actions.listJobsForWorkflowRun({
       owner: context.repo.owner,
       repo: context.repo.repo,
       run_id: parseInt(runId, 10)
     });
-    const workflowRun = response.data;
-    if (!workflowRun) {
-      core.info(`No workflow run found with ${runId} ID`);
-      return false;
+    for (const job of jobsResponse.data.jobs) {
+      if (job.steps) {
+        const failedSteps = job.steps.filter(step => step.conclusion !== 'success');
+        if (failedSteps.length > 0) {
+          hasFailures = true;
+          break;
+        }
+      }
     }
-    const errorConclusions = ['cancelled', 'failure'];
-    const successConclusions = [null, 'success'];
-    if (errorConclusions.includes(workflowRun.conclusion)) {
-      core.info(`Workflow run concluded with ${workflowRun.conclusion}`);
-    }
-    const hasFailures = !successConclusions.includes(workflowRun.conclusion);
     const logsResponse = await github.rest.actions.downloadWorkflowRunLogs({
       owner: context.repo.owner,
       repo: context.repo.repo,

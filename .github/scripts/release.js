@@ -462,7 +462,7 @@ async function _publishOciReleases({ context, core, exec, packagesPath }) {
       core.info('OCI publishing is disabled');
       return;
     }
-    core.info('Setting up OCI registry authentication...');
+    core.info('Authenticating to OCI registry...');
     try {
       await exec.exec('helm', [
         'registry',
@@ -475,9 +475,9 @@ async function _publishOciReleases({ context, core, exec, packagesPath }) {
         input: Buffer.from(process.env['INPUT_GITHUB-TOKEN']),
         silent: true
       });
-      core.info('Successfully authenticated with OCI registry');
+      core.info('Successfully authenticated to OCI registry');
     } catch (authError) {
-      utils.handleError(authError, core, 'authenticate with OCI registry', false);
+      utils.handleError(authError, core, 'authenticate to OCI registry', false);
       return;
     }
     const appType = config('repository').chart.type.application;
@@ -498,59 +498,48 @@ async function _publishOciReleases({ context, core, exec, packagesPath }) {
         .map(file => ({ file: `${libType}.tgz`, source: file, type: libType })));
     }
     if (!packages.length) {
-      core.info('No chart packages found for OCI publishing');
+      core.info('No packages found for OCI registry publishing');
       return;
     }
+    const separator = config('release').title.substring(
+      config('release').title.indexOf('{{ .Name }}') + '{{ .Name }}'.length,
+      config('release').title.indexOf('{{ .Version }}')
+    );
     const word = packages.length === 1 ? 'package' : 'packages';
-    packages = packages.map(package => {
-      const nameVersion = package.source.replace('.tgz', '');
-      return { ...package, nameVersion };
-    });
-    try {
-      core.info(`Deleting ${packages.length} OCI ${word} from '${ociRegistry}' registry...`);
-      for (const package of packages) {
-        try {
-          const separator = config('release').title.substring(
-            config('release').title.indexOf('{{ .Name }}') + '{{ .Name }}'.length,
-            config('release').title.indexOf('{{ .Version }}')
-          );
-          const [name, version] = package.nameVersion.split(separator);
-          if (!name || !version) {
-            core.warning(`Package '${package.nameVersion}' doesn't match the configured pattern format`);
-            continue;
-          }
-          const fullRef = [ociRegistry, package.type, [name, version].join(':')].join('/');
-          core.info(`Deleting '${fullRef}' OCI package...`);
-          await exec.exec('helm', ['registry', 'remove', fullRef]);
-          core.info(`Successfully deleted '${fullRef}' OCI package`);
-        } catch (pkgError) {
-          utils.handleError(pkgError, core, `delete '${package.nameVersion}' OCI package`, false);
-        }
-      }
-      core.info(`Successfully deleted ${packages.length} OCI ${word}`);
-    } catch (deleteError) {
-      utils.handleError(deleteError, core, 'process OCI packages deletion', false);
-    }
-    core.info(`Publishing ${packages.length} chart ${word} to '${ociRegistry}' OCI registry...`);
+    core.info(`Publishing ${packages.length} ${word} to '${ociRegistry}' OCI registry...`);
     for (const package of packages) {
-      const chartPath = path.join(package.dir, package.source);
+      const chartPath = path.join(packagesPath, package.type, package.source);
       try {
-        core.info(`Pushing '${package.source}' to OCI registry...`);
-        const separator = config('release').title.substring(
-          config('release').title.indexOf('{{ .Name }}') + '{{ .Name }}'.length,
-          config('release').title.indexOf('{{ .Version }}')
-        );
-        const [name, version] = package.nameVersion.split(separator);
-        const fullRef = ['oci:/', ociRegistry, package.type, [name, version].join(':')].join('/');
-        await exec.exec('helm', ['push', chartPath, fullRef]);
-        core.info(`Successfully pushed '${package.source}' to OCI registry`);
+        const [name, version] = package.source.replace('.tgz', '').split(separator);
+        const fullRef = [ociRegistry, package.type, [name, version].join(':')].join('/');
+        const ociRef = ['oci:/', ociRegistry, package.type, [name, version].join(':')].join('/');
+        core.info(`Processing '${fullRef}' package...`);
+        try {
+          const result = await exec.getExecOutput('helm', [
+            'registry',
+            'list',
+            fullRef
+          ], {
+            ignoreReturnCode: true,
+            silent: true
+          });
+          if (result.exitCode === 0) {
+            await exec.exec('helm', ['registry', 'remove', fullRef]);
+            core.info(`Successfully deleted '${fullRef}' package`);
+          }
+        } catch (error) {
+          utils.handleError(error, core, `delete '${fullRef}' package`, false);
+        }
+        core.info(`Pushing '${package.source}' package to OCI registry...`);
+        await exec.exec('helm', ['push', chartPath, ociRef]);
+        core.info(`Successfully pushed '${package.source}' package to OCI registry`);
       } catch (error) {
-        utils.handleError(error, core, `push '${package.source}' to OCI registry`, false);
+        utils.handleError(error, core, `process '${fullRef}' package`, false);
       }
     }
-    core.info(`Successfully published ${packages.length} OCI ${word}`);
+    core.info(`Successfully published ${packages.length} ${word} to OCI registry`);
   } catch (error) {
-    utils.handleError(error, core, 'push chart packages to OCI registry');
+    utils.handleError(error, core, 'publish packages to OCI registry');
   }
 }
 
