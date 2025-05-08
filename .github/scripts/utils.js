@@ -35,14 +35,7 @@ const config = require('./config');
  * @param {string} [params.description] - Optional description of the label
  * @returns {Promise<boolean>} - True if label was created, false if it already existed
  */
-async function addLabel({
-  github,
-  context,
-  core,
-  labelName,
-  color,
-  description
-}) {
+async function addLabel({ github, context, core, labelName, color, description }) {
   if (!labelName) handleError(new Error('Label name is required'), core, 'add label', false);
   const labelConfig = config('issue').labels[labelName] || {};
   const labelColor = color || labelConfig.color || 'ededed';
@@ -95,10 +88,7 @@ async function addLabel({
  * @param {Object} options.exec - GitHub Actions exec helpers for running commands
  * @returns {Promise<Function>} - Async function to run Git commands that returns trimmed stdout
  */
-async function configureGitRepository({
-  core,
-  exec
-}) {
+async function configureGitRepository({ core, exec }) {
   const runGit = async (args) => (await exec.getExecOutput('git', args)).stdout.trim();
   try {
     core.info('Configuring Git repository...');
@@ -150,12 +140,7 @@ async function fileExists(filePath) {
  * @param {string[]} [params.files=[]] - Optional array of file paths to filter charts by
  * @returns {Promise<{application: string[], library: string[]}>} - Object containing arrays of chart directories by type
  */
-async function findCharts({
-  core,
-  appDir,
-  libDir,
-  files = []
-}) {
+async function findCharts({ core, appDir, libDir, files = [] }) {
   const word = files.length > 0 ? 'updated' : 'available';
   core.info(`Finding ${word} charts...`);
   const charts = {
@@ -303,19 +288,10 @@ function registerHandlebarsHelpers(repoUrl) {
  * @param {Object} params.core - GitHub Actions Core API for logging and output
  * @returns {Promise<void>}
  */
-async function reportWorkflowIssue({
-  github,
-  context,
-  core
-}) {
+async function reportWorkflowIssue({ github, context, core }) {
   const api = require('./github-api');
-  let hasIssues = await api.checkWorkflowRunStatus({
-    github,
-    context,
-    core,
-    runId: context.runId
-  });
-  if (config('issue').createLabels && context.workflow === 'Chart') {
+  let hasIssues = await api.checkWorkflowRunStatus({ github, context, core, runId: context.runId });
+  if (config('issue').createLabels) {
     hasIssues = true;
     core.warning('Set "createLabels: false" in config.js after initial setup, to optimize workflow performance.');
   }
@@ -380,11 +356,7 @@ async function reportWorkflowIssue({
  * @param {Object} params.core - GitHub Actions Core API for logging and output
  * @returns {Promise<string[]>} - Array of label names that were created, or empty array if skipped
  */
-async function updateIssueLabels({
-  github,
-  context,
-  core
-}) {
+async function updateIssueLabels({ github, context, core }) {
   try {
     if (!config('issue').createLabels) {
       core.info('Label creation is disabled in configuration, skipping label updates');
