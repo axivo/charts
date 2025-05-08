@@ -39,12 +39,7 @@ const utils = require('./utils');
  * @param {string} options.chartName - Name of the chart to find releases for
  * @returns {Promise<string|null>} - ISO date string of the last release or null if none found
  */
-async function _getLastReleaseDate({
-  github,
-  context,
-  core,
-  chartName
-}) {
+async function _getLastReleaseDate({ github, context, core, chartName }) {
   try {
     const query = `
       query($owner: String!, $repo: String!) {
@@ -98,12 +93,7 @@ async function _getLastReleaseDate({
  * @param {number} [params.options.limit=0] - Maximum number of releases to return (0 for all)
  * @returns {Promise<Array>} - Array of matching release objects or empty array if none found
  */
-async function _getReleases({
-  github,
-  context,
-  core,
-  options = {}
-}) {
+async function _getReleases({ github, context, core, options = {} }) {
   try {
     const { tagName, tagPrefix, limit = 0 } = options;
     const message = tagName
@@ -201,12 +191,7 @@ async function _getReleases({
  * @param {number} params.runId - The workflow run ID to check
  * @returns {Promise<boolean>} - True if the workflow run has warnings or errors, false otherwise
  */
-async function checkWorkflowRunStatus({
-  github,
-  context,
-  core,
-  runId
-}) {
+async function checkWorkflowRunStatus({ github, context, core, runId }) {
   try {
     core.info(`Checking workflow run ${runId} ID status...`);
     const response = await github.rest.actions.getWorkflowRun({
@@ -254,30 +239,20 @@ async function checkWorkflowRunStatus({
  * @param {Object} options.github - GitHub API client for making API calls
  * @param {Object} options.context - GitHub Actions context containing repository information
  * @param {Object} options.core - GitHub Actions Core API for logging and output
- * @param {string} options.tagName - Tag name for the release (e.g., "chart-name-v1.0.0")
- * @param {string} options.name - Display name for the release (e.g., "Chart Name 1.0.0")
+ * @param {string} options.name - Tag name for the release (e.g., "chart-name-1.0.0")
  * @param {string} options.body - Body content/description of the release in markdown format
  * @param {boolean} [options.draft=false] - Whether the release should be created as a draft
  * @param {boolean} [options.prerelease=false] - Whether the release should be marked as a prerelease
  * @returns {Promise<Object>} - Standardized object containing the created release data
  */
-async function createRelease({
-  github,
-  context,
-  core,
-  tagName,
-  name,
-  body,
-  draft = false,
-  prerelease = false
-}) {
+async function createRelease({ github, context, core, name, body, draft = false, prerelease = false }) {
   try {
     core.info(`Creating '${name}' release...`);
     const response = await github.rest.repos.createRelease({
       owner: context.repo.owner,
       repo: context.repo.repo,
-      tag_name: tagName,
       name: name,
+      tag_name: name,
       body: body,
       draft: draft,
       prerelease: prerelease
@@ -286,7 +261,7 @@ async function createRelease({
     const releaseData = {
       id: release.id,
       name: release.name,
-      tag_name: release.tag_name,
+      tag_name: release.name,
       body: release.body,
       created_at: release.created_at,
       draft: release.draft,
@@ -324,16 +299,7 @@ async function createRelease({
  * @param {string} options.commitMessage - Commit message headline
  * @returns {Promise<string|null>} - OID (SHA) of the created commit or null if no changes
  */
-async function createSignedCommit({
-  github,
-  context,
-  core,
-  branchName,
-  expectedHeadOid,
-  additions = [],
-  deletions = [],
-  commitMessage
-}) {
+async function createSignedCommit({ github, context, core, branchName, expectedHeadOid, additions = [], deletions = [], commitMessage }) {
   try {
     core.info('Creating signed commit...');
     if (!branchName) {
@@ -397,19 +363,9 @@ async function createSignedCommit({
  * @param {string} params.tagName - The tag name to check for
  * @returns {Promise<Object|null>} - Standardized release data if found, null if not found
  */
-async function getReleaseByTag({
-  github,
-  context,
-  core,
-  tagName
-}) {
+async function getReleaseByTag({ github, context, core, tagName }) {
   try {
-    const releases = await _getReleases({
-      github,
-      context,
-      core,
-      options: { tagName }
-    });
+    const releases = await _getReleases({ github, context, core, options: { tagName } });
     return releases.length > 0 ? releases[0] : null;
   } catch (error) {
     if (error.errors && error.errors.some(e => e.type === 'NOT_FOUND')) {
@@ -435,19 +391,8 @@ async function getReleaseByTag({
  * @param {number} [params.limit=0] - Maximum number of releases to return (0 for all)
  * @returns {Promise<Array>} - Array of matching release objects or empty array if none found
  */
-async function getReleases({
-  github,
-  context,
-  core,
-  tagPrefix,
-  limit = 0
-}) {
-  return _getReleases({
-    github,
-    context,
-    core,
-    options: tagPrefix ? { tagPrefix, limit } : { limit }
-  });
+async function getReleases({ github, context, core, tagPrefix, limit = 0 }) {
+  return _getReleases({ github, context, core, options: tagPrefix ? { tagPrefix, limit } : { limit } });
 }
 
 /**
@@ -469,19 +414,12 @@ async function getReleases({
  * @param {Object} options.github - GitHub API client for making API calls
  * @param {Object} options.context - GitHub Actions context containing repository information
  * @param {Object} options.core - GitHub Actions Core API for logging and output
- * @param {string} options.chartType - Type of chart ('application' or 'library')
  * @param {string} options.chartName - Name of the chart to find issues for
+ * @param {string} options.chartType - Type of chart ('application' or 'library')
  * @param {number} [options.maxIssues=50] - Maximum number of issues to retrieve
  * @returns {Promise<Array>} - Array of chart-related issues with standardized properties
  */
-async function getReleaseIssues({
-  github,
-  context,
-  core,
-  chartType,
-  chartName,
-  maxIssues = 50
-}) {
+async function getReleaseIssues({ github, context, core, chartName, chartType, maxIssues = 50 }) {
   const chartPath = `${chartType}/${chartName}`;
   try {
     core.info(`Fetching '${chartPath}' chart issues...`);
@@ -530,7 +468,7 @@ async function getReleaseIssues({
     if (!relevantIssues.length) {
       core.info(`Found no issues for '${chartPath}' chart`);
     } else {
-      word = relevantIssues.length === 1 ? 'issue' : 'issues';
+      const word = relevantIssues.length === 1 ? 'issue' : 'issues';
       core.info(`Successfully fetched ${relevantIssues.length} ${word} for '${chartPath}' chart`);
     }
     const issues = relevantIssues.map(issue => ({
@@ -566,12 +504,7 @@ async function getReleaseIssues({
  * @param {string} [params.eventType='pull_request'] - Event type to process ('pull_request' or 'push')
  * @returns {Promise<string[]>} - Array of file paths that were changed or added
  */
-async function getUpdatedFiles({
-  github,
-  context,
-  core,
-  eventType = 'pull_request'
-}) {
+async function getUpdatedFiles({ github, context, core, eventType = 'pull_request' }) {
   const files = [];
   try {
     if (!['pull_request', 'push'].includes(eventType)) {
@@ -670,14 +603,7 @@ async function getUpdatedFiles({
  * @param {Buffer|string} options.assetData - Content of the asset to upload
  * @returns {Promise<Object>} - The uploaded asset data from GitHub API
  */
-async function uploadReleaseAsset({
-  github,
-  context,
-  core,
-  releaseId,
-  assetName,
-  assetData
-}) {
+async function uploadReleaseAsset({ github, context, core, releaseId, assetName, assetData }) {
   try {
     core.info(`Uploading '${assetName}' asset to ${releaseId} ID...`);
     const asset = await github.rest.repos.uploadReleaseAsset({

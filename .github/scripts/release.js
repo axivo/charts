@@ -41,80 +41,33 @@ const utils = require('./utils');
  * @param {Object} params.github - GitHub API client for making API calls
  * @param {Object} params.context - GitHub Actions context containing repository information
  * @param {Object} params.core - GitHub Actions Core API for logging and output
- * @param {string} params.chartName - Name of the chart (e.g., "nginx")
- * @param {string} params.chartVersion - Version of the chart (e.g., "1.2.3")
- * @param {string} params.chartType - Type of chart ("application" or "library")
- * @param {Object} params.chartMetadata - Chart metadata from Chart.yaml
- * @param {boolean} params.iconExists - Whether an icon exists for the chart
- * @param {string} params.chartPath - Path to the chart package .tgz file
- * @param {string} params.packageName - Name of the package file (e.g., "nginx-1.2.3.tgz")
+ * @param {Object} params.chart - Chart object containing all chart information
+ * @param {string} params.chart.name - Name of the chart (e.g., "nginx")
+ * @param {string} params.chart.version - Version of the chart (e.g., "1.2.3")
+ * @param {string} params.chart.type - Type of chart ("application" or "library")
+ * @param {Object} params.chart.metadata - Chart metadata from Chart.yaml
+ * @param {boolean} params.chart.icon - Whether an icon exists for the chart
+ * @param {string} params.chart.path - Path to the chart package .tgz file
  * @returns {Promise<void>}
  */
-async function _buildChartRelease({
-  github,
-  context,
-  core,
-  chartName,
-  chartVersion,
-  chartType,
-  chartMetadata,
-  iconExists,
-  chartPath,
-  packageName
-}) {
+async function _buildChartRelease({ github, context, core, chart }) {
   try {
-    const releaseTitle = config('release').title;
-    const tagName = releaseTitle
-      ? releaseTitle
-        .replace('{{ .Name }}', chartName)
-        .replace('{{ .Version }}', chartVersion)
-      : `${chartName}-v${chartVersion}`;
+    const tagName = config('release').title
+      .replace('{{ .Name }}', chart.name)
+      .replace('{{ .Version }}', chart.version);
     core.info(`Processing '${tagName}' release...`);
-    const existingRelease = await api.getReleaseByTag({
-      github,
-      context,
-      core,
-      tagName
-    });
+    const existingRelease = await api.getReleaseByTag({ github, context, core, tagName });
     if (existingRelease) {
       core.info(`Release '${tagName}' already exists, skipping`);
       return;
     }
-    const releaseBody = await _generateChartRelease({
-      github,
-      core,
-      context,
-      chartName,
-      chartVersion,
-      chartType,
-      chartMetadata,
-      iconExists
-    });
-    const releaseName = releaseTitle
-      ? releaseTitle
-        .replace('{{ .Name }}', chartName)
-        .replace('{{ .Version }}', chartVersion)
-      : `${chartName} ${chartVersion}`;
-    const release = await api.createRelease({
-      github,
-      context,
-      core,
-      tagName,
-      name: releaseName,
-      body: releaseBody
-    });
-    const fileContent = await fs.readFile(chartPath);
-    await api.uploadReleaseAsset({
-      github,
-      context,
-      core,
-      releaseId: release.id,
-      assetName: packageName,
-      assetData: fileContent
-    });
+    const body = await _generateChartRelease({ github, context, core, chart });
+    const release = await api.createRelease({ github, context, core, name: tagName, body });
+    const assetData = await fs.readFile(chart.path);
+    await api.uploadReleaseAsset({ github, context, core, releaseId: release.id, assetName: chart.type, assetData });
     core.info(`Successfully created '${tagName}' release`);
   } catch (error) {
-    utils.handleError(error, core, `create release for ${chartName} v${chartVersion}`, false);
+    utils.handleError(error, core, `create '${tagName}' release`, false);
   }
 }
 
@@ -129,8 +82,8 @@ async function _buildChartRelease({
  * @param {Object} params - Function parameters
  * @param {Object} params.github - GitHub API client for making API calls
  * @param {Object} params.context - GitHub Actions context containing repository information
- * @param {Object} params.exec - GitHub Actions exec helpers for running commands
  * @param {Object} params.core - GitHub Actions Core API for logging and output
+ * @param {Object} params.exec - GitHub Actions exec helpers for running commands
  * @param {string} params.distRoot - Root directory for distribution files
  * @param {Object} params.charts - Object containing application and library chart paths to process
  * @returns {Promise<void>}
@@ -248,29 +201,20 @@ async function _generateChartsIndex({ github, context, core, exec, distRoot, cha
  * @private
  * @param {Object} params - Function parameters
  * @param {Object} params.github - GitHub API client for making API calls
- * @param {Object} params.core - GitHub Actions Core API for logging and output
  * @param {Object} params.context - GitHub Actions context containing repository information
- * @param {string} params.chartName - Name of the chart
- * @param {string} params.chartVersion - Version of the chart
- * @param {string} params.chartType - Type of chart ("application" or "library")
- * @param {Object} params.chartMetadata - Chart metadata from Chart.yaml
- * @param {boolean} params.iconExists - Whether an icon exists for the chart
- * @param {string} [params.releaseTemplate=config('release').template] - Path to Handlebars template for release notes
+ * @param {Object} params.core - GitHub Actions Core API for logging and output
+ * @param {Object} params.chart - Chart object containing all chart information
+ * @param {boolean} params.chart.icon - Whether an icon exists for the chart
+ * @param {Object} params.chart.metadata - Chart metadata from Chart.yaml
+ * @param {string} params.chart.name - Name of the chart
+ * @param {string} params.chart.type - Type of chart ("application" or "library")
+ * @param {string} params.chart.version - Version of the chart
  * @returns {Promise<string>} - Generated release content in markdown format
  */
-async function _generateChartRelease({
-  github,
-  core,
-  context,
-  chartName,
-  chartVersion,
-  chartType,
-  chartMetadata,
-  iconExists,
-  releaseTemplate = config('release').template
-}) {
+async function _generateChartRelease({ github, context, core, chart }) {
   try {
-    core.info(`Generating release content for '${chartType}/${chartName}' chart...`);
+    core.info(`Generating release content for '${chart.type}/${chart.name}' chart...`);
+    releaseTemplate = config('release').template;
     try {
       await fs.access(releaseTemplate);
     } catch (accessError) {
@@ -280,29 +224,29 @@ async function _generateChartRelease({
     const templateContent = await fs.readFile(releaseTemplate, 'utf8');
     const Handlebars = utils.registerHandlebarsHelpers(repoUrl);
     const template = Handlebars.compile(templateContent);
-    const chartSources = chartMetadata.sources || [];
-    const issues = await api.getReleaseIssues({ github, context, core, chartType, chartName });
+    const chartSources = chart.metadata.sources || [];
+    const issues = await api.getReleaseIssues({ github, context, core, chartName: chart.name, chartType: chart.type });
     const templateContext = {
-      AppVersion: chartMetadata.appVersion || '',
+      AppVersion: chart.metadata.appVersion || '',
       Branch: context.payload.repository.default_branch,
-      Dependencies: (chartMetadata.dependencies || []).map(dependency => ({
+      Dependencies: (chart.metadata.dependencies || []).map(dependency => ({
         Name: dependency.name,
         Repository: dependency.repository,
         Source: chartSources.length > 0 ? chartSources[0] : null,
         Version: dependency.version
       })),
-      Description: chartMetadata.description || '',
-      Icon: iconExists ? config('repository').chart.icon : null,
+      Description: chart.metadata.description || '',
+      Icon: chart.icon ? config('repository').chart.icon : null,
       Issues: issues.length > 0 ? issues : null,
-      KubeVersion: chartMetadata.kubeVersion || '',
-      Name: chartName,
+      KubeVersion: chart.metadata.kubeVersion || '',
+      Name: chart.name,
       RepoURL: repoUrl,
-      Type: chartType,
-      Version: chartVersion
+      Type: chart.type,
+      Version: chart.version
     };
     return template(templateContext);
   } catch (error) {
-    utils.handleError(error, core, 'generate release content', false);
+    utils.handleError(error, core, 'generate chart release', false);
     throw error;
   }
 }
@@ -383,10 +327,10 @@ async function _generateFrontpage({ context, core }) {
       Branch: defaultBranchName
     });
     await fs.writeFile('./index.md', newContent, 'utf8');
-    core.info(`Successfully generated index content with ${newContent.length} bytes`);
+    core.info(`Successfully generated frontpage content with ${newContent.length} bytes`);
     return true;
   } catch (error) {
-    utils.handleError(error, core, 'create index frontpage');
+    utils.handleError(error, core, 'generate frontpage content');
   }
 }
 
@@ -473,13 +417,14 @@ async function _publishChartReleases({ github, context, core, packagesPath }) {
           github,
           context,
           core,
-          chartName,
-          chartVersion,
-          chartType,
-          chartMetadata,
-          iconExists,
-          chartPath,
-          packageName: package.file
+          chart: {
+            name: chartName,
+            version: chartVersion,
+            type: chartType,
+            metadata: chartMetadata,
+            icon: iconExists,
+            path: chartPath
+          }
         });
       } catch (error) {
         utils.handleError(error, core, `create ${chartName} v${chartVersion} release`, false);
@@ -510,12 +455,7 @@ async function _publishChartReleases({ github, context, core, packagesPath }) {
  * @param {string} params.packagesPath - Directory containing packaged chart .tgz files
  * @returns {Promise<void>}
  */
-async function _publishOciReleases({
-  context,
-  core,
-  exec,
-  packagesPath
-}) {
+async function _publishOciReleases({ context, core, exec, packagesPath }) {
   try {
     const ociRegistry = config('repository').oci.registry;
     if (!config('repository').oci.enabled) {
@@ -636,12 +576,7 @@ async function _publishOciReleases({
  * @param {Object} params.exec - GitHub Actions exec helpers for running commands
  * @returns {Promise<void>}
  */
-async function processReleases({
-  github,
-  context,
-  core,
-  exec
-}) {
+async function processReleases({ github, context, core, exec }) {
   try {
     const appChartType = config('repository').chart.type.application;
     const libChartType = config('repository').chart.type.library;
@@ -651,14 +586,14 @@ async function processReleases({
       core.info('No new charts releases found');
       return;
     }
-    const releasePackages = config('release').packages;
-    core.info(`Creating ${releasePackages} directory...`);
-    await fs.mkdir(releasePackages, { recursive: true });
-    const appPackagesDir = path.join(releasePackages, appChartType);
-    const libPackagesDir = path.join(releasePackages, libChartType);
+    const packagesPath = config('release').packages;
+    core.info(`Creating ${packagesPath} directory...`);
+    await fs.mkdir(packagesPath, { recursive: true });
+    const appPackagesDir = path.join(packagesPath, appChartType);
+    const libPackagesDir = path.join(packagesPath, libChartType);
     await fs.mkdir(appPackagesDir, { recursive: true });
     await fs.mkdir(libPackagesDir, { recursive: true });
-    core.info(`Successfully created ${releasePackages} directory`);
+    core.info(`Successfully created ${packagesPath} directory`);
     const chartDirs = [...charts.application, ...charts.library];
     await Promise.all(chartDirs.map(async (chartDir) => {
       try {
@@ -673,28 +608,16 @@ async function processReleases({
       }
     }));
     core.info(`Successfully packaged ${chartDirs.length} charts`);
-    await _publishChartReleases({
-      github,
-      context,
-      core,
-      packagesPath: releasePackages
-    });
+    await _publishChartReleases({ github, context, core, packagesPath });
     if (config('repository').chart.packages.enabled) {
-      await _generateChartsIndex({
-        github,
-        context,
-        exec,
-        core,
-        distRoot: './',
-        charts
-      });
+      await _generateChartsIndex({ github, context, core, exec, distRoot: './', charts });
     }
     if (config('repository').oci.enabled) {
       await _publishOciReleases({
         context,
         core,
         exec,
-        packagesPath: releasePackages
+        packagesPath
       });
     }
     core.info('Successfully completed the chart releases process');
