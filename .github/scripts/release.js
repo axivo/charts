@@ -427,7 +427,7 @@ async function _publishChartReleases({ github, context, core, packagesPath }) {
       return;
     }
     const word = packages.length === 1 ? 'package' : 'packages'
-    core.info(`Preparing ${packages.length} chart ${word} to release...`);
+    core.info(`Preparing ${packages.length} ${word} to release...`);
     await Promise.all(packages.map(async (package) => {
       try {
         const [name, version] = _extractChartInfo(package);
@@ -458,7 +458,7 @@ async function _publishChartReleases({ github, context, core, packagesPath }) {
           }
         });
       } catch (error) {
-        utils.handleError(error, core, `create ${chartName} v${chartVersion} release`, false);
+        utils.handleError(error, core, `process '${package.source}' package`, false);
       }
     }));
   } catch (error) {
