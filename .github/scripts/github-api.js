@@ -681,7 +681,7 @@ async function setOciPackageVisibility({ context, core, package }) {
       package_type: config('repository').oci.packages.type,
       visibility
     };
-    const data = await client.rest.users.get({ username: context.repo.owner });
+    const { data } = await client.rest.users.getByUsername({ username: context.repo.owner });
     if (data.type === 'User') {
       clientParams.username = context.repo.owner;
       await client.rest.packages.updatePackageForUser(clientParams);
