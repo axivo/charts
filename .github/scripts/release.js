@@ -494,8 +494,8 @@ async function _publishChartReleases({ github, context, core, packagesPath }) {
 async function _publishOciReleases({ github, context, core, exec, packagesPath }) {
   try {
     const ociRegistry = config('repository').oci.registry;
-    if (!config('repository').oci.enabled) {
-      core.info('OCI publishing is disabled');
+    if (!config('repository').oci.packages.enabled) {
+      core.info('OCI packages publishing is disabled');
       return;
     }
     core.info('Authenticating to OCI registry...');
@@ -609,7 +609,7 @@ async function processReleases({ github, context, core, exec }) {
     if (config('repository').chart.packages.enabled) {
       await _generateChartsIndex({ github, context, core, exec, distRoot: './', charts });
     }
-    if (config('repository').oci.enabled) {
+    if (config('repository').oci.packages.enabled) {
       await _publishOciReleases({
         github,
         context,
