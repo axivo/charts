@@ -527,8 +527,8 @@ async function _publishOciReleases({ context, core, exec, packagesPath }) {
         const [name, version] = _extractChartInfo(package);
         const chartPath = path.join(packagesPath, package.type, package.source);
         const chartRelease = [name, version].join(':');
-        const fullRef = [ociRegistry, package.type, chartRelease].join('/');
-        const ociRef = ['oci:/', ociRegistry, package.type, chartRelease].join('/');
+        const fullRef = [ociRegistry, context.payload.repository.full_name, package.type, chartRelease].join('/');
+        const ociRef = ['oci:/', ociRegistry, context.payload.repository.full_name, package.type, chartRelease].join('/');
         core.info(`Processing '${package.source}' package...`);
         try {
           const result = await exec.getExecOutput('helm', [
