@@ -8,7 +8,7 @@ Common library used for ArgoCD applications, deployed into AXIVO [K3s Cluster](h
 
 ### Usage
 
-The library provides a set of reusable Helm templates that simplify the creation of Kubernetes resources with consistent configuration and best practices. It contains helpers for deployments, services, ingress resources, and standard label patterns used across ArgoCD applications.
+The library provides a set of reusable Helm templates, simplifying the creation of Kubernetes resources with consistent configuration and best practices. It contains helpers for deployments, services, ingress resources, and standard label patterns used across ArgoCD applications.
 
 The library can be included as dependency, into `Chart.yaml` file:
 
