@@ -357,8 +357,8 @@ async function createSignedCommit({ github, context, core, branchName, expectedH
  * @param {Object} params.context - GitHub Actions context containing repository information
  * @param {Object} params.core - GitHub Actions Core API for logging and output
  * @param {Object} params.package - Package information
- * @param {string} params.package.type - Type of package ('application' or 'library')
  * @param {string} params.package.name - Name of the package
+ * @param {string} params.package.type - Type of package ('application' or 'library')
  * @param {string} params.package.version - Version of the package
  * @returns {Promise<boolean>} - True if package was deleted successfully, false otherwise
  */
