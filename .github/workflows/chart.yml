@@ -66,6 +66,9 @@ jobs:
             const { installHelmDocs } = require('./.github/scripts/documentation.js');
             await installHelmDocs({ core, exec, version: '1.14.2' });
 
+      - name: Setup repository charts linter
+        uses: helm/chart-testing-action@v2
+
       - name: Update repository charts
         uses: actions/github-script@v7
         with:

@@ -76,6 +76,43 @@ async function _performGitCommit({ github, context, core, exec, files, type }) {
 }
 
 /**
+ * Lints charts using the chart-testing (ct) tool
+ * 
+ * This function runs the 'ct lint' command on the specified charts to identify
+ * any issues that might prevent successful deployment. It validates Helm chart
+ * structure, requirements, and best practices according to the chart-testing tool's
+ * criteria. The function processes both application and library charts.
+ * 
+ * Any linting errors are handled as non-fatal by default, but the function will
+ * return false to indicate failure, allowing the calling function to decide
+ * how to proceed based on the linting results.
+ * 
+ * @private
+ * @param {Object} params - Function parameters
+ * @param {Object} params.core - GitHub Actions Core API for logging and output
+ * @param {Object} params.exec - GitHub Actions exec helpers for running commands
+ * @param {Object} params.charts - Object containing application and library chart paths
+ * @returns {Promise<boolean>} - True if linting passed, false if errors were found
+ */
+async function _lintCharts({ core, exec, charts }) {
+  try {
+    const chartDirs = [...charts.application, ...charts.library];
+    if (!chartDirs.length) {
+      core.info('No charts to lint');
+      return true;
+    }
+    const word = chartDirs.length === 1 ? 'chart' : 'charts';
+    core.info(`Linting ${chartDirs.length} ${word}...`);
+    await exec.exec('ct', ['lint', '--charts', chartDirs.join(',')]);
+    core.info(`Successfully linted ${chartDirs.length} ${word}`);
+    return true;
+  } catch (error) {
+    utils.handleError(error, core, 'lint charts', false);
+    return false;
+  }
+}
+
+/**
  * Updates application files content with latest chart versions
  * 
  * This function processes all application.yaml files within chart directories to ensure
@@ -223,7 +260,6 @@ async function _updateLockFiles({ github, context, core, exec, charts }) {
  * @returns {Promise<void>}
  */
 async function updateCharts({ github, context, core, exec }) {
-  let conclusion = 'success';
   try {
     const appChartType = config('repository').chart.type.application;
     const libChartType = config('repository').chart.type.library;
@@ -233,12 +269,12 @@ async function updateCharts({ github, context, core, exec }) {
     if (updatedCharts.application.length + updatedCharts.library.length > 0) {
       const allUpdatedCharts = [...updatedCharts.application, ...updatedCharts.library];
       updatedChartDirs = allUpdatedCharts.map(chartDir => chartDir);
+      await _lintCharts({ core, exec, charts: updatedCharts });
       await docs.updateDocumentation({ github, context, core, exec, dirs: updatedChartDirs });
       await _updateAppFiles({ github, context, core, exec, charts: updatedCharts });
       await _updateLockFiles({ github, context, core, exec, charts: updatedCharts });
     }
   } catch (error) {
-    conclusion = 'failure';
     utils.handleError(error, core, 'update repository charts');
   }
 }
