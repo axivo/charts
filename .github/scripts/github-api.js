@@ -384,6 +384,7 @@ async function deleteOciPackage({ github, context, core, package }) {
       owner: context.repo.owner,
       repo: context.repo.repo,
       packageName,
+      packageTypes: [config('repository').oci.packages.type.toUpperCase()],
       version: package.version
     });
     const nodes = result.repository.packages.nodes;
@@ -652,34 +653,42 @@ async function getUpdatedFiles({ github, context, core, eventType = 'pull_reques
 }
 
 /**
- * Sets OCI package visibility to public or private
+ * Sets OCI package visibility to public, private or internal
  * 
  * This function changes the visibility of a package in GitHub Container Registry
- * using REST API. It either makes the package public (accessible to anyone)
- * or private (accessible only to repository members with proper permissions).
+ * using Octokit REST API. It makes the package public (accessible to anyone),
+ * private (accessible only to organization members with proper permissions) or
+ * internal (accessible only to all organization members).
  * 
  * @param {Object} params - Function parameters
- * @param {Object} params.github - GitHub API client for making API calls
  * @param {Object} params.context - GitHub Actions context containing repository information
  * @param {Object} params.core - GitHub Actions Core API for logging and output
  * @param {Object} params.package - Package information
  * @param {string} params.package.name - Name of the package
  * @param {string} params.package.type - Type of package ('application' or 'library')
- * @param {string} params.package.visibility - Whether to make the package public or private
+ * @param {string} params.package.visibility - Whether to make the package public, private or internal
  * @returns {Promise<boolean>} - True if visibility was updated successfully, false otherwise
  */
-async function setOciPackageVisibility({ github, context, core, package }) {
+async function setOciPackageVisibility({ context, core, package }) {
   const packageName = [package.type, package.name].join('/');
   try {
     const visibility = package.visibility;
     core.info(`Setting '${packageName}' package visibility to '${visibility}'...`);
-    await github.rest.packages.setPackageVisibilityForRepo({
+    const { Octokit } = require('@octokit/rest');
+    const client = new Octokit({ auth: process.env['INPUT_GITHUB-TOKEN'] });
+    let clientParams = {
       package_name: packageName,
       package_type: config('repository').oci.packages.type,
-      owner: context.repo.owner,
-      repo: context.repo.repo,
       visibility
-    });
+    };
+    const data = await client.rest.users.get({ username: context.repo.owner });
+    if (data.type === 'User') {
+      clientParams.username = context.repo.owner;
+      await client.rest.packages.updatePackageForUser(clientParams);
+    } else {
+      clientParams.org = context.repo.owner;
+      await client.rest.packages.updatePackageForOrg(clientParams);
+    }
     core.info(`Successfully set '${packageName}' package visibility to '${visibility}'`);
     return true;
   } catch (error) {
