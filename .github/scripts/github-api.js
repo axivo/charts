@@ -653,11 +653,12 @@ async function getUpdatedFiles({ github, context, core, eventType = 'pull_reques
 }
 
 /**
- * Sets OCI package visibility to public or private
+ * Sets OCI package visibility to public, private or internal
  * 
  * This function changes the visibility of a package in GitHub Container Registry
- * using Octokit REST API. It either makes the package public (accessible to anyone)
- * or private (accessible only to repository members with proper permissions).
+ * using Octokit REST API. It makes the package public (accessible to anyone),
+ * private (accessible only to organization members with proper permissions) or
+ * internal (accessible only to all organization members).
  * 
  * @param {Object} params - Function parameters
  * @param {Object} params.context - GitHub Actions context containing repository information
@@ -665,7 +666,7 @@ async function getUpdatedFiles({ github, context, core, eventType = 'pull_reques
  * @param {Object} params.package - Package information
  * @param {string} params.package.name - Name of the package
  * @param {string} params.package.type - Type of package ('application' or 'library')
- * @param {string} params.package.visibility - Whether to make the package public or private
+ * @param {string} params.package.visibility - Whether to make the package public, private or internal
  * @returns {Promise<boolean>} - True if visibility was updated successfully, false otherwise
  */
 async function setOciPackageVisibility({ context, core, package }) {
