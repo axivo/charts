@@ -484,17 +484,18 @@ async function _publishChartReleases({ github, context, core, packagesPath }) {
  * 
  * @private
  * @param {Object} params - Function parameters
+ * @param {Object} params.github - GitHub API client for making API calls
  * @param {Object} params.context - GitHub Actions context containing repository information
  * @param {Object} params.core - GitHub Actions Core API for logging and output
  * @param {Object} params.exec - GitHub Actions exec helpers for running commands
  * @param {string} params.packagesPath - Directory containing packaged chart .tgz files
  * @returns {Promise<void>}
  */
-async function _publishOciReleases({ context, core, exec, packagesPath }) {
+async function _publishOciReleases({ github, context, core, exec, packagesPath }) {
   try {
     const ociRegistry = config('repository').oci.registry;
-    if (!config('repository').oci.enabled) {
-      core.info('OCI publishing is disabled');
+    if (!config('repository').oci.packages.enabled) {
+      core.info('OCI packages publishing is disabled');
       return;
     }
     core.info('Authenticating to OCI registry...');
@@ -526,28 +527,19 @@ async function _publishOciReleases({ context, core, exec, packagesPath }) {
       try {
         const [name, version] = _extractChartInfo(package);
         const chartPath = path.join(packagesPath, package.type, package.source);
-        const chartRelease = [name, version].join(':');
-        const fullRef = [ociRegistry, context.payload.repository.full_name, package.type, chartRelease].join('/');
-        const ociRef = ['oci:/', ociRegistry, context.payload.repository.full_name, package.type, chartRelease].join('/');
-        core.info(`Processing '${package.source}' package...`);
-        try {
-          const result = await exec.getExecOutput('helm', [
-            'registry',
-            'list',
-            fullRef
-          ], {
-            ignoreReturnCode: true,
-            silent: true
-          });
-          if (result.exitCode === 0) {
-            await exec.exec('helm', ['registry', 'remove', fullRef]);
-            core.info(`Successfully deleted '${package.source}' package`);
+        const registry = ['oci:/', ociRegistry, context.payload.repository.full_name, package.type].join('/');
+        await api.deleteOciPackage({
+          github,
+          context,
+          core,
+          package: {
+            name,
+            type: package.type,
+            version
           }
-        } catch (error) {
-          utils.handleError(error, core, `delete '${package.source}' package`, false);
-        }
+        });
         core.info(`Pushing '${package.source}' package to OCI registry...`);
-        await exec.exec('helm', ['push', chartPath, ociRef]);
+        await exec.exec('helm', ['push', chartPath, registry]);
         core.info(`Successfully pushed '${package.source}' package to OCI registry`);
       } catch (error) {
         utils.handleError(error, core, `process '${package.source}' package`, false);
@@ -617,8 +609,9 @@ async function processReleases({ github, context, core, exec }) {
     if (config('repository').chart.packages.enabled) {
       await _generateChartsIndex({ github, context, core, exec, distRoot: './', charts });
     }
-    if (config('repository').oci.enabled) {
+    if (config('repository').oci.packages.enabled) {
       await _publishOciReleases({
+        github,
         context,
         core,
         exec,

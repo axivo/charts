@@ -438,7 +438,7 @@ const CONFIG = {
          * @default false
          * @see processReleases - Function in release.js that checks this setting
          */
-        enabled: false,
+        enabled: true,
 
         /**
          * Maximum number of versions to retain per chart in the index.yaml file
@@ -521,20 +521,32 @@ const CONFIG = {
      * Helm repository approach.
      * 
      * @type {Object}
-     * @see _processOciReleases - Function in release.js that uses these settings
      */
     oci: {
       /**
-       * Whether OCI publishing is enabled
+       * Configuration for OCI package publishing
        * 
-       * When true, charts are published to the configured OCI registry during the release process.
-       * When false, charts are published as packaged .tgz files with an index.yaml file,
-       * following the standard Helm repository format (if enabled).
+       * Controls whether charts are published to OCI-compatible registries during
+       * the release process. When enabled, charts are pushed to the registry specified
+       * in the repository.oci.registry configuration.
        * 
-       * @type {boolean}
-       * @default true
+       * @type {Object}
        */
-      enabled: true,
+      packages: {
+        /**
+         * Whether OCI packages publishing is enabled
+         * 
+         * When true, packages are published to the configured OCI registry during the release process.
+         * When false, charts are published as packaged .tgz files with an index.yaml file,
+         * following the standard Helm repository format (if enabled).
+         * 
+         * @type {boolean}
+         * @default true
+         * @see processReleases - Function in release.js that checks this setting
+         * @see _processOciReleases - Function in release.js that publishes charts to OCI registry
+         */
+        enabled: true
+      },
 
       /**
        * OCI registry URL without protocol
@@ -544,6 +556,7 @@ const CONFIG = {
        * 
        * @type {string}
        * @default 'ghcr.io'
+       * @see _processOciReleases - Function in release.js that uses this registry URL
        */
       registry: 'ghcr.io'
     },

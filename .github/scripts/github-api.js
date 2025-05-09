@@ -345,6 +345,75 @@ async function createSignedCommit({ github, context, core, branchName, expectedH
 }
 
 /**
+ * Deletes a specific package version from GitHub Container Registry
+ * 
+ * This function finds and deletes a specific package version from GitHub Container Registry
+ * using GraphQL API. It first queries for the exact package version by name and version,
+ * then deletes it if found. This is used during OCI chart publishing to ensure clean
+ * re-publishing of versions without conflicts.
+ * 
+ * @param {Object} params - Function parameters
+ * @param {Object} params.github - GitHub API client for making API calls
+ * @param {Object} params.context - GitHub Actions context containing repository information
+ * @param {Object} params.core - GitHub Actions Core API for logging and output
+ * @param {Object} params.package - Package information
+ * @param {string} params.package.type - Type of package ('application' or 'library')
+ * @param {string} params.package.name - Name of the package
+ * @param {string} params.package.version - Version of the package
+ * @returns {Promise<boolean>} - True if package was deleted successfully, false otherwise
+ */
+async function deleteOciPackage({ github, context, core, package }) {
+  const packageFullName = [package.type, package.name].join('/');
+  try {
+    core.info(`Searching for '${packageFullName}:${package.version}' package...`);
+    const query = `
+      query($owner: String!, $repo: String!, $packageName: String!, $version: String!) {
+        repository(owner: $owner, name: $repo) {
+          packages(first: 1, names: [$packageName]) {
+            nodes {
+              name
+              versions(first: 1, version: $version) {
+                nodes {
+                  id
+                }
+              }
+            }
+          }
+        }
+      }
+    `;
+    const result = await github.graphql(query, {
+      owner: context.repo.owner,
+      repo: context.repo.repo,
+      packageName: packageFullName,
+      version: package.version
+    });
+    const nodes = result.repository.packages.nodes;
+    if (!nodes.length || !nodes[0].versions.nodes.length) {
+      core.info(`Package '${packageFullName}:${package.version}' not found, skipping deletion`);
+      return false;
+    }
+    const versionId = nodes[0].versions.nodes[0].id;
+    core.info(`Deleting package with '${versionId}' ID...`);
+    const mutation = `
+      mutation($versionId: ID!) {
+        deletePackageVersion(input: { packageVersionId: $versionId }) {
+          success
+        }
+      }
+    `;
+    const deleteResult = await github.graphql(mutation, { versionId });
+    if (deleteResult.deletePackageVersion.success) {
+      core.info(`Successfully deleted '${packageFullName}:${package.version}' package`);
+    }
+    return true;
+  } catch (error) {
+    utils.handleError(error, core, `delete '${packageFullName}:${package.version}' package`, false);
+    return false;
+  }
+}
+
+/**
  * Checks if a GitHub release with the specified tag exists
  * 
  * Queries the GitHub API using GraphQL to determine if a release with the given tag name
@@ -625,6 +694,7 @@ module.exports = {
   checkWorkflowRunStatus,
   createRelease,
   createSignedCommit,
+  deleteOciPackage,
   getReleaseByTag,
   getReleases,
   getReleaseIssues,
