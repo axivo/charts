@@ -363,19 +363,17 @@ async function createSignedCommit({ github, context, core, branchName, expectedH
  * @returns {Promise<boolean>} - True if package was deleted successfully, false otherwise
  */
 async function deleteOciPackage({ github, context, core, package }) {
-  const packageFullName = [package.type, package.name].join('/');
+  const packageName = [package.type, package.name].join('/');
   try {
-    core.info(`Searching for '${packageFullName}:${package.version}' package...`);
+    core.info(`Searching for '${packageName}:${package.version}' package...`);
     const query = `
       query($owner: String!, $repo: String!, $packageName: String!, $version: String!) {
         repository(owner: $owner, name: $repo) {
           packages(first: 1, names: [$packageName]) {
             nodes {
               name
-              versions(first: 1, version: $version) {
-                nodes {
-                  id
-                }
+              version(version: $version) {
+                id
               }
             }
           }
@@ -385,16 +383,16 @@ async function deleteOciPackage({ github, context, core, package }) {
     const result = await github.graphql(query, {
       owner: context.repo.owner,
       repo: context.repo.repo,
-      packageName: packageFullName,
+      packageName,
       version: package.version
     });
     const nodes = result.repository.packages.nodes;
-    if (!nodes.length || !nodes[0].versions.nodes.length) {
-      core.info(`Package '${packageFullName}:${package.version}' not found, skipping deletion`);
+    if (!nodes.length || !nodes[0].version) {
+      core.info(`Package '${packageName}:${package.version}' not found, skipping deletion`);
       return false;
     }
-    const versionId = nodes[0].versions.nodes[0].id;
-    core.info(`Deleting package with '${versionId}' ID...`);
+    const versionId = nodes[0].version.id;
+    core.info(`Deleting '${packageName}:${package.version}' package with '${versionId}' ID...`);
     const mutation = `
       mutation($versionId: ID!) {
         deletePackageVersion(input: { packageVersionId: $versionId }) {
@@ -404,11 +402,12 @@ async function deleteOciPackage({ github, context, core, package }) {
     `;
     const deleteResult = await github.graphql(mutation, { versionId });
     if (deleteResult.deletePackageVersion.success) {
-      core.info(`Successfully deleted '${packageFullName}:${package.version}' package`);
+      core.info(`Successfully deleted '${packageName}:${package.version}' package`);
+      return true;
     }
-    return true;
+    return false;
   } catch (error) {
-    utils.handleError(error, core, `delete '${packageFullName}:${package.version}' package`, false);
+    utils.handleError(error, core, `delete '${packageName}:${package.version}' package`, false);
     return false;
   }
 }
@@ -653,6 +652,43 @@ async function getUpdatedFiles({ github, context, core, eventType = 'pull_reques
 }
 
 /**
+ * Sets OCI package visibility to public or private
+ * 
+ * This function changes the visibility of a package in GitHub Container Registry
+ * using REST API. It either makes the package public (accessible to anyone)
+ * or private (accessible only to repository members with proper permissions).
+ * 
+ * @param {Object} params - Function parameters
+ * @param {Object} params.github - GitHub API client for making API calls
+ * @param {Object} params.context - GitHub Actions context containing repository information
+ * @param {Object} params.core - GitHub Actions Core API for logging and output
+ * @param {Object} params.package - Package information
+ * @param {string} params.package.name - Name of the package
+ * @param {string} params.package.type - Type of package ('application' or 'library')
+ * @param {string} params.package.visibility - Whether to make the package public or private
+ * @returns {Promise<boolean>} - True if visibility was updated successfully, false otherwise
+ */
+async function setOciPackageVisibility({ github, context, core, package }) {
+  const packageName = [package.type, package.name].join('/');
+  try {
+    const visibility = package.visibility;
+    core.info(`Setting '${packageName}' package visibility to '${visibility}'...`);
+    await github.rest.packages.setPackageVisibilityForRepo({
+      package_name: packageName,
+      package_type: config('repository').oci.packages.type,
+      owner: context.repo.owner,
+      repo: context.repo.repo,
+      visibility
+    });
+    core.info(`Successfully set '${packageName}' package visibility to '${visibility}'`);
+    return true;
+  } catch (error) {
+    utils.handleError(error, core, `set visibility for '${packageName}' package`, false);
+    return false;
+  }
+}
+
+/**
  * Uploads an asset to a GitHub release
  * 
  * Attaches a file as an asset to an existing GitHub release using the REST API.
@@ -699,5 +735,6 @@ module.exports = {
   getReleases,
   getReleaseIssues,
   getUpdatedFiles,
+  setOciPackageVisibility,
   uploadReleaseAsset
 };
