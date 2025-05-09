@@ -79,12 +79,16 @@ async function _buildChartRelease({ github, context, core, chart }) {
  * It follows the standard Helm chart naming convention where the package filename format is
  * "chartname-version.tgz", and extracts both components for further processing.
  * 
+ * Unlike most functions in this module, this function is intentionally not async since it
+ * only performs synchronous string operations and doesn't interact with the filesystem or
+ * external services. This allows it to be called directly without await.
+ * 
  * @private
  * @param {Object} package - Package object containing the source property
  * @param {string} package.source - Filename of the chart package (e.g., "nginx-1.2.3.tgz")
  * @returns {Array} - Array containing [name, version] where name is the chart name and version is the semantic version
  */
-async function _extractChartInfo(package) {
+function _extractChartInfo(package) {
   const source = package.source.replace('.tgz', '');
   const lastDashIndex = source.lastIndexOf('-');
   const name = source.substring(0, lastDashIndex);
