@@ -543,9 +543,39 @@ const CONFIG = {
          * @type {boolean}
          * @default true
          * @see processReleases - Function in release.js that checks this setting
-         * @see _processOciReleases - Function in release.js that publishes charts to OCI registry
+         * @see _processOciReleases - Function in release.js that processes packages to OCI registry
          */
-        enabled: true
+        enabled: true,
+
+        /**
+         * Package type for OCI registry packages
+         * 
+         * Defines the package type identifier used when interacting with GitHub Packages API.
+         * For OCI/Helm charts, this is typically 'container' as they are stored in the
+         * GitHub Container Registry. This value is passed to the GitHub API when setting
+         * package visibility or performing other package operations.
+         * 
+         * @type {string}
+         * @default 'container'
+         * @see setOciPackageVisibility - Function in github-api.js that uses this type for API calls
+         */
+        type: 'container',
+
+        /**
+         * Whether OCI packages visibility is public or private
+         * 
+         * Controls the visibility of packages published to OCI-compatible registries.
+         * When public, packages are accessible to anyone without authentication.
+         * When private, packages are only accessible to users with proper permissions.
+         * 
+         * This setting is indirectly used by the setOciPackageVisibility function to automatically
+         * set the visibility of newly published packages via the GitHub REST API.
+         * 
+         * @type {string}
+         * @default 'public'
+         * @see _publishOciReleases - Function in release.js that publishes packages to OCI registry
+         */
+        visibility: 'public'
       },
 
       /**

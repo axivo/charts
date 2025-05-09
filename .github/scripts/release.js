@@ -541,6 +541,16 @@ async function _publishOciReleases({ github, context, core, exec, packagesPath }
         core.info(`Pushing '${package.source}' package to OCI registry...`);
         await exec.exec('helm', ['push', chartPath, registry]);
         core.info(`Successfully pushed '${package.source}' package to OCI registry`);
+        await api.setOciPackageVisibility({
+          github,
+          context,
+          core,
+          package: {
+            name,
+            type: package.type,
+            visibility: config('repository').oci.packages.visibility
+          }
+        });
       } catch (error) {
         utils.handleError(error, core, `process '${package.source}' package`, false);
       }
