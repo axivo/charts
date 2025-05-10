@@ -698,6 +698,5 @@ module.exports = {
   getReleases,
   getReleaseIssues,
   getUpdatedFiles,
-  updateOciPackageMetadata,
   uploadReleaseAsset
 };
