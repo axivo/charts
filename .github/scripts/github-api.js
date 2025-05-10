@@ -670,7 +670,7 @@ async function getUpdatedFiles({ github, context, core, eventType = 'pull_reques
  * @returns {Promise<boolean>} - True if visibility was updated successfully, false otherwise
  */
 async function setOciPackageVisibility({ github, context, core, package }) {
-  const packageName = [package.type, package.name].join('/');
+  const packageName = [context.repo.repo, package.type, package.name].join('/');
   try {
     const visibility = package.visibility;
     core.info(`Setting '${packageName}' package visibility to '${visibility}'...`);
