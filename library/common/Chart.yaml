@@ -2,13 +2,18 @@ apiVersion: v2
 name: common
 description: Common library for Helm charts
 version: 1.0.0
-type: library
 kubeVersion: ">=1.22.0-0"
+type: library
 keywords:
   - common
   - library
 home: https://github.com/axivo/charts
-icon: https://raw.githubusercontent.com/axivo/charts/refs/heads/main/library/common/icon.png
+sources:
+  - https://github.com/axivo/charts
 maintainers:
   - name: AXIVO
     url: https://axivo.com
+icon: https://raw.githubusercontent.com/axivo/charts/refs/heads/main/library/common/icon.png
+annotations:
+  org.opencontainers.image.documentation: https://github.com/axivo/charts/blob/main/library/common/README.md
+  org.opencontainers.image.licenses: BSD-3-Clause

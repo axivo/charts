@@ -3,16 +3,20 @@ name: ubuntu
 description: Ubuntu Server LTS troubleshooting container for Kubernetes
 version: 1.0.0
 appVersion: "24.04"
-type: application
 kubeVersion: ">=1.22.0-0"
+type: application
 keywords:
   - ubuntu
   - server
   - troubleshooting
 home: https://github.com/axivo/charts
-icon: https://raw.githubusercontent.com/axivo/charts/refs/heads/main/application/ubuntu/icon.png
 sources:
+  - https://github.com/axivo/charts
   - https://ubuntu.com/server
 maintainers:
   - name: AXIVO
     url: https://axivo.com
+icon: https://raw.githubusercontent.com/axivo/charts/refs/heads/main/application/ubuntu/icon.png
+annotations:
+  org.opencontainers.image.documentation: https://github.com/axivo/charts/blob/main/application/ubuntu/README.md
+  org.opencontainers.image.licenses: BSD-3-Clause
