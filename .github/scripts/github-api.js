@@ -384,7 +384,6 @@ async function deleteOciPackage({ github, context, core, package }) {
       owner: context.repo.owner,
       repo: context.repo.repo,
       packageName,
-      packageTypes: [config('repository').oci.packages.type.toUpperCase()],
       version: package.version
     });
     const nodes = result.repository.packages.nodes;
@@ -661,6 +660,7 @@ async function getUpdatedFiles({ github, context, core, eventType = 'pull_reques
  * internal (accessible only to all organization members).
  * 
  * @param {Object} params - Function parameters
+ * @param {Object} params.github - GitHub API client for making API calls
  * @param {Object} params.context - GitHub Actions context containing repository information
  * @param {Object} params.core - GitHub Actions Core API for logging and output
  * @param {Object} params.package - Package information
@@ -669,25 +669,23 @@ async function getUpdatedFiles({ github, context, core, eventType = 'pull_reques
  * @param {string} params.package.visibility - Whether to make the package public, private or internal
  * @returns {Promise<boolean>} - True if visibility was updated successfully, false otherwise
  */
-async function setOciPackageVisibility({ context, core, package }) {
+async function setOciPackageVisibility({ github, context, core, package }) {
   const packageName = [package.type, package.name].join('/');
   try {
     const visibility = package.visibility;
     core.info(`Setting '${packageName}' package visibility to '${visibility}'...`);
-    const { Octokit } = require('@octokit/rest');
-    const client = new Octokit({ auth: process.env['INPUT_GITHUB-TOKEN'] });
-    let clientParams = {
+    let params = {
       package_name: packageName,
       package_type: config('repository').oci.packages.type,
       visibility
     };
-    const { data } = await client.rest.users.getByUsername({ username: context.repo.owner });
-    if (data.type === 'User') {
-      clientParams.username = context.repo.owner;
-      await client.rest.packages.updatePackageForUser(clientParams);
+    const { data: response } = await github.rest.users.getByUsername({ username: context.repo.owner });
+    if (response.type === 'User') {
+      params.username = context.repo.owner;
+      await github.request('PATCH /user/packages/{package_type}/{package_name}', params);
     } else {
-      clientParams.org = context.repo.owner;
-      await client.rest.packages.updatePackageForOrg(clientParams);
+      params.org = context.repo.owner;
+      await github.request('PATCH /orgs/{org}/packages/{package_type}/{package_name}', params);
     }
     core.info(`Successfully set '${packageName}' package visibility to '${visibility}'`);
     return true;
