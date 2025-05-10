@@ -551,23 +551,6 @@ async function _publishOciReleases({ github, context, core, exec, packagesPath }
         const chartPath = path.join(packagesPath, package.type, package.source);
         const registry = ['oci:/', ociRegistry, context.payload.repository.full_name, package.type].join('/');
         await exec.exec('helm', ['push', chartPath, registry]);
-        const [name] = _extractChartInfo(package);
-        const chartDir = path.join(package.type, name);
-        const chartYamlContent = await fs.readFile(path.join(chartDir, 'Chart.yaml'), 'utf8');
-        const description = yaml.load(chartYamlContent).description || '';
-        const readme = await fs.readFile(path.join(chartDir, 'README.md'), 'utf8');
-        await api.updateOciPackageMetadata({
-          github,
-          context,
-          core,
-          package: {
-            name,
-            type: package.type,
-            description,
-            readme,
-            visibility: config('repository').oci.packages.visibility
-          }
-        });
         core.info(`Successfully pushed '${package.source}' package to OCI registry`);
       } catch (error) {
         utils.handleError(error, core, `process '${package.source}' package`, false);
