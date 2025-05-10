@@ -528,16 +528,6 @@ async function _publishOciReleases({ github, context, core, exec, packagesPath }
         const [name, version] = _extractChartInfo(package);
         const chartPath = path.join(packagesPath, package.type, package.source);
         const registry = ['oci:/', ociRegistry, context.payload.repository.full_name, package.type].join('/');
-        await api.deleteOciPackage({
-          github,
-          context,
-          core,
-          package: {
-            name,
-            type: package.type,
-            version
-          }
-        });
         core.info(`Pushing '${package.source}' package to OCI registry...`);
         await exec.exec('helm', ['push', chartPath, registry]);
         core.info(`Successfully pushed '${package.source}' package to OCI registry`);
