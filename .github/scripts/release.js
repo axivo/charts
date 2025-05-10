@@ -516,7 +516,29 @@ async function _publishOciReleases({ github, context, core, exec, packagesPath }
       utils.handleError(authError, core, 'authenticate to OCI registry', false);
       return;
     }
-    const packages = await _getChartPackages({ core, packagesPath });
+    const allPackages = await _getChartPackages({ core, packagesPath });
+    if (!allPackages.length) {
+      core.info('No packages available for OCI registry publishing');
+      return;
+    }
+    const files = await api.getUpdatedFiles({ github, context, core });
+    const charts = await utils.findCharts({
+      core,
+      appDir: config('repository').chart.type.application,
+      libDir: config('repository').chart.type.library,
+      files
+    });
+    const chartNames = [
+      ...charts.application.map(dir => path.basename(dir)),
+      ...charts.library.map(dir => path.basename(dir))
+    ];
+    const packages = [];
+    for (const package of allPackages) {
+      const [name] = _extractChartInfo(package);
+      if (chartNames.includes(name)) {
+        packages.push(package);
+      }
+    }
     if (!packages.length) {
       core.info('No packages available for OCI registry publishing');
       return;
@@ -525,22 +547,28 @@ async function _publishOciReleases({ github, context, core, exec, packagesPath }
     core.info(`Publishing ${packages.length} ${word} to '${ociRegistry}' OCI registry...`);
     for (const package of packages) {
       try {
-        const [name, version] = _extractChartInfo(package);
+        core.info(`Pushing '${package.source}' package to OCI registry...`);
         const chartPath = path.join(packagesPath, package.type, package.source);
         const registry = ['oci:/', ociRegistry, context.payload.repository.full_name, package.type].join('/');
-        core.info(`Pushing '${package.source}' package to OCI registry...`);
         await exec.exec('helm', ['push', chartPath, registry]);
-        core.info(`Successfully pushed '${package.source}' package to OCI registry`);
-        await api.setOciPackageVisibility({
+        const [name] = _extractChartInfo(package);
+        const chartDir = path.join(package.type, name);
+        const chartYamlContent = await fs.readFile(path.join(chartDir, 'Chart.yaml'), 'utf8');
+        const description = yaml.load(chartYamlContent).description || '';
+        const readme = await fs.readFile(path.join(chartDir, 'README.md'), 'utf8');
+        await api.updateOciPackage({
           github,
           context,
           core,
           package: {
             name,
             type: package.type,
+            description,
+            readme,
             visibility: config('repository').oci.packages.visibility
           }
         });
+        core.info(`Successfully pushed '${package.source}' package to OCI registry`);
       } catch (error) {
         utils.handleError(error, core, `process '${package.source}' package`, false);
       }

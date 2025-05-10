@@ -363,7 +363,7 @@ async function createSignedCommit({ github, context, core, branchName, expectedH
  * @returns {Promise<boolean>} - True if package was deleted successfully, false otherwise
  */
 async function deleteOciPackage({ github, context, core, package }) {
-  const packageName = [package.type, package.name].join('/');
+  const packageName = [context.payload.repository.full_name, package.type, package.name].join('/');
   try {
     core.info(`Searching for '${packageName}:${package.version}' package...`);
     const query = `
@@ -652,45 +652,58 @@ async function getUpdatedFiles({ github, context, core, eventType = 'pull_reques
 }
 
 /**
- * Sets OCI package visibility to public, private or internal
+ * Updates OCI package metadata
  * 
- * This function changes the visibility of a package in GitHub Container Registry
- * using Octokit REST API. It makes the package public (accessible to anyone),
- * private (accessible only to organization members with proper permissions) or
- * internal (accessible only to all organization members).
+ * This function updates metadata of a package in GitHub Container Registry
+ * using REST API. It can update the package visibility (public, private, internal),
+ * description, and README content.
  * 
  * @param {Object} params - Function parameters
  * @param {Object} params.github - GitHub API client for making API calls
  * @param {Object} params.context - GitHub Actions context containing repository information
  * @param {Object} params.core - GitHub Actions Core API for logging and output
  * @param {Object} params.package - Package information
- * @param {string} params.package.name - Name of the package
- * @param {string} params.package.type - Type of package ('application' or 'library')
- * @param {string} params.package.visibility - Whether to make the package public, private or internal
- * @returns {Promise<boolean>} - True if visibility was updated successfully, false otherwise
+ * @param {string} params.package.name - Package name
+ * @param {string} params.package.type - Package type (application or library)
+ * @param {string} params.package.description - Package description
+ * @param {string} [params.package.readme] - Package README content
+ * @param {string} params.package.visibility - Package visibility (public, private or internal)
+ * @returns {Promise<boolean>} - True if update was successful, false otherwise
  */
-async function setOciPackageVisibility({ github, context, core, package }) {
-  const packageName = [context.repo.repo, package.type, package.name].join('/');
+async function updateOciPackageMetadata({ github, context, core, package }) {
+  const packageName = [context.payload.repository.full_name, package.type, package.name].join('/');
   try {
-    const visibility = package.visibility;
-    core.info(`Setting '${packageName}' package visibility to '${visibility}'...`);
-    let params = {
+    core.info(`Updating '${packageName}' package metadata...`);
+    const params = {
       package_name: packageName,
-      package_type: config('repository').oci.packages.type,
-      visibility
+      package_type: config('repository').oci.packages.type
     };
+    if (package.description) {
+      params.description = package.description;
+    }
+    if (package.readme) {
+      params.readme = package.readme;
+    }
+    if (package.visibility) {
+      params.visibility = package.visibility;
+    }
     const { data: response } = await github.rest.users.getByUsername({ username: context.repo.owner });
+    core.info(`DEBUG: Using '${response.type}' type`)
     if (response.type === 'User') {
       params.username = context.repo.owner;
+      if (['internal', 'private'].includes(params.visibility)) {
+        core.warning(`Invalid '${params.visibility}' visibility for '${response.type}' type, using 'public' visibility`)
+        params.visibility = 'public';
+      }
       await github.request('PATCH /user/packages/{package_type}/{package_name}', params);
     } else {
       params.org = context.repo.owner;
       await github.request('PATCH /orgs/{org}/packages/{package_type}/{package_name}', params);
     }
-    core.info(`Successfully set '${packageName}' package visibility to '${visibility}'`);
+    core.info(`Successfully updated '${packageName}' package metadata`);
     return true;
   } catch (error) {
-    utils.handleError(error, core, `set visibility for '${packageName}' package`, false);
+    utils.handleError(error, core, `update '${packageName}' package metadata`, false);
     return false;
   }
 }
@@ -742,6 +755,6 @@ module.exports = {
   getReleases,
   getReleaseIssues,
   getUpdatedFiles,
-  setOciPackageVisibility,
+  updateOciPackageMetadata,
   uploadReleaseAsset
 };

@@ -564,17 +564,20 @@ const CONFIG = {
         /**
          * Whether OCI packages visibility is public, private or internal
          * 
-         * Controls the visibility of packages published to OCI-compatible registries.
-         * When public, packages are visible to anyone.
-         * When private, packages are visible to organization members with permission.
-         * When internal, packages are visible to all organization members.
+         * Controls the visibility of packages published to OCI-compatible registries:
+         * - public: packages are visible to anyone.
+         * - private: packages are visible only to organization members with permission.
+         * - internal: packages are visible to all organization members.
          * 
-         * This setting is indirectly used by the setOciPackageVisibility function to automatically
-         * set the visibility of newly published packages via the GitHub REST API.
+         * For GitHub user accounts (as opposed to organizations), only 'public' visibility
+         * is allowed. If 'private' or 'internal' visibility is set for a user account, it will be
+         * automatically changed to 'public' with a warning message, as these visibility types are
+         * only available for organization accounts.
          * 
          * @type {string}
          * @default 'public'
          * @see _publishOciReleases - Function in release.js that publishes packages to OCI registry
+         * @see updateOciPackageMetadata - Function in github-api.js that sets package visibility
          */
         visibility: 'public'
       },
