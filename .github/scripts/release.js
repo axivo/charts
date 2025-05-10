@@ -556,7 +556,7 @@ async function _publishOciReleases({ github, context, core, exec, packagesPath }
         const chartYamlContent = await fs.readFile(path.join(chartDir, 'Chart.yaml'), 'utf8');
         const description = yaml.load(chartYamlContent).description || '';
         const readme = await fs.readFile(path.join(chartDir, 'README.md'), 'utf8');
-        await api.updateOciPackage({
+        await api.updateOciPackageMetadata({
           github,
           context,
           core,
