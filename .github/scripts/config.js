@@ -586,7 +586,7 @@ const CONFIG = {
          * @see _publishOciReleases - Function in release.js that publishes packages to OCI registry
          * @see updateOciPackageMetadata - Function in github-api.js that sets package visibility
          */
-        visibility: 'public'
+        visibility: 'internal'
       },
 
       /**
