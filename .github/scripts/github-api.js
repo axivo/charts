@@ -77,15 +77,11 @@ async function _getLastReleaseDate({ github, context, core, chartName }) {
 }
 
 /**
- * Gets the metadata of a specific OCI package in GitHub Container Registry
+ * Gets the version ID of a specific OCI package in GitHub Container Registry
  * 
- * This helper function queries the GitHub GraphQL API to get the package metadata
+ * This helper function queries the GitHub GraphQL API to get the package version ID
  * in the GitHub Container Registry. It builds a package name from the repository, type, and
  * chart name components, then queries for that package with a specific version.
- * 
- * The function is used by package management operations like deletion and metadata updates
- * that require the unique version ID. This centralized implementation prevents code duplication
- * and provides consistent package ID resolution.
  * 
  * @private
  * @param {Object} params - Function parameters
@@ -98,7 +94,7 @@ async function _getLastReleaseDate({ github, context, core, chartName }) {
  * @param {string} params.package.version - Version of the package
  * @returns {Promise<string|false>} - Version ID if found, false if not found or error occurs
  */
-async function _getOciPackageMetadata({ github, context, core, package }) {
+async function _getOciPackageVersionId({ github, context, core, package }) {
   const packageName = [context.payload.repository.full_name, package.type, package.name].join('/');
   try {
     core.info(`Searching for '${packageName}:${package.version}' package...`);
@@ -107,11 +103,9 @@ async function _getOciPackageMetadata({ github, context, core, package }) {
         repository(owner: $owner, name: $repo) {
           packages(first: 1, names: [$packageName]) {
             nodes {
-              name
               version(version: $version) {
                 id
               }
-              visibility
             }
           }
         }
@@ -128,13 +122,9 @@ async function _getOciPackageMetadata({ github, context, core, package }) {
       core.info(`Package '${packageName}:${package.version}' not found`);
       return false;
     }
-    const metadata = {
-      version_id: nodes[0].version.id,
-      visibility: nodes[0].visibility
-    }
-    return metadata;
+    return nodes[0].version.id;
   } catch (error) {
-    utils.handleError(error, core, `get OCI package ID`);
+    utils.handleError(error, core, 'get OCI package metadata');
     return false;
   }
 }
@@ -428,9 +418,8 @@ async function createSignedCommit({ github, context, core, branchName, expectedH
 async function deleteOciPackage({ github, context, core, package }) {
   const packageName = [context.payload.repository.full_name, package.type, package.name].join('/');
   try {
-    const metadata = await _getOciPackageMetadata({ github, context, core, package });
-    if (!metadata || !metadata.version_id) return false;
-    const versionId = metadata.version_id;
+    const versionId = await _getOciPackageVersionId({ github, context, core, package });
+    if (!versionId) return false;
     core.info(`Deleting '${packageName}:${package.version}' package with '${versionId}' ID...`);
     const mutation = `
       mutation($versionId: ID!) {
@@ -439,8 +428,8 @@ async function deleteOciPackage({ github, context, core, package }) {
         }
       }
     `;
-    const deleteResult = await github.graphql(mutation, { versionId });
-    if (deleteResult.deletePackageVersion.success) {
+    const result = await github.graphql(mutation, { versionId });
+    if (result.deletePackageVersion.success) {
       core.info(`Successfully deleted '${packageName}:${package.version}' package`);
       return true;
     }
@@ -691,57 +680,6 @@ async function getUpdatedFiles({ github, context, core, eventType = 'pull_reques
 }
 
 /**
- * Updates OCI package metadata
- * 
- * This function updates metadata of a package in GitHub Container Registry
- * using REST API. It can update the package visibility (public, private, internal).
- * 
- * @param {Object} params - Function parameters
- * @param {Object} params.github - GitHub API client for making API calls
- * @param {Object} params.context - GitHub Actions context containing repository information
- * @param {Object} params.core - GitHub Actions Core API for logging and output
- * @param {Object} params.package - Package information
- * @param {string} params.package.name - Package name
- * @param {string} params.package.type - Package type (application or library)
- * @param {string} params.package.version - Package version
- * @returns {Promise<boolean>} - True if update was successful, false if no update was needed or an error occurred
- * @see config('repository').oci.packages.visibility - Configuration setting that determines package visibility
- * @see config('repository').oci.packages.type - Package type used for GitHub API calls
- */
-async function updateOciPackageMetadata({ github, context, core, package }) {
-  const packageName = [context.payload.repository.full_name, package.type, package.name].join('/');
-  try {
-    const metadata = await _getOciPackageMetadata({ github, context, core, package });
-    if (!metadata || !metadata.visibility) return false;
-    core.info(`Updating '${packageName}' package metadata...`);
-    const visibility = config('repository').oci.packages.visibility;
-    const params = {
-      package_name: packageName,
-      package_type: config('repository').oci.packages.type,
-      visibility
-    };
-    if (visibility !== metadata.visibility) {
-      const { data: response } = await github.rest.users.getByUsername({ username: context.repo.owner });
-      if (response.type === 'User') {
-        if (['internal', 'private'].includes(params.visibility)) {
-          core.warning(`Invalid '${params.visibility}' visibility for '${response.type}' type, use 'public' visibility`)
-          return false;
-        }
-      } else {
-        params.org = context.repo.owner;
-        await github.request('PATCH /orgs/{org}/packages/{package_type}/{package_name}', params);
-      }
-      core.info(`Successfully updated '${packageName}' package metadata`);
-      return true;
-    }
-    return false;
-  } catch (error) {
-    utils.handleError(error, core, `update '${packageName}' package metadata`, false);
-    return false;
-  }
-}
-
-/**
  * Uploads an asset to a GitHub release
  * 
  * Attaches a file as an asset to an existing GitHub release using the REST API.
@@ -788,6 +726,5 @@ module.exports = {
   getReleases,
   getReleaseIssues,
   getUpdatedFiles,
-  updateOciPackageMetadata,
   uploadReleaseAsset
 };

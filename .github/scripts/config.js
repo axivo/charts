@@ -545,48 +545,7 @@ const CONFIG = {
          * @see processReleases - Function in release.js that checks this setting
          * @see _processOciReleases - Function in release.js that processes packages to OCI registry
          */
-        enabled: true,
-
-        /**
-         * Package type for OCI registry packages
-         * 
-         * Defines the package type identifier used when interacting with GitHub Packages API.
-         * For OCI/Helm charts, this is typically 'container' as they are stored in the
-         * GitHub Container Registry. This value is passed to the GitHub API when setting
-         * package visibility or performing other package operations.
-         * 
-         * @type {string}
-         * @default 'container'
-         * @see setOciPackageVisibility - Function in github-api.js that uses this type for API calls
-         */
-        type: 'container',
-
-        /**
-         * Visibility setting for OCI packages
-         * 
-         * Controls the visibility of packages published to OCI-compatible registries:
-         * - public: packages are visible to anyone.
-         * - private: packages are visible only to organization members with permission.
-         * - internal: packages are visible to all organization members.
-         * 
-         * Important restrictions:
-         * - For GitHub user accounts (as opposed to organizations), only 'public' visibility
-         *   is allowed and supported.
-         * - If 'private' or 'internal' visibility is set for a user account in this configuration,
-         *   the updateOciPackageMetadata function will detect the account type and return false
-         *   after logging a warning message.
-         * - For user accounts, 'public' visibility is set by default when a package is created
-         *   and cannot be changed, only organization accounts can use 'private' or 'internal' settings.
-         * 
-         * This restriction is enforced by GitHub's API, which allows changing package visibility
-         * only for organization accounts, not for user accounts.
-         * 
-         * @type {string}
-         * @default 'public'
-         * @see _publishOciReleases - Function in release.js that publishes packages to OCI registry
-         * @see updateOciPackageMetadata - Function in github-api.js that sets package visibility
-         */
-        visibility: 'internal'
+        enabled: true
       },
 
       /**
