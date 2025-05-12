@@ -43,9 +43,7 @@ const utils = require('./utils');
  * @param {string} params.chartDir - Path to the chart directory
  * @returns {Promise<boolean>} - True if validation succeeds, false otherwise
  */
-async function _validateIcon({
-  chartDir
-}) {
+async function _validateIcon({ chartDir }) {
   try {
     console.log(`Validating icon for '${chartDir}' chart...`);
     const iconPath = path.join(chartDir, 'icon.png');
@@ -96,9 +94,7 @@ async function _validateIcon({
  * @param {Object} params.exec - GitHub Actions exec helpers for running commands
  * @returns {Promise<boolean>} - True if all dependencies are available, false otherwise
  */
-async function _checkDependencies({
-  exec
-}) {
+async function _checkDependencies({ exec }) {
   const requiredTools = [
     { name: 'git', command: ['--version'] },
     { name: 'helm', command: ['version', '--short'] },
@@ -186,10 +182,7 @@ async function _checkDependencies({
  * @param {string} params.packagesDir - Directory containing packaged chart files
  * @returns {Promise<boolean>} - True if index generation succeeds, false otherwise
  */
-async function _generateLocalIndex({
-  exec,
-  packagesDir
-}) {
+async function _generateLocalIndex({ exec, packagesDir }) {
   try {
     console.log('Generating local Helm repository index...');
     const indexPath = path.join(packagesDir, 'index.yaml');
@@ -222,11 +215,7 @@ async function _generateLocalIndex({
  * @param {string} params.outputDir - Directory to store the packaged chart
  * @returns {Promise<boolean>} - True if packaging succeeds, false otherwise
  */
-async function _packageChart({
-  exec,
-  chartDir,
-  outputDir
-}) {
+async function _packageChart({ exec, chartDir, outputDir }) {
   try {
     console.log(`Packaging '${chartDir}' chart for local testing...`);
     console.log(`Updating dependencies for '${chartDir}' chart...`);
@@ -261,11 +250,7 @@ async function _packageChart({
  * @param {string} params.tempDir - Directory for temporary files
  * @returns {Promise<boolean>} - True if validation succeeds, false otherwise
  */
-async function _validateChart({
-  exec,
-  chartDir,
-  tempDir
-}) {
+async function _validateChart({ exec, chartDir, tempDir }) {
   try {
     console.log(`Validating '${chartDir}' chart...`);
     await exec.exec('helm', ['lint', '--strict', chartDir], { silent: true });
@@ -312,10 +297,7 @@ async function _validateChart({
  * @param {Object} params.exec - GitHub Actions exec helpers for running commands
  * @returns {Promise<void>}
  */
-async function processLocalReleases({
-  core,
-  exec
-}) {
+async function processLocalReleases({ core, exec }) {
   try {
     if (config('release').deployment === 'production') {
       console.log("In 'production' deployment mode, skipping local releases process");
@@ -329,12 +311,12 @@ async function processLocalReleases({
     const appChartType = config('repository').chart.type.application;
     const libChartType = config('repository').chart.type.library;
     const { stdout } = await exec.getExecOutput('git', ['status', '--porcelain'], { silent: true });
-    const modifiedFiles = stdout
+    const files = stdout
       .split('\n')
       .filter(Boolean)
       .map(line => line.substring(3))
       .filter(file => file.startsWith(appChartType) || file.startsWith(libChartType));
-    const charts = await utils.findCharts({ core, appDir: appChartType, libDir: libChartType, files: modifiedFiles });
+    const charts = await utils.findCharts({ core, files });
     if (!(charts.application.length + charts.library.length)) {
       console.log('No charts found');
       return;
