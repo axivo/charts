@@ -77,11 +77,10 @@ async function _getLastReleaseDate({ github, context, core, chartName }) {
 }
 
 /**
- * Gets the version ID of a specific OCI package in GitHub Container Registry
+ * Gets all version IDs for an OCI package in GitHub Container Registry
  * 
- * This helper function queries the GitHub GraphQL API to get the package version ID
- * in the GitHub Container Registry. It builds a package name from the repository, type, and
- * chart name components, then queries for that package with a specific version.
+ * This helper function queries the GitHub GraphQL API to get all package version IDs
+ * in the GitHub Container Registry using pagination.
  * 
  * @private
  * @param {Object} params - Function parameters
@@ -91,41 +90,126 @@ async function _getLastReleaseDate({ github, context, core, chartName }) {
  * @param {Object} params.package - Package information
  * @param {string} params.package.name - Name of the package
  * @param {string} params.package.type - Type of package ('application' or 'library')
- * @param {string} params.package.version - Version of the package
- * @returns {Promise<string|false>} - Version ID if found, false if not found or error occurs
+ * @returns {Promise<Array>} - Array of version objects with id and version properties
  */
-async function _getOciPackageVersionId({ github, context, core, package }) {
+async function _getOciPackageVersionIds({ github, context, core, package }) {
   const packageName = [context.payload.repository.full_name, package.type, package.name].join('/');
-  try {
-    core.info(`Searching for '${packageName}:${package.version}' package...`);
-    const query = `
-      query($owner: String!, $repo: String!, $packageName: String!, $version: String!) {
-        repository(owner: $owner, name: $repo) {
-          packages(first: 1, names: [$packageName]) {
-            nodes {
-              version(version: $version) {
+  core.info(`Searching for all versions of '${packageName}' package...`);
+  const query = `
+    query($owner: String!, $repo: String!, $packageName: String!, $cursor: String) {
+      repository(owner: $owner, name: $repo) {
+        packages(first: 1, names: [$packageName]) {
+          nodes {
+            versions(first: 100, after: $cursor) {
+              pageInfo {
+                hasNextPage
+                endCursor
+              }
+              nodes {
                 id
+                version
               }
             }
           }
         }
       }
-    `;
-    const result = await github.graphql(query, {
-      owner: context.repo.owner,
-      repo: context.repo.repo,
-      packageName,
-      version: package.version
-    });
-    const nodes = result.repository.packages.nodes;
-    if (!nodes.length || !nodes[0].version) {
-      core.info(`Package '${packageName}:${package.version}' not found`);
-      return false;
     }
-    return nodes[0].version.id;
+  `;
+  let versionIds = [];
+  let hasNextPage = true;
+  let endCursor = null;
+  try {
+    while (hasNextPage) {
+      const result = await github.graphql(query, {
+        owner: context.repo.owner,
+        repo: context.repo.repo,
+        packageName,
+        cursor: endCursor
+      });
+      const packageNodes = result.repository.packages.nodes;
+      if (!packageNodes.length) {
+        return [];
+      }
+      const versions = packageNodes[0].versions.nodes.map(node => ({
+        version: node.version,
+        id: node.id
+      }));
+      versionIds = versionIds.concat(versions);
+      const pageInfo = packageNodes[0].versions.pageInfo;
+      hasNextPage = pageInfo.hasNextPage;
+      endCursor = pageInfo.endCursor;
+    }
+    const word = versionIds.length === 1 ? 'version' : 'versions';
+    core.info(`Found ${versionIds.length} ${word} for '${packageName}' OCI package`);
+    return versionIds;
   } catch (error) {
-    utils.handleError(error, core, 'get OCI package metadata');
-    return false;
+    utils.handleError(error, core, `get versions for '${packageName}' package`, false);
+    return [];
+  }
+}
+
+/**
+ * Gets all release IDs for a specific chart
+ * 
+ * This helper function queries the GitHub GraphQL API to get all release IDs
+ * for a chart based on its name, using the tag naming pattern.
+ * 
+ * @private
+ * @param {Object} params - Function parameters
+ * @param {Object} params.github - GitHub API client for making API calls
+ * @param {Object} params.context - GitHub Actions context containing repository information
+ * @param {Object} params.core - GitHub Actions Core API for logging and output
+ * @param {string} params.chart - Name of the chart
+ * @returns {Promise<Array>} - Array of release objects with databaseId and tagName properties
+ */
+async function _getReleaseIds({ github, context, core, chart }) {
+  const titlePrefix = config('release').title
+    .replace('{{ .Name }}', chart)
+    .replace('{{ .Version }}', '');
+  core.info(`Searching for all releases of '${chart}' chart...`);
+  const query = `
+    query($owner: String!, $repo: String!, $cursor: String) {
+      repository(owner: $owner, name: $repo) {
+        releases(first: 100, after: $cursor) {
+          pageInfo {
+            hasNextPage
+            endCursor
+          }
+          nodes {
+            databaseId
+            tagName
+          }
+        }
+      }
+    }
+  `;
+  let releaseIds = [];
+  let hasNextPage = true;
+  let endCursor = null;
+  try {
+    while (hasNextPage) {
+      const result = await github.graphql(query, {
+        owner: context.repo.owner,
+        repo: context.repo.repo,
+        cursor: endCursor
+      });
+      const releases = result.repository.releases.nodes
+        .filter(release => release.tagName.startsWith(titlePrefix))
+        .map(release => ({
+          databaseId: release.databaseId,
+          tagName: release.tagName
+        }));
+      releaseIds = releaseIds.concat(releases);
+      const pageInfo = result.repository.releases.pageInfo;
+      hasNextPage = pageInfo.hasNextPage;
+      endCursor = pageInfo.endCursor;
+    }
+    const word = releaseIds.length === 1 ? 'release' : 'releases';
+    core.info(`Found ${releaseIds.length} ${word} for '${chart}' chart`);
+    return releaseIds;
+  } catch (error) {
+    utils.handleError(error, core, `get releases for '${chart}' chart`, false);
+    return [];
   }
 }
 
@@ -398,12 +482,11 @@ async function createSignedCommit({ github, context, core, branchName, expectedH
 }
 
 /**
- * Deletes a specific package version from GitHub Container Registry
+ * Deletes all versions of a package from GitHub Container Registry
  * 
- * This function finds and deletes a specific package version from GitHub Container Registry
- * using GraphQL API. It first queries for the exact package version by name and version,
- * then deletes it if found. This is used during OCI chart publishing to ensure clean
- * re-publishing of versions without conflicts.
+ * This function finds and deletes all versions of a package from GitHub Container Registry
+ * using GraphQL API. It uses the _getOciPackageVersionIds helper to retrieve all version IDs
+ * and then deletes each version in sequence.
  * 
  * @param {Object} params - Function parameters
  * @param {Object} params.github - GitHub API client for making API calls
@@ -412,15 +495,14 @@ async function createSignedCommit({ github, context, core, branchName, expectedH
  * @param {Object} params.package - Package information
  * @param {string} params.package.name - Name of the package
  * @param {string} params.package.type - Type of package ('application' or 'library')
- * @param {string} params.package.version - Version of the package
- * @returns {Promise<boolean>} - True if package was deleted successfully, false otherwise
+ * @returns {Promise<boolean>} - True if at least one package version was deleted successfully, false otherwise
  */
 async function deleteOciPackage({ github, context, core, package }) {
   const packageName = [context.payload.repository.full_name, package.type, package.name].join('/');
   try {
-    const versionId = await _getOciPackageVersionId({ github, context, core, package });
-    if (!versionId) return false;
-    core.info(`Deleting '${packageName}:${package.version}' package with '${versionId}' ID...`);
+    core.info(`Deleting '${packageName}' OCI package...`);
+    const versionIds = await _getOciPackageVersionIds({ github, context, core, package });
+    if (!versionIds.length) return false;
     const mutation = `
       mutation($versionId: ID!) {
         deletePackageVersion(input: { packageVersionId: $versionId }) {
@@ -428,14 +510,62 @@ async function deleteOciPackage({ github, context, core, package }) {
         }
       }
     `;
-    const result = await github.graphql(mutation, { versionId });
-    if (result.deletePackageVersion.success) {
-      core.info(`Successfully deleted '${packageName}:${package.version}' package`);
-      return true;
+    let counter = 0;
+    for (const version of versionIds) {
+      const result = await github.graphql(mutation, { versionId: version.id });
+      if (result.deletePackageVersion.success) counter++;
     }
-    return false;
+    core.info(`Successfully deleted '${packageName}' OCI package`);
+    return counter > 0;
   } catch (error) {
-    utils.handleError(error, core, `delete '${packageName}:${package.version}' package`, false);
+    utils.handleError(error, core, `delete '${packageName}' OCI package`, false);
+    return false;
+  }
+}
+
+/**
+ * Deletes all releases for a chart from GitHub
+ * 
+ * This function finds and deletes all releases for a specific chart from GitHub
+ * using the REST API. It uses the _getReleaseIds helper to retrieve all release IDs
+ * and then deletes each release in sequence.
+ * 
+ * @param {Object} params - Function parameters
+ * @param {Object} params.github - GitHub API client for making API calls
+ * @param {Object} params.context - GitHub Actions context containing repository information
+ * @param {Object} params.core - GitHub Actions Core API for logging and output
+ * @param {string} params.chart - Name of the chart whose releases should be deleted
+ * @returns {Promise<boolean>} - True if at least one release was deleted successfully, false otherwise
+ */
+async function deleteReleases({ github, context, core, chart }) {
+  try {
+    core.info(`Deleting releases for '${chart}' chart...`);
+    const releaseIds = await _getReleaseIds({ github, context, core, chart });
+    if (!releaseIds.length) {
+      core.info(`No releases found for '${chart}' chart`);
+      return false;
+    }
+    let counter = 0;
+    const promises = releaseIds.map(async (release) => {
+      try {
+        await github.rest.repos.deleteRelease({
+          owner: context.repo.owner,
+          repo: context.repo.repo,
+          release_id: release.databaseId
+        });
+        return { success: true, tagName: release.tagName };
+      } catch (error) {
+        utils.handleError(error, core, `delete release '${release.tagName}'`, false);
+        return { success: false, tagName: release.tagName };
+      }
+    });
+    const results = await Promise.all(promises);
+    counter = results.filter((result) => result.success).length;
+    const word = counter === 1 ? 'release' : 'releases';
+    core.info(`Successfully deleted ${counter} ${word} for '${chart}' chart`);
+    return counter > 0;
+  } catch (error) {
+    utils.handleError(error, core, `delete releases for '${chart}' chart`, false);
     return false;
   }
 }
@@ -597,10 +727,10 @@ async function getReleaseIssues({ github, context, core, chartName, chartType, m
  * @param {Object} params.context - GitHub Actions context containing repository information
  * @param {Object} params.core - GitHub Actions Core API for logging and output
  * @param {string} [params.eventType='pull_request'] - Event type to process ('pull_request' or 'push')
- * @returns {Promise<string[]>} - Array of file paths that were changed or added
+ * @returns {Promise<Object>} - Object mapping file paths to their Git change types (added, deleted, modified, renamed)
  */
 async function getUpdatedFiles({ github, context, core, eventType = 'pull_request' }) {
-  const files = [];
+  const files = {};
   try {
     if (!['pull_request', 'push'].includes(eventType)) {
       throw new Error(`'${eventType}'`);
@@ -624,6 +754,7 @@ async function getUpdatedFiles({ github, context, core, eventType = 'pull_reques
               files(first: 100, after: $cursor) {
                 nodes {
                   path
+                  changeType
                 }
                 pageInfo {
                   hasNextPage
@@ -644,15 +775,17 @@ async function getUpdatedFiles({ github, context, core, eventType = 'pull_reques
           cursor: endCursor
         };
         const result = await github.graphql(query, variables);
-        const newFiles = result.repository.pullRequest.files.nodes.map(node => node.path);
-        files.push(...newFiles);
+        result.repository.pullRequest.files.nodes.forEach(node => {
+          files[node.path] = node.changeType.toLowerCase();
+        });
         const pageInfo = result.repository.pullRequest.files.pageInfo;
         hasNextPage = pageInfo.hasNextPage;
         endCursor = pageInfo.endCursor;
       }
-      if (files.length > 0) {
-        const word = files.length === 1 ? 'file' : 'files';
-        core.info(`Found ${files.length} updated ${word} in pull request #${context.payload.pull_request.number}`);
+      const fileCount = Object.keys(files).length;
+      if (fileCount > 0) {
+        const word = fileCount === 1 ? 'file' : 'files';
+        core.info(`Found ${fileCount} updated ${word} in pull request #${context.payload.pull_request.number}`);
       }
       return files;
     }
@@ -664,11 +797,12 @@ async function getUpdatedFiles({ github, context, core, eventType = 'pull_reques
         head: context.payload.after
       });
       response.data.files.forEach(file => {
-        files.push(file.filename);
+        files[file.filename] = file.status;
       });
-      if (files.length > 0) {
-        const word = files.length === 1 ? 'file' : 'files';
-        core.info(`Found ${files.length} updated ${word} in push event`);
+      const fileCount = Object.keys(files).length;
+      if (fileCount > 0) {
+        const word = fileCount === 1 ? 'file' : 'files';
+        core.info(`Found ${fileCount} updated ${word} in push event`);
       }
       return files;
     }
@@ -721,6 +855,7 @@ module.exports = {
   checkWorkflowRunStatus,
   createRelease,
   createSignedCommit,
+  deleteReleases,
   deleteOciPackage,
   getReleaseByTag,
   getReleases,

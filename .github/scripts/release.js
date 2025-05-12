@@ -299,9 +299,7 @@ async function _generateChartRelease({ github, context, core, chart }) {
  */
 async function _generateFrontpage({ context, core }) {
   try {
-    const appDir = config('repository').chart.type.application;
-    const libDir = config('repository').chart.type.library;
-    const chartDirs = await utils.findCharts({ core, appDir, libDir });
+    const chartDirs = await utils.findCharts({ core });
     const chartEntries = {};
     const allChartDirs = [...chartDirs.application, ...chartDirs.library];
     await Promise.all(allChartDirs.map(async (chartDir) => {
@@ -397,6 +395,47 @@ async function _getChartPackages({ core, packagesPath }) {
 }
 
 /**
+ * Packages modified charts into distribution directories
+ * 
+ * This function creates the necessary directory structure and packages each
+ * modified chart using Helm. Charts are packaged into separate directories
+ * based on their type (application or library).
+ * 
+ * @private
+ * @param {Object} params - Function parameters
+ * @param {Object} params.core - GitHub Actions Core API for logging and output
+ * @param {Object} params.exec - GitHub Actions exec helpers for running commands
+ * @param {Object} params.charts - Object containing application and library chart arrays
+ * @returns {Promise<void>}
+ */
+async function _packageCharts({ core, exec, charts }) {
+  const packagesPath = config('release').packages;
+  const appChartType = config('repository').chart.type.application;
+  const libChartType = config('repository').chart.type.library;
+  core.info(`Creating ${packagesPath} directory...`);
+  await fs.mkdir(packagesPath, { recursive: true });
+  const appPackagesDir = path.join(packagesPath, appChartType);
+  const libPackagesDir = path.join(packagesPath, libChartType);
+  await fs.mkdir(appPackagesDir, { recursive: true });
+  await fs.mkdir(libPackagesDir, { recursive: true });
+  core.info(`Successfully created ${packagesPath} directory`);
+  const chartDirs = [...charts.application, ...charts.library];
+  await Promise.all(chartDirs.map(async (chartDir) => {
+    try {
+      core.info(`Packaging '${chartDir}' chart...`);
+      core.info(`Updating dependencies for '${chartDir}' chart...`);
+      await exec.exec('helm', ['dependency', 'update', chartDir]);
+      const isAppChartType = chartDir.startsWith(appChartType);
+      const packageDest = isAppChartType ? appPackagesDir : libPackagesDir;
+      await exec.exec('helm', ['package', chartDir, '--destination', packageDest]);
+    } catch (error) {
+      utils.handleError(error, core, `package ${chartDir} chart`, false);
+    }
+  }));
+  core.info(`Successfully packaged ${chartDirs.length} charts`);
+}
+
+/**
  * Publishes GitHub releases for packaged charts and uploads the chart packages as release assets
  * 
  * This function processes all chart packages in the specified directory, creating GitHub
@@ -420,11 +459,25 @@ async function _getChartPackages({ core, packagesPath }) {
  * @param {Object} params.github - GitHub API client for making API calls
  * @param {Object} params.context - GitHub Actions context containing repository information
  * @param {Object} params.core - GitHub Actions Core API for logging and output
- * @param {string} params.packagesPath - Directory containing packaged chart .tgz files
+ * @param {string} params.deletedObjects - Deleted chart objects
  * @returns {Promise<void>}
  */
-async function _publishChartReleases({ github, context, core, packagesPath }) {
+async function _publishChartReleases({ github, context, core, deletedObjects }) {
   try {
+    if (deletedObjects.length) {
+      const word = deletedObjects.length === 1 ? 'release' : 'releases';
+      core.info(`Deleting ${deletedObjects.length} chart ${word}...`);
+      await Promise.all(deletedObjects.map(async (deletedChart) => {
+        try {
+          const chartPath = path.dirname(deletedChart);
+          const chart = path.basename(chartPath);
+          await api.deleteReleases({ github, context, core, chart });
+        } catch (error) {
+          utils.handleError(error, core, `delete releases for '${deletedChart}' chart`, false);
+        }
+      }));
+    }
+    const packagesPath = config('release').packages;
     const packages = await _getChartPackages({ core, packagesPath });
     if (!packages.length) {
       core.info('No packages available for publishing');
@@ -488,10 +541,10 @@ async function _publishChartReleases({ github, context, core, packagesPath }) {
  * @param {Object} params.context - GitHub Actions context containing repository information
  * @param {Object} params.core - GitHub Actions Core API for logging and output
  * @param {Object} params.exec - GitHub Actions exec helpers for running commands
- * @param {string} params.packagesPath - Directory containing packaged chart .tgz files
+ * @param {Object} params.deletedObjects - Deleted chart objects
  * @returns {Promise<void>}
  */
-async function _publishOciReleases({ github, context, core, exec, packagesPath }) {
+async function _publishOciReleases({ github, context, core, exec, deletedObjects }) {
   try {
     const ociRegistry = config('repository').oci.registry;
     if (!config('repository').oci.packages.enabled) {
@@ -516,18 +569,37 @@ async function _publishOciReleases({ github, context, core, exec, packagesPath }
       utils.handleError(authError, core, 'authenticate to OCI registry', false);
       return;
     }
+    if (deletedObjects.length) {
+      const word = deletedObjects.length === 1 ? 'package' : 'packages';
+      core.info(`Deleting ${deletedObjects.length} OCI ${word}...`);
+      const appChartType = config('repository').chart.type.application;
+      await Promise.all(deletedObjects.map(async (object) => {
+        try {
+          const packagePath = path.dirname(object);
+          const name = path.basename(packagePath);
+          const type = packagePath.startsWith(appChartType) ? 'application' : 'library';
+          await api.deleteOciPackage({
+            github,
+            context,
+            core,
+            package: {
+              name,
+              type
+            }
+          });
+        } catch (error) {
+          utils.handleError(error, core, `delete OCI packages`, false);
+        }
+      }));
+    }
+    const packagesPath = config('release').packages;
     const allPackages = await _getChartPackages({ core, packagesPath });
     if (!allPackages.length) {
       core.info('No packages available for OCI registry publishing');
       return;
     }
-    const files = await api.getUpdatedFiles({ github, context, core });
-    const charts = await utils.findCharts({
-      core,
-      appDir: config('repository').chart.type.application,
-      libDir: config('repository').chart.type.library,
-      files
-    });
+    const files = Object.keys(await api.getUpdatedFiles({ github, context, core }));
+    const charts = await utils.findCharts({ core, files });
     const chartNames = [
       ...charts.application.map(dir => path.basename(dir)),
       ...charts.library.map(dir => path.basename(dir))
@@ -586,48 +658,22 @@ async function _publishOciReleases({ github, context, core, exec, packagesPath }
  */
 async function processReleases({ github, context, core, exec }) {
   try {
-    const appChartType = config('repository').chart.type.application;
-    const libChartType = config('repository').chart.type.library;
     const files = await api.getUpdatedFiles({ github, context, core });
-    const charts = await utils.findCharts({ core, appDir: appChartType, libDir: libChartType, files });
+    const charts = await utils.findCharts({ core, files: Object.keys(files) });
     if (!(charts.application.length + charts.library.length)) {
-      core.info('No new charts releases found');
+      core.info('No new chart releases found');
       return;
     }
-    const packagesPath = config('release').packages;
-    core.info(`Creating ${packagesPath} directory...`);
-    await fs.mkdir(packagesPath, { recursive: true });
-    const appPackagesDir = path.join(packagesPath, appChartType);
-    const libPackagesDir = path.join(packagesPath, libChartType);
-    await fs.mkdir(appPackagesDir, { recursive: true });
-    await fs.mkdir(libPackagesDir, { recursive: true });
-    core.info(`Successfully created ${packagesPath} directory`);
-    const chartDirs = [...charts.application, ...charts.library];
-    await Promise.all(chartDirs.map(async (chartDir) => {
-      try {
-        core.info(`Packaging '${chartDir}' chart...`);
-        core.info(`Updating dependencies for '${chartDir}' chart...`);
-        await exec.exec('helm', ['dependency', 'update', chartDir]);
-        const isAppChartType = chartDir.startsWith(appChartType);
-        const packageDest = isAppChartType ? appPackagesDir : libPackagesDir;
-        await exec.exec('helm', ['package', chartDir, '--destination', packageDest]);
-      } catch (error) {
-        utils.handleError(error, core, `package ${chartDir} chart`, false);
-      }
-    }));
-    core.info(`Successfully packaged ${chartDirs.length} charts`);
-    await _publishChartReleases({ github, context, core, packagesPath });
+    await _packageCharts({ core, exec, charts });
+    const deletedObjects = Object.entries(files)
+      .filter(([file, status]) => file.endsWith('Chart.yaml') && status === 'deleted')
+      .map(([file]) => file);
+    await _publishChartReleases({ github, context, core, deletedObjects });
     if (config('repository').chart.packages.enabled) {
       await _generateChartsIndex({ github, context, core, exec, distRoot: './', charts });
     }
     if (config('repository').oci.packages.enabled) {
-      await _publishOciReleases({
-        github,
-        context,
-        core,
-        exec,
-        packagesPath
-      });
+      await _publishOciReleases({ github, context, core, exec, deletedObjects });
     }
     core.info('Successfully completed the chart releases process');
   } catch (error) {

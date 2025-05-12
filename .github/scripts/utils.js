@@ -135,12 +135,10 @@ async function fileExists(filePath) {
  * 
  * @param {Object} params - Function parameters
  * @param {Object} params.core - GitHub Actions Core API for logging and output
- * @param {string} params.appDir - Path to application charts directory
- * @param {string} params.libDir - Path to library charts directory
  * @param {string[]} [params.files=[]] - Optional array of file paths to filter charts by
  * @returns {Promise<{application: string[], library: string[]}>} - Object containing arrays of chart directories by type
  */
-async function findCharts({ core, appDir, libDir, files = [] }) {
+async function findCharts({ core, files = [] }) {
   const word = files.length > 0 ? 'updated' : 'available';
   core.info(`Finding ${word} charts...`);
   const charts = {
@@ -148,8 +146,8 @@ async function findCharts({ core, appDir, libDir, files = [] }) {
     library: []
   };
   const paths = [
-    { dir: appDir, type: 'application' },
-    { dir: libDir, type: 'library' }
+    { dir: config('repository').chart.type.application, type: 'application' },
+    { dir: config('repository').chart.type.library, type: 'library' }
   ];
   await Promise.all(paths.map(async ({ dir, type }) => {
     try {

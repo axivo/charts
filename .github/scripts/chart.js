@@ -15,7 +15,6 @@
  * @license BSD-3-Clause
  */
 
-const crypto = require('crypto');
 const fs = require('fs/promises');
 const path = require('path');
 const yaml = require('js-yaml');
@@ -261,18 +260,16 @@ async function _updateLockFiles({ github, context, core, exec, charts }) {
  */
 async function updateCharts({ github, context, core, exec }) {
   try {
-    const appChartType = config('repository').chart.type.application;
-    const libChartType = config('repository').chart.type.library;
-    const files = await api.getUpdatedFiles({ github, context, core });
-    const updatedCharts = await utils.findCharts({ core, appDir: appChartType, libDir: libChartType, files });
-    let updatedChartDirs = [];
-    if (updatedCharts.application.length + updatedCharts.library.length > 0) {
-      const allUpdatedCharts = [...updatedCharts.application, ...updatedCharts.library];
-      updatedChartDirs = allUpdatedCharts.map(chartDir => chartDir);
-      await _lintCharts({ core, exec, charts: updatedCharts });
-      await docs.updateDocumentation({ github, context, core, exec, dirs: updatedChartDirs });
-      await _updateAppFiles({ github, context, core, exec, charts: updatedCharts });
-      await _updateLockFiles({ github, context, core, exec, charts: updatedCharts });
+    const files = Object.keys(await api.getUpdatedFiles({ github, context, core }));
+    const charts = await utils.findCharts({ core, files });
+    let dirs = [];
+    if (charts.application.length + charts.library.length > 0) {
+      const allCharts = [...charts.application, ...charts.library];
+      dirs = allCharts.map(chartDir => chartDir);
+      await _lintCharts({ core, exec, charts });
+      await docs.updateDocumentation({ github, context, core, exec, dirs });
+      await _updateAppFiles({ github, context, core, exec, charts });
+      await _updateLockFiles({ github, context, core, exec, charts });
     }
   } catch (error) {
     utils.handleError(error, core, 'update repository charts');
