@@ -215,5 +215,6 @@
       "title": "Common Library Configuration",
       "description": "Common library configuration"
     }
-  }
+  },
+  "additionalProperties": false
 }

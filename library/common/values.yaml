@@ -2,11 +2,11 @@ global:
   # -- (string) Global image registry
   # @default -- ""
   imageRegistry: ""
-  
+
   # -- (list) Global image pull secrets
   # @default -- []
   imagePullSecrets: []
-  
+
   # -- (string) Primary domain used across applications
   # @default -- "noty.cc"
   domain: noty.cc

@@ -101,8 +101,8 @@ async function _lintCharts({ core, exec, charts }) {
       return true;
     }
     // Related to extraArgs, see https://github.com/helm/helm/issues/10392
-    const extraArgs = ['--debug', '--helm-lint-extra-args', '--skip-schema-validation'];
-    await exec.exec('ct', ['lint', '--skip-helm-dependencies', ...extraArgs, '--charts', chartDirs.join(',')]);
+    const extraArgs = ['--helm-lint-extra-args', '--skip-schema-validation'];
+    await exec.exec('ct', ['lint', '--skip-helm-dependencies', '--charts', chartDirs.join(',')]);
     const word = chartDirs.length === 1 ? 'chart' : 'charts';
     core.info(`Successfully linted ${chartDirs.length} ${word}`);
     return true;
