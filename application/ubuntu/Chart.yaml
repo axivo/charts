@@ -13,6 +13,10 @@ home: https://github.com/axivo/charts
 sources:
   - https://github.com/axivo/charts
   - https://ubuntu.com/server
+dependencies:
+  - name: common
+    repository: oci://ghcr.io/axivo/charts/library
+    version: 1.0.0
 maintainers:
   - name: AXIVO
     url: https://axivo.com
