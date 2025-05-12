@@ -12,14 +12,16 @@
       "properties": {
         "imageRegistry": {
           "description": "Global image registry",
-          "type": "string"
+          "type": "string",
+          "default": ""
         },
         "imagePullSecrets": {
           "description": "Global image pull secrets",
           "type": "array",
           "items": {
             "type": "object"
-          }
+          },
+          "default": []
         }
       }
     },
@@ -226,6 +228,11 @@
     },
     "affinity": {
       "description": "Affinity rules for pod assignment",
+      "type": "object",
+      "additionalProperties": true
+    },
+    "common": {
+      "description": "Common library configuration",
       "type": "object",
       "additionalProperties": true
     }
