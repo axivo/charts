@@ -726,27 +726,24 @@ async function getReleaseIssues({ github, context, core, chartName, chartType, m
  * @param {Object} params.github - GitHub API client for making API calls
  * @param {Object} params.context - GitHub Actions context containing repository information
  * @param {Object} params.core - GitHub Actions Core API for logging and output
- * @param {string} [params.eventType='pull_request'] - Event type to process ('pull_request' or 'push')
  * @returns {Promise<Object>} - Object mapping file paths to their Git change types (added, deleted, modified, renamed)
  */
-async function getUpdatedFiles({ github, context, core, eventType = 'pull_request' }) {
+async function getUpdatedFiles({ github, context, core }) {
   const files = {};
+  const eventName = context.eventName;
   try {
-    if (!['pull_request', 'push'].includes(eventType)) {
-      throw new Error(`'${eventType}'`);
-    }
-    if (eventType === 'pull_request' && (!context.payload.pull_request || !context.payload.pull_request.number)) {
+    if (eventName === 'pull_request' && (!context.payload.pull_request || !context.payload.pull_request.number)) {
       return files;
     }
-    if (eventType === 'push' && (!context.payload.before || !context.payload.after)) {
+    if (eventName === 'push' && (!context.payload.before || !context.payload.after)) {
       return files;
     }
   } catch (error) {
-    utils.handleError(error, core, 'validate event type', false);
+    utils.handleError(error, core, 'validate event name', false);
     return files;
   }
   try {
-    if (eventType === 'pull_request') {
+    if (eventName === 'pull_request') {
       const query = `
         query($owner: String!, $repo: String!, $prNumber: Int!, $cursor: String) {
           repository(owner: $owner, name: $repo) {
@@ -789,7 +786,7 @@ async function getUpdatedFiles({ github, context, core, eventType = 'pull_reques
       }
       return files;
     }
-    if (eventType === 'push') {
+    if (eventName === 'push') {
       const response = await github.rest.repos.compareCommits({
         owner: context.repo.owner,
         repo: context.repo.repo,
@@ -808,7 +805,7 @@ async function getUpdatedFiles({ github, context, core, eventType = 'pull_reques
     }
     return files;
   } catch (error) {
-    utils.handleError(error, core, `get updated files for '${eventType}' event`, false);
+    utils.handleError(error, core, `get updated files for '${eventName}' event`, false);
     return files;
   }
 }
