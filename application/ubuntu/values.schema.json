@@ -3,12 +3,10 @@
   "title": "UbuntuValues",
   "description": "Values schema for the Ubuntu troubleshooting chart.",
   "type": "object",
-  "additionalProperties": true,
   "properties": {
     "global": {
       "description": "Global configuration",
       "type": "object",
-      "additionalProperties": true,
       "properties": {
         "imageRegistry": {
           "description": "Global image registry",
@@ -93,30 +91,25 @@
         },
         "annotations": {
           "description": "Annotations to add to the service account",
-          "type": "object",
-          "additionalProperties": true
+          "type": "object"
         }
       }
     },
     "podAnnotations": {
       "description": "Annotations to add to the pod",
-      "type": "object",
-      "additionalProperties": true
+      "type": "object"
     },
     "podLabels": {
       "description": "Labels to add to the pod",
-      "type": "object",
-      "additionalProperties": true
+      "type": "object"
     },
     "podSecurityContext": {
       "description": "Pod security context",
-      "type": "object",
-      "additionalProperties": true
+      "type": "object"
     },
     "securityContext": {
       "description": "Container security context",
-      "type": "object",
-      "additionalProperties": true
+      "type": "object"
     },
     "livenessProbe": {
       "description": "Liveness probe configuration",

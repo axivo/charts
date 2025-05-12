@@ -3,12 +3,10 @@
   "title": "CommonLibraryValues",
   "description": "Values schema for the common library chart.",
   "type": "object",
-  "additionalProperties": true,
   "properties": {
     "global": {
       "description": "Global settings that can be referenced by charts using this library",
       "type": "object",
-      "additionalProperties": true,
       "properties": {
         "imageRegistry": {
           "description": "Global image registry",
@@ -36,7 +34,6 @@
         "certManager": {
           "description": "Configuration for cert-manager",
           "type": "object",
-          "additionalProperties": true,
           "properties": {
             "clusterIssuer": {
               "description": "Default cert-manager cluster issuer",
@@ -48,7 +45,6 @@
         "externalDns": {
           "description": "Configuration for ExternalDNS",
           "type": "object",
-          "additionalProperties": true,
           "properties": {
             "provider": {
               "description": "DNS provider for external-dns",
