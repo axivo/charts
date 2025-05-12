@@ -29,3 +29,5 @@ See the chart values, listed below.
 | global.domain | string | "noty.cc" | Primary domain used across applications |
 | global.externalDns.acmeServer | string | "production" | ACME server environment, `production` or `staging` |
 | global.externalDns.provider | string | "cloudflare" | DNS provider for external-dns |
+| global.imagePullSecrets | list | [] | Global image pull secrets |
+| global.imageRegistry | string | "" | Global image registry |
