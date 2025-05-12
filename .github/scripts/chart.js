@@ -102,7 +102,7 @@ async function _lintCharts({ core, exec, charts }) {
     }
     const word = chartDirs.length === 1 ? 'chart' : 'charts';
     core.info(`Linting ${chartDirs.length} ${word}...`);
-    await exec.exec('ct', ['lint', '--charts', chartDirs.join(',')]);
+    await exec.exec('ct', ['lint', '--skip-helm-dependencies', '--charts', chartDirs.join(',')]);
     core.info(`Successfully linted ${chartDirs.length} ${word}`);
     return true;
   } catch (error) {
