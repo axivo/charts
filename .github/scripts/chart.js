@@ -104,7 +104,7 @@ async function _lintCharts({ core, exec, charts }) {
     core.info(`Linting ${chartDirs.length} ${word}...`);
     for (const chartDir of chartDirs) {
       core.info(`Linting '${chartDir}' chart...`);
-      await exec.exec('ct', ['lint', '--skip-helm-dependencies', '--charts', chartDir]);
+      await exec.exec('helm', ['lint', chartDir]);
     }
     core.info(`Successfully linted ${chartDirs.length} ${word}`);
     return true;
