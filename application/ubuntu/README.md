@@ -35,6 +35,7 @@ See the chart dependencies, listed below.
 
 | Repository | Name | Version |
 |------------|------|---------|
+| oci://ghcr.io/axivo/charts/library | common | 1.0.0 |
 
 ### Chart Values
 
