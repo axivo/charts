@@ -100,8 +100,9 @@ async function _lintCharts({ core, exec, charts }) {
       core.info('No charts to lint');
       return true;
     }
+    // Workaround for https://github.com/helm/helm/issues/12798
     for (const chartDir of chartDirs) {
-      await exec.exec('helm', ['lint', '--skip-helm-dependencies', chartDir]);
+      await exec.exec('ct', ['lint', '--charts', chartDir, '--skip-helm-dependencies']);
     }
     const word = chartDirs.length === 1 ? 'chart' : 'charts';
     core.info(`Successfully linted ${chartDirs.length} ${word}`);
