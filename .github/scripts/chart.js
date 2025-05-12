@@ -266,10 +266,10 @@ async function updateCharts({ github, context, core, exec }) {
     if (charts.application.length + charts.library.length > 0) {
       const allCharts = [...charts.application, ...charts.library];
       dirs = allCharts.map(chartDir => chartDir);
-      await _lintCharts({ core, exec, charts });
       await docs.updateDocumentation({ github, context, core, exec, dirs });
       await _updateAppFiles({ github, context, core, exec, charts });
       await _updateLockFiles({ github, context, core, exec, charts });
+      await _lintCharts({ core, exec, charts });
     }
   } catch (error) {
     utils.handleError(error, core, 'update repository charts');
