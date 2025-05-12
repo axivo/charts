@@ -10,6 +10,24 @@
       "type": "object",
       "additionalProperties": true,
       "properties": {
+        "imageRegistry": {
+          "description": "Global image registry",
+          "type": "string",
+          "default": ""
+        },
+        "imagePullSecrets": {
+          "description": "Global image pull secrets",
+          "type": "array",
+          "default": [],
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              }
+            }
+          }
+        },
         "domain": {
           "description": "Primary domain used across applications",
           "type": "string",
