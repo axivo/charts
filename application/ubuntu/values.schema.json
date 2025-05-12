@@ -3,10 +3,12 @@
   "title": "UbuntuValues",
   "description": "Values schema for the Ubuntu troubleshooting chart.",
   "type": "object",
+  "additionalProperties": false,
   "properties": {
     "global": {
       "description": "Global configuration",
       "type": "object",
+      "additionalProperties": false,
       "properties": {
         "imageRegistry": {
           "description": "Global image registry",
