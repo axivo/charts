@@ -3,10 +3,12 @@
   "title": "Sealed Secrets Values",
   "description": "Schema for the values of the sealed-secrets Helm chart dependency.",
   "type": "object",
+  "additionalProperties": true,
   "properties": {
     "global": {
       "type": "object",
       "title": "Global configuration",
+      "additionalProperties": true,
       "properties": {
         "imageRegistry": {
           "type": "string",
@@ -215,6 +217,5 @@
       "title": "Common Library Configuration",
       "description": "Common library configuration"
     }
-  },
-  "additionalProperties": false
+  }
 }
