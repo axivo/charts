@@ -55,18 +55,16 @@ async function _performGitCommit({ github, context, core, exec, files, type }) {
     core.info(`Committing ${files.length} ${type}...`);
     await runGit(['add', ...files]);
     const { additions, deletions } = await utils.getGitStagedChanges(runGit);
-    if (additions.length + deletions.length > 0) {
+    if (additions.length + deletions.length) {
       const currentHead = await runGit(['rev-parse', 'HEAD']);
-      await api.createSignedCommit({
-        github,
-        context,
-        core,
+      const git = {
         branchName: headRef,
         expectedHeadOid: currentHead,
         additions,
         deletions,
         commitMessage: `chore(github-action): update ${type}`
-      });
+      }
+      await api.createSignedCommit({ github, context, core, git });
       core.info(`Successfully committed ${type}`);
     }
   } catch (error) {

@@ -95,80 +95,36 @@ async function _getLastReleaseDate({ github, context, core, chartName }) {
 async function _getOciPackageVersionIds({ github, context, core, package }) {
   const packageName = [context.repo.repo, package.type, package.name].join('/');
   core.info(`Searching for all versions of '${packageName}' package...`);
-  // DEBUG Start
-  core.info(`DEBUG: Owner: ${context.repo.owner}`);
-  core.info(`DEBUG: Repo: ${context.repo.repo}`);
-  core.info(`DEBUG: Package Type: ${package.type}`);
-  core.info(`DEBUG: Package Name: ${package.name}`);
-  core.info(`DEBUG: Full Package Name: ${packageName}`);
-  // DEBUG End
-  const query = `
-    query($owner: String!, $repo: String!, $packageName: String!, $cursor: String) {
-      repository(owner: $owner, name: $repo) {
-        packages(first: 1, names: [$packageName]) {
-          nodes {
-            name
-            id
-            versions(first: 100, after: $cursor) {
-              pageInfo {
-                hasNextPage
-                endCursor
-              }
-              nodes {
-                id
-                version
-              }
-            }
-          }
-        }
-      }
-    }
-  `;
+  const repoType = await _getRepositoryType({ github, core, owner: context.repo.owner });
+  const isOrg = repoType === 'organization';
+  const perPage = 100;
   let versionIds = [];
-  let hasNextPage = true;
-  let endCursor = null;
   try {
-    while (hasNextPage) {
-      // DEBUG Start
-      core.info(`DEBUG: Query variables: owner=${context.repo.owner}, repo=${context.repo.repo}, packageName=${packageName}`);
-      // DEBUG End
-      const result = await github.graphql(query, {
-        owner: context.repo.owner,
-        repo: context.repo.repo,
-        packageName,
-        cursor: endCursor
-      });
-      // DEBUG Start
-      core.info(`DEBUG: GraphQL result: ${JSON.stringify(result, null, 2)}`);
-      // DEBUG End
-      const packageNodes = result.repository.packages.nodes;
-      if (!packageNodes.length) {
-        // DEBUG Start
-        core.info('DEBUG: No package nodes found');
-        // DEBUG End
-        return [];
+    while (true) {
+      const { data } = await github.rest.packages[isOrg
+        ? 'getAllPackageVersionsForPackageOwnedByOrg'
+        : 'getAllPackageVersionsForPackageOwnedByUser']({
+          [isOrg ? 'org' : 'username']: context.repo.owner,
+          package_name: packageName,
+          package_type: 'container',
+          per_page: perPage
+        });
+      if (!data.length) {
+        break;
       }
-      // DEBUG Start
-      core.info(`DEBUG: Found package: ${packageNodes[0].name} with ID: ${packageNodes[0].id}`);
-      core.info(`DEBUG: Package has ${packageNodes[0].versions.nodes.length} versions`);
-      // DEBUG End
-      const versions = packageNodes[0].versions.nodes.map(node => ({
-        version: node.version,
-        id: node.id
+      const versions = data.map(version => ({
+        id: version.id,
+        version: version.name
       }));
       versionIds = versionIds.concat(versions);
-      const pageInfo = packageNodes[0].versions.pageInfo;
-      hasNextPage = pageInfo.hasNextPage;
-      endCursor = pageInfo.endCursor;
+      if (data.length < perPage) {
+        break;
+      }
     }
     const word = versionIds.length === 1 ? 'version' : 'versions';
     core.info(`Found ${versionIds.length} ${word} for '${packageName}' OCI package`);
     return versionIds;
   } catch (error) {
-    // DEBUG Start
-    core.info(`DEBUG: GraphQL error: ${error.message}`);
-    core.info(`DEBUG: Full error: ${JSON.stringify(error, null, 2)}`);
-    // DEBUG End
     utils.handleError(error, core, `get versions for '${packageName}' package`, false);
     return [];
   }
@@ -336,6 +292,32 @@ async function _getReleases({ github, context, core, options = {} }) {
 }
 
 /**
+ * Get repository owner type
+ * 
+ * @private
+ * @param {Object} params - Function parameters
+ * @param {Object} params.github - GitHub API client for making API calls
+ * @param {Object} params.core - GitHub Actions Core API for logging and output
+ * @param {string} params.owner - Repository owner name
+ * @returns {Promise<string>} Owner type in lowercase ('user' or 'organization')
+ */
+async function _getRepositoryType({ github, core, owner }) {
+  const query = `
+    query($owner: String!) {
+      repositoryOwner(login: $owner) {
+        __typename
+      }
+    }
+  `;
+  try {
+    const response = await github.graphql(query, { owner });
+    return response.repositoryOwner.__typename.toLowerCase();
+  } catch (error) {
+    utils.handleError(error, core, 'determine repository type', false);
+  }
+}
+
+/**
  * Checks if a workflow run has any warnings or errors using GraphQL API
  * 
  * Analyzes a specific workflow run by its run ID to determine if it encountered any issues,
@@ -450,44 +432,45 @@ async function createRelease({ github, context, core, name, body, draft = false,
  * - Proper branch targeting and HEAD validation to prevent conflicts
  * - Error handling for the GraphQL operation
  * 
- * @param {Object} options - Function parameters
- * @param {Object} options.github - GitHub API client for making API calls 
- * @param {Object} options.context - GitHub Actions context containing repository information
- * @param {Object} options.core - GitHub Actions Core API for logging and output
- * @param {string} options.branchName - Branch name to commit to
- * @param {string} options.expectedHeadOid - Expected HEAD SHA of the branch (for validation)
- * @param {Array<Object>} options.additions - Files to add/modify, each having {path, contents} where contents is base64 encoded
- * @param {Array<Object>} options.deletions - Files to delete, each having {path}
- * @param {string} options.commitMessage - Commit message headline
+ * @param {Object} params - Function parameters
+ * @param {Object} params.github - GitHub API client for making API calls 
+ * @param {Object} params.context - GitHub Actions context containing repository information
+ * @param {Object} params.core - GitHub Actions Core API for logging and output
+ * @param {Object} params.git - Git-related parameters for the commit
+ * @param {string} params.git.branchName - Branch name to commit to
+ * @param {string} params.git.expectedHeadOid - Expected HEAD SHA of the branch (for validation)
+ * @param {Array<Object>} params.git.additions - Files to add/modify, each having {path, contents} where contents is base64 encoded
+ * @param {Array<Object>} params.git.deletions - Files to delete, each having {path}
+ * @param {string} params.git.commitMessage - Commit message headline
  * @returns {Promise<string|null>} - OID (SHA) of the created commit or null if no changes
  */
-async function createSignedCommit({ github, context, core, branchName, expectedHeadOid, additions = [], deletions = [], commitMessage }) {
+async function createSignedCommit({ github, context, core, git }) {
   try {
     core.info('Creating signed commit...');
-    if (!branchName) {
+    if (!git.branchName) {
       throw new Error('branchName is required');
     }
-    if (!expectedHeadOid) {
+    if (!git.expectedHeadOid) {
       throw new Error('expectedHeadOid is required');
     }
-    if (!commitMessage) {
+    if (!git.commitMessage) {
       throw new Error('commitMessage is required');
     }
-    if (!(additions.length + deletions.length)) {
+    if (!(git.additions.length + git.deletions.length)) {
       core.info('No changes to commit');
       return null;
     }
     const input = {
       branch: {
         repositoryNameWithOwner: context.payload.repository.full_name,
-        branchName: branchName
+        branchName: git.branchName
       },
-      expectedHeadOid: expectedHeadOid,
+      expectedHeadOid: git.expectedHeadOid,
       fileChanges: {
-        additions: additions,
-        deletions: deletions
+        additions: git.additions,
+        deletions: git.deletions
       },
-      message: { headline: commitMessage }
+      message: { headline: git.commitMessage }
     };
     const mutation = `
       mutation($input: CreateCommitOnBranchInput!) {
@@ -511,7 +494,7 @@ async function createSignedCommit({ github, context, core, branchName, expectedH
  * Deletes all versions of a package from GitHub Container Registry
  * 
  * This function finds and deletes all versions of a package from GitHub Container Registry
- * using GraphQL API. It uses the _getOciPackageVersionIds helper to retrieve all version IDs
+ * using REST API. It uses the _getOciPackageVersionIds helper to retrieve all version IDs
  * and then deletes each version in sequence.
  * 
  * @param {Object} params - Function parameters
@@ -529,17 +512,23 @@ async function deleteOciPackage({ github, context, core, package }) {
     core.info(`Deleting '${packageName}' OCI package...`);
     const versionIds = await _getOciPackageVersionIds({ github, context, core, package });
     if (!versionIds.length) return false;
-    const mutation = `
-      mutation($versionId: ID!) {
-        deletePackageVersion(input: { packageVersionId: $versionId }) {
-          success
-        }
-      }
-    `;
+    const repoType = await _getRepositoryType({ github, core, owner: context.repo.owner });
+    const isOrg = repoType === 'organization';
     let counter = 0;
     for (const version of versionIds) {
-      const result = await github.graphql(mutation, { versionId: version.id });
-      if (result.deletePackageVersion.success) counter++;
+      try {
+        await github.rest.packages[isOrg
+          ? 'deletePackageVersionForOrg'
+          : 'deletePackageVersionForUser']({
+            [isOrg ? 'org' : 'username']: context.repo.owner,
+            package_name: packageName,
+            package_type: 'container',
+            version_id: version.id
+          });
+        counter++;
+      } catch (error) {
+        utils.handleError(error, core, `delete version ${version.version} of '${packageName}' OCI package`, false);
+      }
     }
     core.info(`Successfully deleted '${packageName}' OCI package`);
     return counter > 0;
