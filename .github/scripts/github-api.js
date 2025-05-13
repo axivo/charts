@@ -522,7 +522,7 @@ async function deleteOciPackage({ github, context, core, package }) {
         [isOrg ? 'org' : 'username']: context.repo.owner,
         package_name: packageName,
         package_type: 'container',
-        per_page: perPage
+        per_page: 100
       });
     core.info('DEBUG Raw Versions:', JSON.stringify(data, null, 2));
     // DEBUG End
