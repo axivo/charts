@@ -679,6 +679,12 @@ async function processReleases({ github, context, core, exec }) {
     if (!(charts.application.length + charts.library.length)) {
       core.info('No new chart releases found');
       // DEBUG Start
+      // Show all Chart.yaml files and their statuses
+      Object.entries(files).forEach(([file, status]) => {
+        if (file.endsWith('Chart.yaml')) {
+          core.info(`DEBUG: Chart.yaml found - file: ${file}, status: "${status}"`);
+        }
+      });
       const deletedObjects = Object.entries(files)
         .filter(([file, status]) => file.endsWith('Chart.yaml') && status === 'deleted')
         .map(([file]) => file);
