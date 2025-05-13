@@ -161,6 +161,7 @@ async function findCharts({ core, files = [] }) {
       const results = await Promise.all(
         directoryEntries.map(async entry => {
           const chartDir = path.join(dir, entry.name);
+          const chartYamlExists = await fileExists(path.join(chartDir, 'Chart.yaml'));
           const chartUpdatedFiles = files.some(file => file.startsWith(chartDir));
           if (chartYamlExists && (!files.length || chartUpdatedFiles)) {
             return chartDir;
