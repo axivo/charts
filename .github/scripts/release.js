@@ -459,28 +459,18 @@ async function _packageCharts({ core, exec, charts }) {
  * @param {Object} params.github - GitHub API client for making API calls
  * @param {Object} params.context - GitHub Actions context containing repository information
  * @param {Object} params.core - GitHub Actions Core API for logging and output
- * @param {string} params.deletedObjects - Deleted chart objects
+ * @param {string} params.deletedCharts - Deleted charts
  * @returns {Promise<void>}
  */
-async function _publishChartReleases({ github, context, core, deletedObjects }) {
+async function _publishChartReleases({ github, context, core, deletedCharts }) {
   try {
-    // DEBUG Start
-    const allReleases = await api.getReleases({ github, context, core });
-    core.info(`DEBUG: Current releases in repository:`);
-    allReleases.forEach(release => {
-      core.info(`DEBUG:   ${release.tag_name}`);
-    });
-    // DEBUG End
-    if (deletedObjects.length) {
-      const word = deletedObjects.length === 1 ? 'release' : 'releases';
-      core.info(`Deleting ${deletedObjects.length} chart ${word}...`);
-      await Promise.all(deletedObjects.map(async (deletedChart) => {
+    if (deletedCharts.length) {
+      const word = deletedCharts.length === 1 ? 'release' : 'releases';
+      core.info(`Deleting ${deletedCharts.length} chart ${word}...`);
+      await Promise.all(deletedCharts.map(async (deletedChart) => {
         try {
           const chartPath = path.dirname(deletedChart);
           const chart = path.basename(chartPath);
-          // DEBUG Start
-          core.info(`DEBUG: Parsing deleted chart - path: ${deletedChart}, chartPath: ${chartPath}, chart: ${chart}`);
-          // DEBUG End
           await api.deleteReleases({ github, context, core, chart });
         } catch (error) {
           utils.handleError(error, core, `delete releases for '${deletedChart}' chart`, false);
@@ -551,10 +541,10 @@ async function _publishChartReleases({ github, context, core, deletedObjects }) 
  * @param {Object} params.context - GitHub Actions context containing repository information
  * @param {Object} params.core - GitHub Actions Core API for logging and output
  * @param {Object} params.exec - GitHub Actions exec helpers for running commands
- * @param {Object} params.deletedObjects - Deleted chart objects
+ * @param {Object} params.deletedCharts - Deleted charts
  * @returns {Promise<void>}
  */
-async function _publishOciReleases({ github, context, core, exec, deletedObjects }) {
+async function _publishOciReleases({ github, context, core, exec, deletedCharts }) {
   try {
     const ociRegistry = config('repository').oci.registry;
     if (!config('repository').oci.packages.enabled) {
@@ -579,13 +569,13 @@ async function _publishOciReleases({ github, context, core, exec, deletedObjects
       utils.handleError(authError, core, 'authenticate to OCI registry', false);
       return;
     }
-    if (deletedObjects.length) {
-      const word = deletedObjects.length === 1 ? 'package' : 'packages';
-      core.info(`Deleting ${deletedObjects.length} OCI ${word}...`);
+    if (deletedCharts.length) {
+      const word = deletedCharts.length === 1 ? 'package' : 'packages';
+      core.info(`Deleting ${deletedCharts.length} OCI ${word}...`);
       const appChartType = config('repository').chart.type.application;
-      await Promise.all(deletedObjects.map(async (object) => {
+      await Promise.all(deletedCharts.map(async (deletedChart) => {
         try {
-          const packagePath = path.dirname(object);
+          const packagePath = path.dirname(deletedChart);
           const name = path.basename(packagePath);
           const type = packagePath.startsWith(appChartType) ? 'application' : 'library';
           await api.deleteOciPackage({
@@ -669,48 +659,21 @@ async function _publishOciReleases({ github, context, core, exec, deletedObjects
 async function processReleases({ github, context, core, exec }) {
   try {
     const files = await api.getUpdatedFiles({ github, context, core });
-    // DEBUG Start
-    core.info('DEBUG: All updated files:');
-    Object.entries(files).forEach(([file, status]) => {
-      core.info(`DEBUG:   ${file} => ${status}`);
-    });
-    // DEBUG End
     const charts = await utils.findCharts({ core, files: Object.keys(files) });
-    if (!(charts.application.length + charts.library.length)) {
-      core.info('No new chart releases found');
-      // DEBUG Start
-      // Show all Chart.yaml files and their statuses
-      Object.entries(files).forEach(([file, status]) => {
-        if (file.endsWith('Chart.yaml')) {
-          core.info(`DEBUG: Chart.yaml found - file: ${file}, status: "${status}"`);
-        }
-      });
-      const deletedObjects = Object.entries(files)
-        .filter(([file, status]) => file.endsWith('Chart.yaml') && status === 'deleted')
-        .map(([file]) => file);
-      core.info(`DEBUG: Found ${deletedObjects.length} deleted Chart.yaml files:`);
-      deletedObjects.forEach(file => {
-        core.info(`DEBUG:   ${file}`);
-      });
-      // DEBUG End
+    const deletedCharts = Object.entries(files)
+      .filter(([file, status]) => file.endsWith('Chart.yaml') && status === 'removed')
+      .map(([file]) => file);
+    if (!(charts.application.length + charts.library.length + deletedCharts.length)) {
+      core.info('No updated chart releases found');
       return;
     }
     await _packageCharts({ core, exec, charts });
-    const deletedObjects = Object.entries(files)
-      .filter(([file, status]) => file.endsWith('Chart.yaml') && status === 'deleted')
-      .map(([file]) => file);
-    // DEBUG Start
-    core.info(`DEBUG: Found ${deletedObjects.length} deleted Chart.yaml files:`);
-    deletedObjects.forEach(file => {
-      core.info(`DEBUG:   ${file}`);
-    });
-    // DEBUG End
-    await _publishChartReleases({ github, context, core, deletedObjects });
+    await _publishChartReleases({ github, context, core, deletedCharts });
     if (config('repository').chart.packages.enabled) {
       await _generateChartsIndex({ github, context, core, exec, distRoot: './', charts });
     }
     if (config('repository').oci.packages.enabled) {
-      await _publishOciReleases({ github, context, core, exec, deletedObjects });
+      await _publishOciReleases({ github, context, core, exec, deletedCharts });
     }
     core.info('Successfully completed the chart releases process');
   } catch (error) {
