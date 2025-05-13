@@ -5,19 +5,6 @@
   "type": "object",
   "additionalProperties": true,
   "properties": {
-    "imageRegistry": {
-      "description": "Image registry (from dependency charts)",
-      "type": "string",
-      "default": ""
-    },
-    "imagePullSecrets": {
-      "description": "Image pull secrets (from dependency charts)",
-      "type": "array",
-      "items": {
-        "type": "object"
-      },
-      "default": []
-    },
     "global": {
       "description": "Global settings that can be referenced by charts using this library",
       "type": "object",
