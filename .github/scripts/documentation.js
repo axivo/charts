@@ -97,18 +97,16 @@ async function updateDocumentation({ github, context, core, exec, dirs = [] }) {
       return;
     }
     const { additions, deletions } = await utils.getGitStagedChanges(runGit);
-    if (additions.length + deletions.length > 0) {
+    if (additions.length + deletions.length) {
       const currentHead = await runGit(['rev-parse', 'HEAD']);
-      await api.createSignedCommit({
-        github,
-        context,
-        core,
+      const git = {
         branchName: headRef,
         expectedHeadOid: currentHead,
         additions,
         deletions,
         commitMessage: 'chore(github-action): update documentation'
-      });
+      }
+      await api.createSignedCommit({ github, context, core, git });
       core.info(`Successfully updated ${files.length} documentation files`);
     } else {
       core.info('No documentation changes to commit');
