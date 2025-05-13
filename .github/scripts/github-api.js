@@ -109,6 +109,9 @@ async function _getOciPackageVersionIds({ github, context, core, package }) {
           package_type: 'container',
           per_page: perPage
         });
+      core.info('DEBUG START _getOciPackageVersionIds');
+      core.info('DEBUG Raw Versions: ', JSON.stringify(data, null, 2));
+      core.info('DEBUG END _getOciPackageVersionIds');
       if (!data.length) {
         break;
       }
@@ -515,18 +518,9 @@ async function deleteOciPackage({ github, context, core, package }) {
     const repoType = await _getRepositoryType({ github, core, owner: context.repo.owner });
     const isOrg = repoType === 'organization';
     let counter = 0;
-    core.info('DEBUG START');
+    core.info('DEBUG START deleteOciPackage');
     core.info('DEBUG versionIds: ', JSON.stringify(versionIds, null, 2));
-    const { data } = await github.rest.packages[isOrg
-      ? 'getAllPackageVersionsForPackageOwnedByOrg'
-      : 'getAllPackageVersionsForPackageOwnedByUser']({
-        [isOrg ? 'org' : 'username']: context.repo.owner,
-        package_name: encodeURIComponent(packageName),
-        package_type: 'container',
-        per_page: 100
-      });
-    core.info('DEBUG Raw Versions: ', JSON.stringify(data, null, 2));
-    core.info('DEBUG END');
+    core.info('DEBUG END deleteOciPackage');
     for (const version of versionIds) {
       try {
         await github.rest.packages[isOrg
