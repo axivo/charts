@@ -101,6 +101,10 @@ async function _getOciPackageVersionIds({ github, context, core, package }) {
   let versionIds = [];
   try {
     while (true) {
+      // DEBUG Start
+      core.info(`DEBUG: Fetching versions for package '${packageName}', isOrg: ${isOrg}`);
+      core.info(`DEBUG: API call params - owner: ${context.repo.owner}, package_name: ${packageName}, package_type: container`);
+      // DEBUG End
       const { data } = await github.rest.packages[isOrg
         ? 'getAllPackageVersionsForPackageOwnedByOrg'
         : 'getAllPackageVersionsForPackageOwnedByUser']({
@@ -109,6 +113,10 @@ async function _getOciPackageVersionIds({ github, context, core, package }) {
           package_type: 'container',
           per_page: perPage
         });
+      // DEBUG Start
+      core.info(`DEBUG: API response - received ${data.length} versions`);
+      core.info(`DEBUG: First version sample: ${data.length > 0 ? JSON.stringify({ id: data[0].id, name: data[0].name }) : 'none'}`);
+      // DEBUG End
       if (!data.length) {
         break;
       }
@@ -508,15 +516,27 @@ async function createSignedCommit({ github, context, core, git }) {
  */
 async function deleteOciPackage({ github, context, core, package }) {
   const packageName = [context.repo.repo, package.type, package.name].join('/');
+  // DEBUG Start
+  core.info(`DEBUG: deleteOciPackage called with package: ${JSON.stringify(package)}`);
+  core.info(`DEBUG: Constructed packageName: '${packageName}'`);
+  // DEBUG End
   try {
     core.info(`Deleting '${packageName}' OCI package...`);
     const versionIds = await _getOciPackageVersionIds({ github, context, core, package });
     if (!versionIds.length) return false;
     const repoType = await _getRepositoryType({ github, core, owner: context.repo.owner });
     const isOrg = repoType === 'organization';
+    // DEBUG Start
+    core.info(`DEBUG: API method for deletion: ${isOrg ? 'deletePackageVersionForOrg' : 'deletePackageVersionForUser'}`);
+    // DEBUG End
     let counter = 0;
     for (const version of versionIds) {
       try {
+        // DEBUG Start
+        core.info(`DEBUG: Attempting to delete version ${version.version} (ID: ${version.id})`);
+        core.info(`DEBUG: Delete API call params - owner: ${context.repo.owner}, package_name: ${packageName}`);
+        core.info(`DEBUG: Delete API call params - package_type: container, version_id: ${version.id}`);
+        // DEBUG End
         await github.rest.packages[isOrg
           ? 'deletePackageVersionForOrg'
           : 'deletePackageVersionForUser']({
@@ -525,11 +545,21 @@ async function deleteOciPackage({ github, context, core, package }) {
             package_type: 'container',
             version_id: version.id
           });
+        // DEBUG Start
+        core.info(`DEBUG: Successfully deleted version ${version.version}`);
+        // DEBUG End
         counter++;
       } catch (error) {
+        // DEBUG Start
+        core.info(`DEBUG: Error deleting version ${version.version}: ${error.message}`);
+        core.info(`DEBUG: Error status: ${error.status}, Error type: ${error.constructor.name}`);
+        // DEBUG End
         utils.handleError(error, core, `delete version ${version.version} of '${packageName}' OCI package`, false);
       }
     }
+    // DEBUG Start
+    core.info(`DEBUG: Deletion summary - attempted: ${versionIds.length}, succeeded: ${counter}`);
+    // DEBUG End
     core.info(`Successfully deleted '${packageName}' OCI package`);
     return counter > 0;
   } catch (error) {
@@ -751,6 +781,9 @@ async function getReleaseIssues({ github, context, core, chartName, chartType, m
 async function getUpdatedFiles({ github, context, core }) {
   const files = {};
   const eventName = context.eventName;
+  // DEBUG Start
+  core.info(`DEBUG: getUpdatedFiles called with eventName: ${eventName}`);
+  // DEBUG End
   try {
     if (eventName === 'pull_request' && (!context.payload.pull_request || !context.payload.pull_request.number)) {
       return files;
@@ -815,6 +848,11 @@ async function getUpdatedFiles({ github, context, core }) {
       });
       response.data.files.forEach(file => {
         files[file.filename] = file.status;
+        // DEBUG Start
+        if (file.filename.endsWith('.yaml') || file.filename.endsWith('.yml')) {
+          core.info(`DEBUG: Updated file - filename: ${file.filename}, status: ${file.status}`);
+        }
+        // DEBUG End
       });
       const fileCount = Object.keys(files).length;
       if (fileCount > 0) {
