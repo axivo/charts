@@ -515,17 +515,18 @@ async function deleteOciPackage({ github, context, core, package }) {
     const repoType = await _getRepositoryType({ github, core, owner: context.repo.owner });
     const isOrg = repoType === 'organization';
     let counter = 0;
-    // DEBUG Start
+    core.info('DEBUG START');
+    core.info('DEBUG versionIds: ', JSON.stringify(versionIds));
     const { data } = await github.rest.packages[isOrg
       ? 'getAllPackageVersionsForPackageOwnedByOrg'
       : 'getAllPackageVersionsForPackageOwnedByUser']({
         [isOrg ? 'org' : 'username']: context.repo.owner,
-        package_name: packageName,
+        package_name: encodeURIComponent(packageName),
         package_type: 'container',
         per_page: 100
       });
-    core.info('DEBUG Raw Versions:', JSON.stringify(data, null, 2));
-    // DEBUG End
+    core.info('DEBUG Raw Versions: ', JSON.stringify(data, null, 2));
+    core.info('DEBUG END');
     for (const version of versionIds) {
       try {
         await github.rest.packages[isOrg
