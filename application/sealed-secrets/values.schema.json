@@ -3,10 +3,12 @@
   "title": "Sealed Secrets Values",
   "description": "Schema for the values of the sealed-secrets Helm chart dependency.",
   "type": "object",
+  "additionalProperties": true,
   "properties": {
     "global": {
       "type": "object",
       "title": "Global configuration",
+      "additionalProperties": true,
       "properties": {
         "imageRegistry": {
           "type": "string",
@@ -28,6 +30,7 @@
     "sealed-secrets": {
       "type": "object",
       "title": "Sealed Secrets configuration",
+      "additionalProperties": true,
       "properties": {
         "fullnameOverride": {
           "type": "string",
@@ -44,10 +47,12 @@
         "metrics": {
           "type": "object",
           "title": "Metrics Configuration",
+          "additionalProperties": true,
           "properties": {
             "dashboards": {
               "type": "object",
               "title": "Grafana Dashboards",
+              "additionalProperties": true,
               "properties": {
                 "create": {
                   "type": "boolean",
@@ -59,14 +64,12 @@
                   "type": "object",
                   "title": "Dashboard Labels",
                   "description": "Labels added to Grafana dashboard ConfigMap",
-                  "additionalProperties": true,
                   "default": {}
                 },
                 "annotations": {
                   "type": "object",
                   "title": "Dashboard Annotations",
                   "description": "Annotations added to Grafana dashboard ConfigMap",
-                  "additionalProperties": true,
                   "default": {}
                 },
                 "namespace": {
@@ -80,6 +83,7 @@
             "serviceMonitor": {
               "type": "object",
               "title": "Service Monitor",
+              "additionalProperties": true,
               "properties": {
                 "enabled": {
                   "type": "boolean",
@@ -136,6 +140,7 @@
         "pdb": {
           "type": "object",
           "title": "Pod Disruption Budget",
+          "additionalProperties": true,
           "properties": {
             "create": {
               "type": "boolean",
@@ -175,11 +180,13 @@
           "type": "object",
           "title": "Resource Configuration",
           "description": "Resource limits and requests for the controller container",
+          "additionalProperties": true,
           "properties": {
             "limits": {
               "type": "object",
               "title": "Resource Limits",
               "description": "Resource limits for the container",
+              "additionalProperties": true,
               "properties": {
                 "memory": {
                   "type": "string",
@@ -187,13 +194,13 @@
                   "description": "Memory limit",
                   "default": "128Mi"
                 }
-              },
-              "additionalProperties": true
+              }
             },
             "requests": {
               "type": "object",
               "title": "Resource Requests",
               "description": "Resource requests for the container",
+              "additionalProperties": true,
               "properties": {
                 "cpu": {
                   "type": "string",
@@ -207,8 +214,7 @@
                   "description": "Memory request",
                   "default": "128Mi"
                 }
-              },
-              "additionalProperties": true
+              }
             }
           }
         }
@@ -217,8 +223,7 @@
     "common": {
       "type": "object",
       "title": "Common Library Configuration",
-      "description": "Common library configuration",
-      "additionalProperties": true
+      "description": "Common library configuration"
     }
   }
 }

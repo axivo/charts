@@ -3,10 +3,12 @@
   "title": "UbuntuValues",
   "description": "Values schema for the Ubuntu troubleshooting chart.",
   "type": "object",
+  "additionalProperties": true,
   "properties": {
     "global": {
       "description": "Global configuration",
       "type": "object",
+      "additionalProperties": true,
       "properties": {
         "imageRegistry": {
           "description": "Global image registry",
@@ -24,6 +26,7 @@
     "image": {
       "description": "Image configuration",
       "type": "object",
+      "additionalProperties": true,
       "properties": {
         "digest": {
           "description": "Image digest (overrides tag when specified)",
@@ -77,6 +80,7 @@
     "serviceAccount": {
       "description": "ServiceAccount configuration",
       "type": "object",
+      "additionalProperties": true,
       "properties": {
         "create": {
           "description": "Specifies whether a service account should be created",
@@ -117,6 +121,7 @@
     "livenessProbe": {
       "description": "Liveness probe configuration",
       "type": "object",
+      "additionalProperties": true,
       "properties": {
         "enabled": {
           "description": "Enable liveness probe",
@@ -164,6 +169,7 @@
     "resources": {
       "description": "Resource limits and requests for the container",
       "type": "object",
+      "additionalProperties": true,
       "properties": {
         "limits": {
           "description": "Resource limits for the container",
@@ -180,6 +186,7 @@
         "requests": {
           "description": "Resource requests for the container",
           "type": "object",
+          "additionalProperties": true,
           "properties": {
             "cpu": {
               "description": "CPU request",
@@ -191,8 +198,7 @@
               "type": "string",
               "default": "128Mi"
             }
-          },
-          "additionalProperties": true
+          }
         }
       }
     },

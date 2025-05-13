@@ -100,9 +100,8 @@ async function _lintCharts({ core, exec, charts }) {
       core.info('No charts to lint');
       return true;
     }
+    await exec.exec('ct', ['lint', '--skip-helm-dependencies', '--charts', chartDirs.join(',')]);
     const word = chartDirs.length === 1 ? 'chart' : 'charts';
-    core.info(`Linting ${chartDirs.length} ${word}...`);
-    await exec.exec('ct', ['lint', '--charts', chartDirs.join(',')]);
     core.info(`Successfully linted ${chartDirs.length} ${word}`);
     return true;
   } catch (error) {
@@ -266,10 +265,10 @@ async function updateCharts({ github, context, core, exec }) {
     if (charts.application.length + charts.library.length > 0) {
       const allCharts = [...charts.application, ...charts.library];
       dirs = allCharts.map(chartDir => chartDir);
-      await _lintCharts({ core, exec, charts });
       await docs.updateDocumentation({ github, context, core, exec, dirs });
       await _updateAppFiles({ github, context, core, exec, charts });
       await _updateLockFiles({ github, context, core, exec, charts });
+      await _lintCharts({ core, exec, charts });
     }
   } catch (error) {
     utils.handleError(error, core, 'update repository charts');

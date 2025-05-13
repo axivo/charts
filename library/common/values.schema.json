@@ -3,13 +3,26 @@
   "title": "CommonLibraryValues",
   "description": "Values schema for the common library chart.",
   "type": "object",
-  "additionalProperties": false,
+  "additionalProperties": true,
   "properties": {
     "global": {
       "description": "Global settings that can be referenced by charts using this library",
       "type": "object",
-      "additionalProperties": false,
+      "additionalProperties": true,
       "properties": {
+        "imageRegistry": {
+          "description": "Global image registry",
+          "type": "string",
+          "default": ""
+        },
+        "imagePullSecrets": {
+          "description": "Global image pull secrets",
+          "type": "array",
+          "items": {
+            "type": "object"
+          },
+          "default": []
+        },
         "domain": {
           "description": "Primary domain used across applications",
           "type": "string",
@@ -18,7 +31,7 @@
         "certManager": {
           "description": "Configuration for cert-manager",
           "type": "object",
-          "additionalProperties": false,
+          "additionalProperties": true,
           "properties": {
             "clusterIssuer": {
               "description": "Default cert-manager cluster issuer",
@@ -30,7 +43,7 @@
         "externalDns": {
           "description": "Configuration for ExternalDNS",
           "type": "object",
-          "additionalProperties": false,
+          "additionalProperties": true,
           "properties": {
             "provider": {
               "description": "DNS provider for external-dns",
