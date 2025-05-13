@@ -432,7 +432,8 @@ async function _packageCharts({ core, exec, charts }) {
       utils.handleError(error, core, `package ${chartDir} chart`, false);
     }
   }));
-  core.info(`Successfully packaged ${chartDirs.length} charts`);
+  const word = chartDirs.length === 1 ? 'chart' : 'charts';
+  core.info(`Successfully packaged ${chartDirs.length} ${word}`);
 }
 
 /**
@@ -663,11 +664,13 @@ async function processReleases({ github, context, core, exec }) {
     const deletedCharts = Object.entries(files)
       .filter(([file, status]) => file.endsWith('Chart.yaml') && status === 'removed')
       .map(([file]) => file);
-    if (!(charts.application.length + charts.library.length + deletedCharts.length)) {
-      core.info('No updated chart releases found');
+    if (!(charts.total + deletedCharts.length)) {
+      core.info(`No ${charts.word} chart releases found`);
       return;
     }
-    await _packageCharts({ core, exec, charts });
+    if (charts.total) {
+      await _packageCharts({ core, exec, charts });
+    }
     await _publishChartReleases({ github, context, core, deletedCharts });
     if (config('repository').chart.packages.enabled) {
       await _generateChartsIndex({ github, context, core, exec, distRoot: './', charts });
