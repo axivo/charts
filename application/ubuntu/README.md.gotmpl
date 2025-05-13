@@ -1,0 +1,76 @@
+# {{ template "chart.name" . }}
+
+<img align="right" width="250" height="250" src="https://raw.githubusercontent.com/axivo/charts/main/application/{{ template "chart.name" . }}/icon.png" alt="{{ template "chart.name" . }}" />
+
+{{ template "chart.typeBadge" . }} {{ template "chart.versionBadge" . }} {{ template "chart.appVersionBadge" . }}
+
+ArgoCD application for minimal Ubuntu `{{ template "chart.appVersion" . }}` LTS container, deployed into AXIVO [K3s Cluster](https://github.com/axivo/k3s-cluster). Review the cluster [documentation](https://axivo.com/k3s-cluster/), for additional details. The application deployment is also compatible with a generic Kubernetes cluster.
+
+### Prerequisites
+
+- Kubernetes v1.22+
+- Helm v3.0+
+- ArgoCD v7.5+
+
+### Application Deployment
+
+> [!IMPORTANT]
+> Prior application deployment, adjust the [`values.yaml`](./values.yaml) chart configurable parameters.
+
+The application can be deployed from ArgoCD UI, or terminal:
+
+```shell
+$ kubectl apply -f application/{{ template "chart.name" . }}/application.yaml
+```
+
+Alternatively, the chart can be deployed using Helm directly:
+
+```shell
+$ helm install {{ template "chart.name" . }} oci://ghcr.io/axivo/application/{{ template "chart.name" . }}:{{ template "chart.version" . }} -n kube-system
+```
+
+### Chart Dependencies
+
+See the chart dependencies, listed below.
+
+{{ template "chart.requirementsTable" . }}
+
+### Chart Values
+
+See the chart values, listed below.
+
+> [!TIP]
+> Use [Robusta KRR](https://axivo.com/k3s-cluster/tutorials/handbook/tools/#robusta-krr), to optimize the cluster resources allocation.
+
+{{ template "chart.valuesTable" . }}
+
+### Shell Login
+
+Example of container shell login:
+
+```shell
+$ kubectl get pods -n default -o go-template \
+  --template='{{`{{range .items}}{{.metadata.name}}{{"\n"}}{{end}}`}}'
+ubuntu-6589cf5fb4-p9z2b
+
+$ kubectl exec -itn default ubuntu-6589cf5fb4-p9z2b -- /bin/bash
+root@ubuntu-6589cf5fb4-p9z2b:/#
+```
+
+Compact form example of container shell login:
+
+```shell
+$ kubectl exec -itn default $(
+  kubectl get pods -n default -l app.kubernetes.io/name=ubuntu -o jsonpath='{.items[*].metadata.name}'
+) -- /bin/bash
+```
+
+End-user will have `root` access to a minimal Ubuntu `{{ template "chart.appVersion" . }}` LTS container, connected to the Kubernetes cluster network. Common tools may require manual installation via `apt-get`.
+
+### Troubleshooting
+
+If the pod doesn't start, check its status and events:
+
+```shell
+$ kubectl describe pod -n default -l app.kubernetes.io/name=ubuntu
+```

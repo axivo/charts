@@ -141,6 +141,14 @@ async function fileExists(filePath) {
 async function findCharts({ core, files = [] }) {
   const word = files.length > 0 ? 'updated' : 'available';
   core.info(`Finding ${word} charts...`);
+  // DEBUG Start
+  if (files.length > 0) {
+    core.info(`DEBUG: Files to check for charts (${files.length} files):`);
+    files.forEach(file => {
+      core.info(`DEBUG:   ${file}`);
+    });
+  }
+  // DEBUG End
   const charts = {
     application: [],
     library: []
@@ -153,12 +161,22 @@ async function findCharts({ core, files = [] }) {
     try {
       const entries = await fs.readdir(dir, { withFileTypes: true });
       const directoryEntries = entries.filter(entry => entry.isDirectory());
+      // DEBUG Start
+      core.info(`DEBUG: Directories in ${dir}:`);
+      directoryEntries.forEach(entry => {
+        core.info(`DEBUG:   ${entry.name}`);
+      });
+      // DEBUG End
       const results = await Promise.all(
         directoryEntries.map(async entry => {
           const chartDir = path.join(dir, entry.name);
           const chartYamlPath = path.join(chartDir, 'Chart.yaml');
           const chartUpdatedFiles = files.some(file => file.startsWith(chartDir));
-          if (await fileExists(chartYamlPath) && (!files.length || chartUpdatedFiles)) {
+          // DEBUG Start
+          const chartYamlExists = await fileExists(chartYamlPath);
+          core.info(`DEBUG: Chart ${chartDir}: Chart.yaml exists=${chartYamlExists}, has updated files=${chartUpdatedFiles}`);
+          // DEBUG End
+          if (chartYamlExists && (!files.length || chartUpdatedFiles)) {
             return chartDir;
           }
           return null;
