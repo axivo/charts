@@ -576,26 +576,12 @@ async function _publishOciReleases({ github, context, core, exec, deletedCharts 
       const appChartType = config('repository').chart.type.application;
       await Promise.all(deletedCharts.map(async (deletedChart) => {
         try {
-          // DEBUG Start
-          core.info(`DEBUG: Processing deleted chart: ${deletedChart}`);
-          // DEBUG End
           const packagePath = path.dirname(deletedChart);
-          const name = path.basename(packagePath);
-          const type = packagePath.startsWith(appChartType) ? 'application' : 'library';
-          // DEBUG Start
-          core.info(`DEBUG: Extracted packagePath: ${packagePath}`);
-          core.info(`DEBUG: Extracted name: ${name}`);
-          core.info(`DEBUG: Determined type: ${type} (appChartType: ${appChartType})`);
-          // DEBUG End
-          await api.deleteOciPackage({
-            github,
-            context,
-            core,
-            package: {
-              name,
-              type
-            }
-          });
+          const package = {
+            name: path.basename(packagePath),
+            type: packagePath.startsWith(appChartType) ? 'application' : 'library'
+          };
+          await api.deleteOciPackage({ github, context, core, package });
         } catch (error) {
           utils.handleError(error, core, `delete OCI packages`, false);
         }
@@ -671,10 +657,6 @@ async function processReleases({ github, context, core, exec }) {
     const deletedCharts = Object.entries(files)
       .filter(([file, status]) => file.endsWith('Chart.yaml') && status === 'removed')
       .map(([file]) => file);
-    // DEBUG Start
-    core.info(`DEBUG: processReleases - found ${deletedCharts.length} deleted charts:`);
-    deletedCharts.forEach(chart => core.info(`DEBUG: - Deleted chart: ${chart}`));
-    // DEBUG End
     if (!(charts.total + deletedCharts.length)) {
       core.info(`No ${charts.word} chart releases found`);
       return;
