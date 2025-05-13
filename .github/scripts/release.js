@@ -624,9 +624,8 @@ async function _publishOciReleases({ github, context, core, exec, deletedCharts 
         const chartPath = path.join(packagesPath, package.type, package.source);
         const registry = ['oci:/', ociRegistry, context.payload.repository.full_name, package.type].join('/');
         await exec.exec('helm', ['push', chartPath, registry]);
-        core.info(`Successfully pushed '${package.source}' package to OCI registry`);
       } catch (error) {
-        utils.handleError(error, core, `process '${package.source}' package`, false);
+        utils.handleError(error, core, `push '${package.source}' package`, false);
       }
     }
     core.info(`Successfully published ${packages.length} ${word} to OCI registry`);
