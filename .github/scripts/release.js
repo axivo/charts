@@ -464,6 +464,13 @@ async function _packageCharts({ core, exec, charts }) {
  */
 async function _publishChartReleases({ github, context, core, deletedObjects }) {
   try {
+    // DEBUG Start
+    const allReleases = await api.getReleases({ github, context, core });
+    core.info(`DEBUG: Current releases in repository:`);
+    allReleases.forEach(release => {
+      core.info(`DEBUG:   ${release.tag_name}`);
+    });
+    // DEBUG End
     if (deletedObjects.length) {
       const word = deletedObjects.length === 1 ? 'release' : 'releases';
       core.info(`Deleting ${deletedObjects.length} chart ${word}...`);
