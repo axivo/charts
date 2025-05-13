@@ -95,11 +95,20 @@ async function _getLastReleaseDate({ github, context, core, chartName }) {
 async function _getOciPackageVersionIds({ github, context, core, package }) {
   const packageName = [context.repo.repo, package.type, package.name].join('/');
   core.info(`Searching for all versions of '${packageName}' package...`);
+  // DEBUG Start
+  core.info(`DEBUG: Owner: ${context.repo.owner}`);
+  core.info(`DEBUG: Repo: ${context.repo.repo}`);
+  core.info(`DEBUG: Package Type: ${package.type}`);
+  core.info(`DEBUG: Package Name: ${package.name}`);
+  core.info(`DEBUG: Full Package Name: ${packageName}`);
+  // DEBUG End
   const query = `
     query($owner: String!, $repo: String!, $packageName: String!, $cursor: String) {
       repository(owner: $owner, name: $repo) {
         packages(first: 1, names: [$packageName]) {
           nodes {
+            name
+            id
             versions(first: 100, after: $cursor) {
               pageInfo {
                 hasNextPage
@@ -120,16 +129,29 @@ async function _getOciPackageVersionIds({ github, context, core, package }) {
   let endCursor = null;
   try {
     while (hasNextPage) {
+      // DEBUG Start
+      core.info(`DEBUG: Query variables: owner=${context.repo.owner}, repo=${context.repo.repo}, packageName=${packageName}`);
+      // DEBUG End
       const result = await github.graphql(query, {
         owner: context.repo.owner,
         repo: context.repo.repo,
         packageName,
         cursor: endCursor
       });
+      // DEBUG Start
+      core.info(`DEBUG: GraphQL result: ${JSON.stringify(result, null, 2)}`);
+      // DEBUG End
       const packageNodes = result.repository.packages.nodes;
       if (!packageNodes.length) {
+        // DEBUG Start
+        core.info('DEBUG: No package nodes found');
+        // DEBUG End
         return [];
       }
+      // DEBUG Start
+      core.info(`DEBUG: Found package: ${packageNodes[0].name} with ID: ${packageNodes[0].id}`);
+      core.info(`DEBUG: Package has ${packageNodes[0].versions.nodes.length} versions`);
+      // DEBUG End
       const versions = packageNodes[0].versions.nodes.map(node => ({
         version: node.version,
         id: node.id
@@ -143,6 +165,10 @@ async function _getOciPackageVersionIds({ github, context, core, package }) {
     core.info(`Found ${versionIds.length} ${word} for '${packageName}' OCI package`);
     return versionIds;
   } catch (error) {
+    // DEBUG Start
+    core.info(`DEBUG: GraphQL error: ${error.message}`);
+    core.info(`DEBUG: Full error: ${JSON.stringify(error, null, 2)}`);
+    // DEBUG End
     utils.handleError(error, core, `get versions for '${packageName}' package`, false);
     return [];
   }
