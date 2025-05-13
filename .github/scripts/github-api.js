@@ -93,7 +93,7 @@ async function _getLastReleaseDate({ github, context, core, chartName }) {
  * @returns {Promise<Array>} - Array of version objects with id and version properties
  */
 async function _getOciPackageVersionIds({ github, context, core, package }) {
-  const packageName = [context.repo.repo, package.type, package.name].join('/');
+  const packageName = [package.type, package.name].join('/');
   core.info(`Searching for all versions of '${packageName}' package...`);
   const repoType = await _getRepositoryType({ github, core, owner: context.repo.owner });
   const isOrg = repoType === 'organization';
@@ -507,7 +507,7 @@ async function createSignedCommit({ github, context, core, git }) {
  * @returns {Promise<boolean>} - True if at least one package version was deleted successfully, false otherwise
  */
 async function deleteOciPackage({ github, context, core, package }) {
-  const packageName = [context.repo.repo, package.type, package.name].join('/');
+  const packageName = [package.type, package.name].join('/');
   try {
     core.info(`Deleting '${packageName}' OCI package...`);
     const versionIds = await _getOciPackageVersionIds({ github, context, core, package });
