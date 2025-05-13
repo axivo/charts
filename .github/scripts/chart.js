@@ -262,7 +262,7 @@ async function updateCharts({ github, context, core, exec }) {
     const files = Object.keys(await api.getUpdatedFiles({ github, context, core }));
     const charts = await utils.findCharts({ core, files });
     let dirs = [];
-    if (charts.application.length + charts.library.length > 0) {
+    if (charts.total) {
       const allCharts = [...charts.application, ...charts.library];
       dirs = allCharts.map(chartDir => chartDir);
       await docs.updateDocumentation({ github, context, core, exec, dirs });

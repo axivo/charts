@@ -93,7 +93,7 @@ async function _getLastReleaseDate({ github, context, core, chartName }) {
  * @returns {Promise<Array>} - Array of version objects with id and version properties
  */
 async function _getOciPackageVersionIds({ github, context, core, package }) {
-  const packageName = [context.payload.repository.full_name, package.type, package.name].join('/');
+  const packageName = [package.type, package.name].join('/');
   core.info(`Searching for all versions of '${packageName}' package...`);
   const query = `
     query($owner: String!, $repo: String!, $packageName: String!, $cursor: String) {
@@ -498,7 +498,7 @@ async function createSignedCommit({ github, context, core, branchName, expectedH
  * @returns {Promise<boolean>} - True if at least one package version was deleted successfully, false otherwise
  */
 async function deleteOciPackage({ github, context, core, package }) {
-  const packageName = [context.payload.repository.full_name, package.type, package.name].join('/');
+  const packageName = [package.type, package.name].join('/');
   try {
     core.info(`Deleting '${packageName}' OCI package...`);
     const versionIds = await _getOciPackageVersionIds({ github, context, core, package });
@@ -548,6 +548,11 @@ async function deleteReleases({ github, context, core, chart }) {
     let counter = 0;
     const promises = releaseIds.map(async (release) => {
       try {
+        await github.rest.git.deleteRef({
+          owner: context.repo.owner,
+          repo: context.repo.repo,
+          ref: ['tags', release.tagName].join('/')
+        });
         await github.rest.repos.deleteRelease({
           owner: context.repo.owner,
           repo: context.repo.repo,

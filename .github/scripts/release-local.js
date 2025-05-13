@@ -317,8 +317,8 @@ async function processLocalReleases({ core, exec }) {
       .map(line => line.substring(3))
       .filter(file => file.startsWith(appChartType) || file.startsWith(libChartType));
     const charts = await utils.findCharts({ core, files });
-    if (!(charts.application.length + charts.library.length)) {
-      console.log('No charts found');
+    if (!(charts.total)) {
+      core.info(`No ${charts.word} chart releases found`);
       return;
     }
     const chartDirs = [...charts.application, ...charts.library];
@@ -334,12 +334,12 @@ async function processLocalReleases({ core, exec }) {
         }
       }
     }
-    const word = validCharts.length === 1 ? 'chart' : 'charts';
-    console.log(`Successfully packaged ${validCharts.length} ${word}`);
     if (!validCharts.length) {
-      console.error('No valid charts were successfully packaged');
+      console.log('No charts required for packaging');
       return;
     }
+    const word = validCharts.length === 1 ? 'chart' : 'charts';
+    console.log(`Successfully packaged ${validCharts.length} ${word}`);
     await _generateLocalIndex({ exec, packagesDir: localPackagesDir });
   } catch (error) {
     console.error(`Error processing local releases: ${error.message}`);

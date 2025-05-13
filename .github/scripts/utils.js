@@ -136,19 +136,16 @@ async function fileExists(filePath) {
  * @param {Object} params - Function parameters
  * @param {Object} params.core - GitHub Actions Core API for logging and output
  * @param {string[]} [params.files=[]] - Optional array of file paths to filter charts by
- * @returns {Promise<{application: string[], library: string[]}>} - Object containing arrays of chart directories by type
+ * @returns {Promise<{
+ *   application: string[],
+ *   library: string[],
+ *   total: number,
+ *   word: string
+ * }>} - Object containing chart directories, total count and files definition word
  */
 async function findCharts({ core, files = [] }) {
   const word = files.length > 0 ? 'updated' : 'available';
   core.info(`Finding ${word} charts...`);
-  // DEBUG Start
-  if (files.length > 0) {
-    core.info(`DEBUG: Files to check for charts (${files.length} files):`);
-    files.forEach(file => {
-      core.info(`DEBUG:   ${file}`);
-    });
-  }
-  // DEBUG End
   const charts = {
     application: [],
     library: []
@@ -161,21 +158,10 @@ async function findCharts({ core, files = [] }) {
     try {
       const entries = await fs.readdir(dir, { withFileTypes: true });
       const directoryEntries = entries.filter(entry => entry.isDirectory());
-      // DEBUG Start
-      core.info(`DEBUG: Directories in ${dir}:`);
-      directoryEntries.forEach(entry => {
-        core.info(`DEBUG:   ${entry.name}`);
-      });
-      // DEBUG End
       const results = await Promise.all(
         directoryEntries.map(async entry => {
           const chartDir = path.join(dir, entry.name);
-          const chartYamlPath = path.join(chartDir, 'Chart.yaml');
           const chartUpdatedFiles = files.some(file => file.startsWith(chartDir));
-          // DEBUG Start
-          const chartYamlExists = await fileExists(chartYamlPath);
-          core.info(`DEBUG: Chart ${chartDir}: Chart.yaml exists=${chartYamlExists}, has updated files=${chartUpdatedFiles}`);
-          // DEBUG End
           if (chartYamlExists && (!files.length || chartUpdatedFiles)) {
             return chartDir;
           }
@@ -187,8 +173,15 @@ async function findCharts({ core, files = [] }) {
       handleError(error, core, `read directory ${dir}`, false);
     }
   }));
-  core.info(`Found ${charts.application.length} 'application' and ${charts.library.length} 'library' charts`);
-  return charts;
+  const total = charts.application.length + charts.library.length;
+  const keyword = total === 1 ? 'chart' : 'charts';
+  core.info(`Found ${total} ${word} ${keyword}`);
+  return {
+    application: charts.application,
+    library: charts.library,
+    total,
+    word
+  };
 }
 
 /**
