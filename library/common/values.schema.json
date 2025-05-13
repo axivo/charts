@@ -1,0 +1,80 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "CommonLibraryValues",
+  "description": "Values schema for the common library chart.",
+  "type": "object",
+  "additionalProperties": true,
+  "properties": {
+    "imageRegistry": {
+      "description": "Image registry (from dependency charts)",
+      "type": "string",
+      "default": ""
+    },
+    "imagePullSecrets": {
+      "description": "Image pull secrets (from dependency charts)",
+      "type": "array",
+      "items": {
+        "type": "object"
+      },
+      "default": []
+    },
+    "global": {
+      "description": "Global settings that can be referenced by charts using this library",
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "imageRegistry": {
+          "description": "Global image registry",
+          "type": "string",
+          "default": ""
+        },
+        "imagePullSecrets": {
+          "description": "Global image pull secrets",
+          "type": "array",
+          "items": {
+            "type": "object"
+          },
+          "default": []
+        },
+        "domain": {
+          "description": "Primary domain used across applications",
+          "type": "string",
+          "default": "noty.cc"
+        },
+        "certManager": {
+          "description": "Configuration for cert-manager",
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "clusterIssuer": {
+              "description": "Default cert-manager cluster issuer",
+              "type": "string",
+              "default": "cluster-issuer"
+            }
+          }
+        },
+        "externalDns": {
+          "description": "Configuration for ExternalDNS",
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "provider": {
+              "description": "DNS provider for external-dns",
+              "type": "string",
+              "default": "cloudflare"
+            },
+            "acmeServer": {
+              "description": "ACME server environment, `production` or `staging`",
+              "type": "string",
+              "enum": [
+                "production",
+                "staging"
+              ],
+              "default": "production"
+            }
+          }
+        }
+      }
+    }
+  }
+}
