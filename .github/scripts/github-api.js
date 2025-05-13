@@ -516,7 +516,7 @@ async function deleteOciPackage({ github, context, core, package }) {
     const isOrg = repoType === 'organization';
     let counter = 0;
     core.info('DEBUG START');
-    core.info('DEBUG versionIds: ', JSON.stringify(versionIds));
+    core.info('DEBUG versionIds: ', JSON.stringify(versionIds, null, 2));
     const { data } = await github.rest.packages[isOrg
       ? 'getAllPackageVersionsForPackageOwnedByOrg'
       : 'getAllPackageVersionsForPackageOwnedByUser']({
