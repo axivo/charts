@@ -265,22 +265,32 @@ async function _updateMetadataFiles({ github, context, core, exec, charts }) {
   try {
     core.info('Updating metadata files...');
     const indexFiles = [];
+    const appType = config('repository').chart.type.application;
+    const libType = config('repository').chart.type.library;
     const chartDirs = [...charts.application, ...charts.library];
     await Promise.all(chartDirs.map(async (chartDir) => {
       try {
         const chartName = path.basename(chartDir);
+        const chartType = charts.application.includes(chartDir) ? appType : libType;
         const baseUrl = [context.payload.repository.html_url, 'releases', 'download'].join('/');
         const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'helm-metadata-'));
         const indexPath = path.join(tempDir, 'index.yaml')
         const metadataPath = path.join(chartDir, 'metadata.yaml');
         await exec.exec('helm', ['package', chartDir, '--destination', tempDir], { silent: true });
         if (await utils.fileExists(metadataPath)) {
-          await fs.copyFile(metadataPath, indexPath);
+          const metadata = yaml.load(await fs.readFile(metadataPath, 'utf8'));
+          const entries = metadata.entries[chartName];
+          const retention = config('repository').chart.packages.retention;
+          if (entries.length >= retention) {
+            const deletedEntries = entries.length - retention + 1;
+            metadata.entries[chartName] = entries.slice(deletedEntries);
+          }
+          await fs.writeFile(indexPath, yaml.dump(metadata), 'utf8');
         }
         await exec.exec('helm', ['repo', 'index', tempDir, '--url', baseUrl], { silent: true });
         await fs.copyFile(indexPath, metadataPath);
         indexFiles.push(metadataPath);
-        core.info(`Successfully updated '${chartName}' metadata file`);
+        core.info(`Successfully updated '${chartType}/${chartName}' metadata file`);
       } catch (error) {
         utils.handleError(error, core, `update '${chartDir}' metadata file`, false);
       }
