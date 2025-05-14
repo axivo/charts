@@ -196,6 +196,7 @@ async function _updateChartIndexes({ github, context, core, exec, charts }) {
           : config('repository').chart.type.library;
         const indexPath = path.join(chartDir, 'release.yaml');
         const baseUrl = [context.payload.repository.html_url, 'releases', 'download'].join('/');
+        await exec.exec('helm', ['package', chartDir, '--destination', chartDir], { silent: true });
         await exec.exec('helm', ['repo', 'index', chartDir, '--url', baseUrl, '--merge', indexPath], { silent: true });
         indexFiles.push(indexPath);
         core.info(`Successfully updated index for '${chartName}' chart`);
