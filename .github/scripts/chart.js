@@ -24,41 +24,6 @@ const docs = require('./documentation');
 const utils = require('./utils');
 
 /**
- * Downloads a package from a GitHub release asset URL
- * 
- * This function downloads release asset packages from GitHub using the fetch API with proper
- * authentication headers. It handles both public and private repository access by
- * including the GitHub token in the authorization header.
- * 
- * @private
- * @param {Object} params - Function parameters
- * @param {Object} params.core - GitHub Actions Core API for logging and output
- * @param {Object} params.package - Package information
- * @param {string} params.package.url - URL of the package to download
- * @param {string} params.package.name - Name of the package file
- * @param {string} params.package.file - Destination path for the downloaded file
- * @returns {Promise<boolean>} - True if download succeeded, false otherwise
- */
-async function _downloadAssetPackage({ core, package }) {
-  try {
-    const authToken = process.env['INPUT_GITHUB-TOKEN'];
-    const response = await fetch(package.url, {
-      headers: {
-        'Authorization': `token ${authToken}`,
-        'Accept': 'application/octet-stream'
-      }
-    });
-    if (!response.ok) return false;
-    const arrayBuffer = await response.arrayBuffer();
-    await fs.writeFile(package.file, Buffer.from(arrayBuffer));
-    return true;
-  } catch (error) {
-    utils.handleError(error, core, `download '${package.name}' asset package`, false);
-    return false;
-  }
-}
-
-/**
  * Lints charts using the chart-testing (ct) tool
  * 
  * This function runs the 'ct lint' command on the specified charts to identify
