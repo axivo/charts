@@ -196,8 +196,55 @@ async function _updateChartIndexes({ github, context, core, exec, charts }) {
           : config('repository').chart.type.library;
         const indexPath = path.join(chartDir, 'release.yaml');
         const baseUrl = [context.payload.repository.html_url, 'releases', 'download'].join('/');
+        
+        // DEBUG Start
+        core.info(`DEBUG: Processing chart: ${chartName} (${chartType})`);
+        core.info(`DEBUG: Chart directory: ${chartDir}`);
+        core.info(`DEBUG: Index path: ${indexPath}`);
+        core.info(`DEBUG: Base URL: ${baseUrl}`);
+        
+        // Check if release.yaml exists before operations
+        const indexExistsBefore = await utils.fileExists(indexPath);
+        core.info(`DEBUG: release.yaml exists before: ${indexExistsBefore}`);
+        // DEBUG End
+        
         await exec.exec('helm', ['package', chartDir, '--destination', chartDir], { silent: true });
+        
+        // DEBUG Start
+        // List files in chart directory after packaging
+        const filesAfterPackage = await fs.readdir(chartDir);
+        core.info(`DEBUG: Files after package: ${filesAfterPackage.join(', ')}`);
+        // DEBUG End
+        
         await exec.exec('helm', ['repo', 'index', chartDir, '--url', baseUrl, '--merge', indexPath], { silent: true });
+        
+        // DEBUG Start
+        // Check what files exist after index command
+        const filesAfterIndex = await fs.readdir(chartDir);
+        core.info(`DEBUG: Files after index: ${filesAfterIndex.join(', ')}`);
+        
+        // Check if release.yaml exists after
+        const indexExistsAfter = await utils.fileExists(indexPath);
+        core.info(`DEBUG: release.yaml exists after: ${indexExistsAfter}`);
+        
+        // If release.yaml exists, check its content
+        if (indexExistsAfter) {
+          const releaseContent = await fs.readFile(indexPath, 'utf8');
+          core.info(`DEBUG: release.yaml content length: ${releaseContent.length}`);
+          core.info(`DEBUG: release.yaml first 200 chars: ${releaseContent.substring(0, 200)}`);
+        }
+        
+        // Check if index.yaml was created instead
+        const standardIndexPath = path.join(chartDir, 'index.yaml');
+        const standardIndexExists = await utils.fileExists(standardIndexPath);
+        core.info(`DEBUG: index.yaml exists: ${standardIndexExists}`);
+        if (standardIndexExists) {
+          const indexContent = await fs.readFile(standardIndexPath, 'utf8');
+          core.info(`DEBUG: index.yaml content length: ${indexContent.length}`);
+          core.info(`DEBUG: index.yaml first 200 chars: ${indexContent.substring(0, 200)}`);
+        }
+        // DEBUG End
+        
         indexFiles.push(indexPath);
         core.info(`Successfully updated '${chartName}' chart index`);
       } catch (error) {
