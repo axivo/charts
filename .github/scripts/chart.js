@@ -24,6 +24,77 @@ const docs = require('./documentation');
 const utils = require('./utils');
 
 /**
+ * Downloads a package from a GitHub release asset URL
+ * 
+ * This function downloads release asset packages from GitHub using the fetch API with proper
+ * authentication headers. It handles both public and private repository access by
+ * including the GitHub token in the authorization header.
+ * 
+ * @private
+ * @param {Object} params - Function parameters
+ * @param {Object} params.core - GitHub Actions Core API for logging and output
+ * @param {Object} params.package - Package information
+ * @param {string} params.package.url - URL of the package to download
+ * @param {string} params.package.name - Name of the package file
+ * @param {string} params.package.file - Destination path for the downloaded file
+ * @returns {Promise<boolean>} - True if download succeeded, false otherwise
+ */
+async function _downloadAssetPackage({ core, package }) {
+  try {
+    const authToken = process.env['INPUT_GITHUB-TOKEN'];
+    const response = await fetch(package.url, {
+      headers: {
+        'Authorization': `token ${authToken}`,
+        'Accept': 'application/octet-stream'
+      }
+    });
+    if (!response.ok) return false;
+    const arrayBuffer = await response.arrayBuffer();
+    await fs.writeFile(package.file, Buffer.from(arrayBuffer));
+    return true;
+  } catch (error) {
+    utils.handleError(error, core, `download '${package.name}' asset package`, false);
+    return false;
+  }
+}
+
+/**
+ * Lints charts using the chart-testing (ct) tool
+ * 
+ * This function runs the 'ct lint' command on the specified charts to identify
+ * any issues that might prevent successful deployment. It validates Helm chart
+ * structure, requirements, and best practices according to the chart-testing tool's
+ * criteria. The function processes both application and library charts.
+ * 
+ * Any linting errors are handled as non-fatal by default, but the function will
+ * return false to indicate failure, allowing the calling function to decide
+ * how to proceed based on the linting results.
+ * 
+ * @private
+ * @param {Object} params - Function parameters
+ * @param {Object} params.core - GitHub Actions Core API for logging and output
+ * @param {Object} params.exec - GitHub Actions exec helpers for running commands
+ * @param {Object} params.charts - Object containing application and library chart paths
+ * @returns {Promise<boolean>} - True if linting passed, false if errors were found
+ */
+async function _lintCharts({ core, exec, charts }) {
+  try {
+    const chartDirs = [...charts.application, ...charts.library];
+    if (!chartDirs.length) {
+      core.info('No charts to lint');
+      return true;
+    }
+    await exec.exec('ct', ['lint', '--charts', chartDirs.join(',')]);
+    const word = chartDirs.length === 1 ? 'chart' : 'charts';
+    core.info(`Successfully linted ${chartDirs.length} ${word}`);
+    return true;
+  } catch (error) {
+    utils.handleError(error, core, 'lint charts', false);
+    return false;
+  }
+}
+
+/**
  * Performs a Git commit for the specified files
  * 
  * This function handles the complete process of committing changes to the repository:
@@ -69,42 +140,6 @@ async function _performGitCommit({ github, context, core, exec, files, type }) {
     }
   } catch (error) {
     utils.handleError(error, core, `commit ${type}`, false);
-  }
-}
-
-/**
- * Lints charts using the chart-testing (ct) tool
- * 
- * This function runs the 'ct lint' command on the specified charts to identify
- * any issues that might prevent successful deployment. It validates Helm chart
- * structure, requirements, and best practices according to the chart-testing tool's
- * criteria. The function processes both application and library charts.
- * 
- * Any linting errors are handled as non-fatal by default, but the function will
- * return false to indicate failure, allowing the calling function to decide
- * how to proceed based on the linting results.
- * 
- * @private
- * @param {Object} params - Function parameters
- * @param {Object} params.core - GitHub Actions Core API for logging and output
- * @param {Object} params.exec - GitHub Actions exec helpers for running commands
- * @param {Object} params.charts - Object containing application and library chart paths
- * @returns {Promise<boolean>} - True if linting passed, false if errors were found
- */
-async function _lintCharts({ core, exec, charts }) {
-  try {
-    const chartDirs = [...charts.application, ...charts.library];
-    if (!chartDirs.length) {
-      core.info('No charts to lint');
-      return true;
-    }
-    await exec.exec('ct', ['lint', '--charts', chartDirs.join(',')]);
-    const word = chartDirs.length === 1 ? 'chart' : 'charts';
-    core.info(`Successfully linted ${chartDirs.length} ${word}`);
-    return true;
-  } catch (error) {
-    utils.handleError(error, core, 'lint charts', false);
-    return false;
   }
 }
 
@@ -164,6 +199,83 @@ async function _updateAppFiles({ github, context, core, exec, charts }) {
     }
   } catch (error) {
     utils.handleError(error, core, 'update application files', false);
+  }
+}
+
+/**
+ * Updates index.yaml files for modified charts
+ * 
+ * This function generates or updates the index.yaml file for each modified chart
+ * by fetching its releases from GitHub and using helm repo index to create the index.
+ * The generated index files are committed to the repository alongside the charts.
+ * 
+ * @private
+ * @param {Object} params - Function parameters
+ * @param {Object} params.github - GitHub API client for making API calls
+ * @param {Object} params.context - GitHub Actions context containing repository information
+ * @param {Object} params.core - GitHub Actions Core API for logging and output
+ * @param {Object} params.exec - GitHub Actions exec helpers for running commands
+ * @param {Object} params.charts - Object containing application and library chart paths
+ * @returns {Promise<void>}
+ */
+async function _updateChartIndexes({ github, context, core, exec, charts }) {
+  try {
+    core.info('Updating chart index files...');
+    const indexFiles = [];
+    const chartDirs = [...charts.application, ...charts.library];
+    await Promise.all(chartDirs.map(async (chartDir) => {
+      try {
+        const chartName = path.basename(chartDir);
+        const chartType = charts.application.includes(chartDir)
+          ? config('repository').chart.type.application
+          : config('repository').chart.type.library;
+        const titlePrefix = config('release').title
+          .replace('{{ .Name }}', chartName)
+          .replace('{{ .Version }}', '');
+        const allReleases = await api.getReleases({ github, context, core, tagPrefix: titlePrefix });
+        if (!allReleases.length) {
+          core.info(`No releases found for '${chartName}' chart, skipping index generation`);
+          return;
+        }
+        const retention = config('repository').chart.packages.retention;
+        let releases = allReleases;
+        if (retention > 0 && releases.length > retention) {
+          releases = releases.sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).slice(0, retention);
+        }
+        const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'chart-index-'));
+        for (const release of releases) {
+          const asset = release.assets.find(file => file.name.endsWith('.tgz'));
+          if (!asset) continue;
+          const packageUrl = asset.browser_download_url;
+          const packageName = path.basename(packageUrl);
+          const tempPackageFile = path.join(tempDir, packageName);
+          const package = {
+            url: packageUrl,
+            name: packageName,
+            file: tempPackageFile
+          };
+          const downloaded = await _downloadAssetPackage({ core, package });
+          if (!downloaded) continue;
+        }
+        const baseUrl = [context.payload.repository.html_url, 'releases', 'download'].join('/');
+        await exec.exec('helm', ['repo', 'index', tempDir, '--url', baseUrl], { silent: true });
+        const sourceIndex = path.join(tempDir, 'index.yaml');
+        const destIndex = path.join(chartDir, 'index.yaml');
+        await fs.copyFile(sourceIndex, destIndex);
+        indexFiles.push(destIndex);
+        core.info(`Successfully updated index for '${chartName}' chart`);
+        await fs.rm(tempDir, { recursive: true, force: true });
+      } catch (error) {
+        utils.handleError(error, core, `update index for '${chartDir}'`, false);
+      }
+    }));
+    if (indexFiles.length > 0) {
+      const word = indexFiles.length === 1 ? 'file' : 'files';
+      await _performGitCommit({ github, context, core, exec, files: indexFiles, type: `index ${word}` });
+      core.info(`Successfully updated ${indexFiles.length} index ${word}`);
+    }
+  } catch (error) {
+    utils.handleError(error, core, 'update chart indexes', false);
   }
 }
 
@@ -266,6 +378,9 @@ async function updateCharts({ github, context, core, exec }) {
       await docs.updateDocumentation({ github, context, core, exec, dirs });
       await _updateAppFiles({ github, context, core, exec, charts });
       await _updateLockFiles({ github, context, core, exec, charts });
+      if (config('repository').chart.packages.enabled) {
+        await _updateChartIndexes({ github, context, core, exec, charts });
+      }
       await _lintCharts({ core, exec, charts });
     }
   } catch (error) {
