@@ -100,6 +100,7 @@ async function _getOciPackageVersionIds({ github, context, core, package }) {
   const perPage = 100;
   let versionIds = [];
   try {
+    let page = 1;
     while (true) {
       const { data } = await github.rest.packages[isOrg
         ? 'getAllPackageVersionsForPackageOwnedByOrg'
@@ -107,11 +108,11 @@ async function _getOciPackageVersionIds({ github, context, core, package }) {
           [isOrg ? 'org' : 'username']: context.repo.owner,
           package_name: packageName,
           package_type: 'container',
+          page,
           per_page: perPage
         });
-      core.info('DEBUG START _getOciPackageVersionIds');
-      core.info('DEBUG Raw Versions: ', JSON.stringify(data, null, 2));
-      core.info('DEBUG END _getOciPackageVersionIds');
+      core.info(`DEBUG _getOciPackageVersionIds raw API response keys: ${Object.keys(data).join(', ')}`);
+      core.info(`DEBUG _getOciPackageVersionIds page ${page}: ${JSON.stringify(data, null, 2)}`);
       if (!data.length) {
         break;
       }
@@ -123,6 +124,7 @@ async function _getOciPackageVersionIds({ github, context, core, package }) {
       if (data.length < perPage) {
         break;
       }
+      page++;
     }
     const word = versionIds.length === 1 ? 'version' : 'versions';
     core.info(`Found ${versionIds.length} ${word} for '${packageName}' OCI package`);
@@ -510,7 +512,7 @@ async function createSignedCommit({ github, context, core, git }) {
  * @returns {Promise<boolean>} - True if at least one package version was deleted successfully, false otherwise
  */
 async function deleteOciPackage({ github, context, core, package }) {
-  const packageName = [context.repo.repo, package.type, package.name].join('/');
+  const packageName = [package.type, package.name].join('/');
   try {
     core.info(`Deleting '${packageName}' OCI package...`);
     const versionIds = await _getOciPackageVersionIds({ github, context, core, package });
@@ -518,16 +520,14 @@ async function deleteOciPackage({ github, context, core, package }) {
     const repoType = await _getRepositoryType({ github, core, owner: context.repo.owner });
     const isOrg = repoType === 'organization';
     let counter = 0;
-    core.info('DEBUG START deleteOciPackage');
-    core.info('DEBUG versionIds: ', JSON.stringify(versionIds, null, 2));
-    core.info('DEBUG END deleteOciPackage');
+    core.info(`DEBUG deleteOciPackage versionIds: ${JSON.stringify(versionIds, null, 2)}`);
     for (const version of versionIds) {
       try {
         await github.rest.packages[isOrg
           ? 'deletePackageVersionForOrg'
           : 'deletePackageVersionForUser']({
             [isOrg ? 'org' : 'username']: context.repo.owner,
-            package_name: encodeURIComponent(packageName),
+            package_name: packageName,
             package_type: 'container',
             version_id: version.id
           });
