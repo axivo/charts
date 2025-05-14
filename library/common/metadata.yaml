@@ -1,0 +1,27 @@
+apiVersion: v1
+entries:
+  common:
+  - annotations:
+      org.opencontainers.image.documentation: https://github.com/axivo/charts/blob/main/library/common/README.md
+      org.opencontainers.image.licenses: BSD-3-Clause
+    apiVersion: v2
+    created: "2025-05-14T21:41:20.048098023Z"
+    description: Common library for Helm charts
+    digest: 8020cd65d9c23b8603b5b3b4214519a8af42560cdbe7054464061deca507aaa7
+    home: https://github.com/axivo/charts
+    icon: https://raw.githubusercontent.com/axivo/charts/refs/heads/main/library/common/icon.png
+    keywords:
+    - common
+    - library
+    kubeVersion: '>=1.22.0-0'
+    maintainers:
+    - name: AXIVO
+      url: https://axivo.com
+    name: common
+    sources:
+    - https://github.com/axivo/charts
+    type: library
+    urls:
+    - https://github.com/axivo/charts/releases/download/common-1.0.0.tgz
+    version: 1.0.0
+generated: "2025-05-14T21:41:20.047029529Z"
