@@ -55,7 +55,7 @@ async function _buildChartRelease({ github, context, core, chart }) {
     const tagName = config('release').title
       .replace('{{ .Name }}', chart.name)
       .replace('{{ .Version }}', chart.version);
-    core.info(`Processing '${tagName}' release...`);
+    core.info(`Processing '${tagName}' repository release...`);
     const existingRelease = await api.getReleaseByTag({ github, context, core, tagName });
     if (existingRelease) {
       core.info(`Release '${tagName}' already exists, skipping`);
@@ -66,9 +66,9 @@ async function _buildChartRelease({ github, context, core, chart }) {
     const assetName = [chart.type, 'tgz'].join('.');
     const assetData = await fs.readFile(chart.path);
     await api.uploadReleaseAsset({ github, context, core, releaseId: release.id, assetName, assetData });
-    core.info(`Successfully created '${tagName}' release`);
+    core.info(`Successfully created '${tagName}' repository release`);
   } catch (error) {
-    utils.handleError(error, core, `create '${tagName}' release`, false);
+    utils.handleError(error, core, `create '${tagName}' repository release`, false);
   }
 }
 
@@ -130,16 +130,16 @@ async function _generateChartsIndex({ github, context, core, exec, distRoot, cha
           .replace('{{ .Version }}', '');
         const chartReleases = allReleases.filter(release => release.tag_name.startsWith(titlePrefix));
         const word = chartReleases.length === 1 ? 'release' : 'releases';
-        core.info(`Found ${chartReleases.length} new ${word} for '${chartType}/${chartName}' chart`);
+        core.info(`Found ${chartReleases.length} new repository ${word} for '${chartType}/${chartName}' chart`);
         if (!chartReleases.length) {
-          core.info(`No releases found for '${chartType}/${chartName}' chart, skipping index generation`);
+          core.info(`No repository releases found for '${chartType}/${chartName}' chart, skipping index generation`);
           return;
         }
         const retention = config('repository').chart.packages.retention;
         if (retention > 0 && chartReleases.length > retention) {
           chartReleases.sort((older, newer) => new Date(newer.created_at) - new Date(older.created_at));
           const retainedReleases = chartReleases.slice(0, retention);
-          core.info(`Keeping ${retainedReleases.length} of ${chartReleases.length} releases for '${chartType}/${chartName}' chart...`);
+          core.info(`Keeping ${retainedReleases.length} of ${chartReleases.length} repository ${word} for '${chartType}/${chartName}' chart...`);
           chartReleases.length = 0;
           chartReleases.push(...retainedReleases);
         }
@@ -236,7 +236,7 @@ async function _generateChartsIndex({ github, context, core, exec, distRoot, cha
  */
 async function _generateChartRelease({ github, context, core, chart }) {
   try {
-    core.info(`Generating release content for '${chart.type}/${chart.name}' chart...`);
+    core.info(`Generating repository release content for '${chart.type}/${chart.name}' chart...`);
     releaseTemplate = config('release').template;
     try {
       await fs.access(releaseTemplate);
