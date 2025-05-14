@@ -76,7 +76,7 @@ async function installHelmDocs({ core, exec, version }) {
  */
 async function updateDocumentation({ github, context, core, exec, dirs = [] }) {
   try {
-    const runGit = async (args) => (await exec.getExecOutput('git', args)).stdout.trim();
+    const runGit = async (args) => (await exec.getExecOutput('git', args, { silent: true })).stdout.trim();
     const headRef = process.env.GITHUB_HEAD_REF;
     core.info(`Getting the latest changes for '${headRef}' branch...`);
     await runGit(['fetch', 'origin', headRef]);
