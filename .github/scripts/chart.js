@@ -220,7 +220,7 @@ async function _updateAppFiles({ github, context, core, exec, charts }) {
  */
 async function _updateChartIndexes({ github, context, core, exec, charts }) {
   try {
-    core.info('Updating chart index files...');
+    core.info('Updating chart indexes...');
     const indexFiles = [];
     const chartDirs = [...charts.application, ...charts.library];
     await Promise.all(chartDirs.map(async (chartDir) => {
@@ -229,50 +229,19 @@ async function _updateChartIndexes({ github, context, core, exec, charts }) {
         const chartType = charts.application.includes(chartDir)
           ? config('repository').chart.type.application
           : config('repository').chart.type.library;
-        const titlePrefix = config('release').title
-          .replace('{{ .Name }}', chartName)
-          .replace('{{ .Version }}', '');
-        const allReleases = await api.getReleases({ github, context, core, tagPrefix: titlePrefix });
-        if (!allReleases.length) {
-          core.info(`No releases found for '${chartName}' chart, skipping index generation`);
-          return;
-        }
-        const retention = config('repository').chart.packages.retention;
-        let releases = allReleases;
-        if (retention > 0 && releases.length > retention) {
-          releases = releases.sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).slice(0, retention);
-        }
-        const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'chart-index-'));
-        for (const release of releases) {
-          const asset = release.assets.find(file => file.name.endsWith('.tgz'));
-          if (!asset) continue;
-          const packageUrl = asset.browser_download_url;
-          const packageName = path.basename(packageUrl);
-          const tempPackageFile = path.join(tempDir, packageName);
-          const package = {
-            url: packageUrl,
-            name: packageName,
-            file: tempPackageFile
-          };
-          const downloaded = await _downloadAssetPackage({ core, package });
-          if (!downloaded) continue;
-        }
+        const indexPath = path.join(chartDir, 'index.yaml');
         const baseUrl = [context.payload.repository.html_url, 'releases', 'download'].join('/');
-        await exec.exec('helm', ['repo', 'index', tempDir, '--url', baseUrl], { silent: true });
-        const sourceIndex = path.join(tempDir, 'index.yaml');
-        const destIndex = path.join(chartDir, 'index.yaml');
-        await fs.copyFile(sourceIndex, destIndex);
-        indexFiles.push(destIndex);
+        await exec.exec('helm', ['repo', 'index', chartDir, '--url', baseUrl, '--merge', indexPath], { silent: true });
+        indexFiles.push(indexPath);
         core.info(`Successfully updated index for '${chartName}' chart`);
-        await fs.rm(tempDir, { recursive: true, force: true });
       } catch (error) {
         utils.handleError(error, core, `update index for '${chartDir}'`, false);
       }
     }));
     if (indexFiles.length > 0) {
-      const word = indexFiles.length === 1 ? 'file' : 'files';
-      await _performGitCommit({ github, context, core, exec, files: indexFiles, type: `index ${word}` });
-      core.info(`Successfully updated ${indexFiles.length} index ${word}`);
+      const word = indexFiles.length === 1 ? 'index' : 'indexes';
+      await _performGitCommit({ github, context, core, exec, files: indexFiles, type: `chart ${word}` });
+      core.info(`Successfully updated ${indexFiles.length} chart ${word}`);
     }
   } catch (error) {
     utils.handleError(error, core, 'update chart indexes', false);
