@@ -238,14 +238,15 @@ async function _updateLockFiles({ github, context, core, exec, charts }) {
  * This function refreshes the metadata.yaml files for all charts in the repository by:
  * 
  * 1. Iterating through all application and library charts
- * 2. Checking if an existing metadata.yaml file exists and renaming it to index.yaml
- * 3. Running 'helm repo index' to generate the chart index
- * 4. Renaming the generated index.yaml back to metadata.yaml
- * 5. Adding updated metadata files to a list for commit
+ * 2. Creating a temporary directory for clean index generation
+ * 3. Packaging the chart to the temporary directory
+ * 4. Copying existing metadata.yaml to the temp directory for merging (if it exists)
+ * 5. Running 'helm repo index' on the temp directory to generate the chart index
+ * 6. Copying the generated index.yaml back to the chart directory as metadata.yaml
+ * 7. Adding updated metadata files to a list for commit
  * 
- * The function handles two scenarios:
- * - When metadata.yaml exists: It's used as the base for merging with the new index
- * - When metadata.yaml doesn't exist: A new one is created from the generated index
+ * The function ensures clean index generation by using a temporary directory that
+ * contains only the chart's own package, avoiding pollution from dependency packages.
  * 
  * After processing all charts, it commits the changed metadata files using _performGitCommit().
  * This ensures that all charts have up-to-date repository metadata, including proper

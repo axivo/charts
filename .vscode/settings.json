@@ -49,6 +49,7 @@
     "*.yml": "yaml",
     "**/.github/workflows/*.yml": "yaml",
     "**/renovate.json5": "jsonc",
+    "**/metadata.yaml": "helm",
     "**/templates/*.yaml": "helm",
     "**/templates/*.yml": "helm"
   },
