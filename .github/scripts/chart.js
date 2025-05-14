@@ -49,7 +49,7 @@ async function _lintCharts({ core, exec, charts }) {
       core.info('No charts to lint');
       return true;
     }
-    await exec.exec('ct', ['lint', '--charts', chartDirs.join(','), '--skip-helm-dependencies']);
+    await exec.exec('ct', ['lint', '--charts', chartDirs.join(','), '--skip-helm-dependencies'], { silent: true });
     const word = chartDirs.length === 1 ? 'chart' : 'charts';
     core.info(`Successfully linted ${chartDirs.length} ${word}`);
     return true;
@@ -194,7 +194,9 @@ async function _updateChartIndexes({ github, context, core, exec, charts }) {
         const baseUrl = [context.payload.repository.html_url, 'releases', 'download'].join('/');
         const indexPath = path.join(chartDir, 'index.yaml');
         const releasePath = path.join(chartDir, 'release.yaml');
-        await exec.exec('helm', ['package', chartDir, '--destination', chartDir], { silent: true });
+        if (await utils.fileExists(releasePath)) {
+          await fs.rename(releasePath, indexPath);
+        }
         await exec.exec('helm', ['repo', 'index', chartDir, '--url', baseUrl], { silent: true });
         await fs.rename(indexPath, releasePath);
         indexFiles.push(releasePath);
