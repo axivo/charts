@@ -168,54 +168,6 @@ async function _updateAppFiles({ github, context, core, exec, charts }) {
 }
 
 /**
- * Updates index.yaml files for modified charts
- * 
- * This function generates or updates the index.yaml file for each modified chart
- * by fetching its releases from GitHub and using helm repo index to create the index.
- * The generated index files are committed to the repository alongside the charts.
- * 
- * @private
- * @param {Object} params - Function parameters
- * @param {Object} params.github - GitHub API client for making API calls
- * @param {Object} params.context - GitHub Actions context containing repository information
- * @param {Object} params.core - GitHub Actions Core API for logging and output
- * @param {Object} params.exec - GitHub Actions exec helpers for running commands
- * @param {Object} params.charts - Object containing application and library chart paths
- * @returns {Promise<void>}
- */
-async function _updateChartIndexes({ github, context, core, exec, charts }) {
-  try {
-    core.info('Updating chart indexes...');
-    const indexFiles = [];
-    const chartDirs = [...charts.application, ...charts.library];
-    await Promise.all(chartDirs.map(async (chartDir) => {
-      try {
-        const chartName = path.basename(chartDir);
-        const baseUrl = [context.payload.repository.html_url, 'releases', 'download'].join('/');
-        const indexPath = path.join(chartDir, 'index.yaml');
-        const releasePath = path.join(chartDir, 'release.yaml');
-        if (await utils.fileExists(releasePath)) {
-          await fs.rename(releasePath, indexPath);
-        }
-        await exec.exec('helm', ['repo', 'index', chartDir, '--url', baseUrl], { silent: true });
-        await fs.rename(indexPath, releasePath);
-        indexFiles.push(releasePath);
-        core.info(`Successfully updated '${chartName}' chart index`);
-      } catch (error) {
-        utils.handleError(error, core, `update '${chartDir}' chart index`, false);
-      }
-    }));
-    if (indexFiles.length > 0) {
-      const word = indexFiles.length === 1 ? 'index' : 'indexes';
-      await _performGitCommit({ github, context, core, exec, files: indexFiles, type: `chart ${word}` });
-      core.info(`Successfully updated ${indexFiles.length} chart ${word}`);
-    }
-  } catch (error) {
-    utils.handleError(error, core, 'update chart indexes', false);
-  }
-}
-
-/**
  * Updates dependency lock files for charts in a pull request
  * 
  * This function refreshes the Chart.lock files for all charts in the repository by:
@@ -280,6 +232,66 @@ async function _updateLockFiles({ github, context, core, exec, charts }) {
 }
 
 /**
+ * Updates metadata files for charts in a pull request
+ * 
+ * This function refreshes the metadata.yaml files for all charts in the repository by:
+ * 
+ * 1. Iterating through all application and library charts
+ * 2. Checking if an existing metadata.yaml file exists and renaming it to index.yaml
+ * 3. Running 'helm repo index' to generate the chart index
+ * 4. Renaming the generated index.yaml back to metadata.yaml
+ * 5. Adding updated metadata files to a list for commit
+ * 
+ * The function handles two scenarios:
+ * - When metadata.yaml exists: It's used as the base for merging with the new index
+ * - When metadata.yaml doesn't exist: A new one is created from the generated index
+ * 
+ * After processing all charts, it commits the changed metadata files using _performGitCommit().
+ * This ensures that all charts have up-to-date repository metadata, including proper
+ * URLs and version information for chart distribution.
+ * 
+ * @private
+ * @param {Object} params - Function parameters
+ * @param {Object} params.github - GitHub API client for making API calls
+ * @param {Object} params.context - GitHub Actions context containing repository information
+ * @param {Object} params.core - GitHub Actions Core API for logging and output
+ * @param {Object} params.exec - GitHub Actions exec helpers for running commands
+ * @param {Object} params.charts - Object containing application and library chart paths
+ * @returns {Promise<void>}
+ */
+async function _updateMetadataFiles({ github, context, core, exec, charts }) {
+  try {
+    core.info('Updating metadata files...');
+    const indexFiles = [];
+    const chartDirs = [...charts.application, ...charts.library];
+    await Promise.all(chartDirs.map(async (chartDir) => {
+      try {
+        const chartName = path.basename(chartDir);
+        const baseUrl = [context.payload.repository.html_url, 'releases', 'download'].join('/');
+        const indexPath = path.join(chartDir, 'index.yaml');
+        const metadataPath = path.join(chartDir, 'metadata.yaml');
+        if (await utils.fileExists(metadataPath)) {
+          await fs.rename(metadataPath, indexPath);
+        }
+        await exec.exec('helm', ['repo', 'index', chartDir, '--url', baseUrl], { silent: true });
+        await fs.rename(indexPath, metadataPath);
+        indexFiles.push(metadataPath);
+        core.info(`Successfully updated '${chartName}' metadata file`);
+      } catch (error) {
+        utils.handleError(error, core, `update '${chartDir}' metadata file`, false);
+      }
+    }));
+    if (indexFiles.length > 0) {
+      const word = indexFiles.length === 1 ? 'file' : 'files';
+      await _performGitCommit({ github, context, core, exec, files: indexFiles, type: `metadata ${word}` });
+      core.info(`Successfully updated ${indexFiles.length} chart metadata ${word}`);
+    }
+  } catch (error) {
+    utils.handleError(error, core, 'update metadata files', false);
+  }
+}
+
+/**
  * Performs all required repository updates for charts
  * 
  * This function orchestrates the complete chart repository maintenance process in a
@@ -315,7 +327,7 @@ async function updateCharts({ github, context, core, exec }) {
       await _updateAppFiles({ github, context, core, exec, charts });
       await _updateLockFiles({ github, context, core, exec, charts });
       if (config('repository').chart.packages.enabled) {
-        await _updateChartIndexes({ github, context, core, exec, charts });
+        await _updateMetadataFiles({ github, context, core, exec, charts });
       }
       await _lintCharts({ core, exec, charts });
     }

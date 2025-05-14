@@ -121,14 +121,12 @@ async function _generateChartIndexes({ core, distRoot }) {
       const outputDir = path.join(distRoot, chartType, chartName);
       try {
         await fs.mkdir(outputDir, { recursive: true });
-        const sourceIndex = path.join(chartDir, 'release.yaml');
-        const destIndex = path.join(outputDir, 'index.yaml');
-        const sourceIndexExists = await utils.fileExists(sourceIndex);
-        if (sourceIndexExists) {
-          await fs.copyFile(sourceIndex, destIndex);
-          core.info(`Successfully generated '${chartType}/${chartName}' chart index`);
-        }
-        if (!sourceIndexExists) return false;
+        const indexPath = path.join(outputDir, 'index.yaml');
+        const metadataPath = path.join(chartDir, 'metadata.yaml');
+        const metadataPathExists = await utils.fileExists(metadataPath);
+        if (!metadataPathExists) return false;
+        await fs.copyFile(metadataPath, indexPath);
+        core.info(`Successfully generated '${chartType}/${chartName}' chart index`);
         const redirectTemplate = config('repository').chart.redirect.template;
         const redirectContent = await fs.readFile(redirectTemplate, 'utf8');
         const repoUrl = config('repository').url;
