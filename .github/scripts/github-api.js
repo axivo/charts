@@ -512,7 +512,7 @@ async function createSignedCommit({ github, context, core, git }) {
  * @returns {Promise<boolean>} - True if at least one package version was deleted successfully, false otherwise
  */
 async function deleteOciPackage({ github, context, core, package }) {
-  const packageName = [package.type, package.name].join('/');
+  const packageName = [context.repo.repo, package.type, package.name].join('/');
   try {
     core.info(`Deleting '${packageName}' OCI package...`);
     const versionIds = await _getOciPackageVersionIds({ github, context, core, package });
