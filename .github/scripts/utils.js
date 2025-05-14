@@ -89,7 +89,7 @@ async function addLabel({ github, context, core, labelName, color, description }
  * @returns {Promise<Function>} - Async function to run Git commands that returns trimmed stdout
  */
 async function configureGitRepository({ core, exec }) {
-  const runGit = async (args) => (await exec.getExecOutput('git', args)).stdout.trim();
+  const runGit = async (args) => (await exec.getExecOutput('git', args, { silent: true })).stdout.trim();
   try {
     core.info('Configuring Git repository...');
     await Promise.all([
