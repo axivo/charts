@@ -97,11 +97,11 @@ async function _getOciPackageVersionIds({ github, context, core, package }) {
   core.info(`Searching for all versions of '${packageName}' package...`);
   const repoType = await _getRepositoryType({ github, core, owner: context.repo.owner });
   const isOrg = repoType === 'organization';
-  const perPage = 100;
   let versionIds = [];
   try {
-    let page = 1;
-    while (true) {
+    let more = true;
+    const perPage = 100;
+    for (let page = 1; more; page++) {
       const { data } = await github.rest.packages[isOrg
         ? 'getAllPackageVersionsForPackageOwnedByOrg'
         : 'getAllPackageVersionsForPackageOwnedByUser']({
@@ -112,26 +112,21 @@ async function _getOciPackageVersionIds({ github, context, core, package }) {
           per_page: perPage
         });
       core.info(`DEBUG _getOciPackageVersionIds raw API response keys: ${Object.keys(data).join(', ')}`);
-      core.info(`DEBUG _getOciPackageVersionIds page ${page}: ${JSON.stringify(data, null, 2)}`);
-      if (!data.length) {
-        break;
-      }
-      const versions = data.map(version => ({
+      const dataArray = Array.isArray(data) ? data : Object.values(data);
+      core.info(`DEBUG _getOciPackageVersionIds page ${page}: ${JSON.stringify(dataArray, null, 2)}`);
+      const versions = dataArray.map(version => ({
         id: version.id,
         version: version.name
       }));
       versionIds = versionIds.concat(versions);
-      if (data.length < perPage) {
-        break;
-      }
-      page++;
+      more = dataArray.length === perPage;
     }
     const word = versionIds.length === 1 ? 'version' : 'versions';
     core.info(`Found ${versionIds.length} ${word} for '${packageName}' OCI package`);
     return versionIds;
   } catch (error) {
     utils.handleError(error, core, `get versions for '${packageName}' package`, false);
-    return [];
+    return versionIds;
   }
 }
 
