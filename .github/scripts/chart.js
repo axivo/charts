@@ -272,6 +272,7 @@ async function _updateMetadataFiles({ github, context, core, exec, charts }) {
         const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'helm-metadata-'));
         const indexPath = path.join(tempDir, 'index.yaml')
         const metadataPath = path.join(chartDir, 'metadata.yaml');
+        await exec.exec('helm', ['package', chartDir, '--destination', tempDir], { silent: true });
         if (await utils.fileExists(metadataPath)) {
           await fs.copyFile(metadataPath, indexPath);
         }
