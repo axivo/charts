@@ -199,9 +199,9 @@ async function _updateChartIndexes({ github, context, core, exec, charts }) {
         await exec.exec('helm', ['package', chartDir, '--destination', chartDir], { silent: true });
         await exec.exec('helm', ['repo', 'index', chartDir, '--url', baseUrl, '--merge', indexPath], { silent: true });
         indexFiles.push(indexPath);
-        core.info(`Successfully updated index for '${chartName}' chart`);
+        core.info(`Successfully updated '${chartName}' chart index`);
       } catch (error) {
-        utils.handleError(error, core, `update index for '${chartDir}'`, false);
+        utils.handleError(error, core, `update '${chartDir}' chart index`, false);
       }
     }));
     if (indexFiles.length > 0) {
