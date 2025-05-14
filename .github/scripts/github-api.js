@@ -77,57 +77,6 @@ async function _getLastReleaseDate({ github, context, core, chartName }) {
 }
 
 /**
- * Gets all version IDs for an OCI package in GitHub Container Registry
- * 
- * This helper function queries the GitHub GraphQL API to get all package version IDs
- * in the GitHub Container Registry using pagination.
- * 
- * @private
- * @param {Object} params - Function parameters
- * @param {Object} params.github - GitHub API client for making API calls
- * @param {Object} params.context - GitHub Actions context containing repository information
- * @param {Object} params.core - GitHub Actions Core API for logging and output
- * @param {Object} params.package - Package information
- * @param {string} params.package.name - Name of the package
- * @param {string} params.package.type - Type of package ('application' or 'library')
- * @returns {Promise<Array>} - Array of version objects with id and version properties
- */
-async function _getOciPackageVersionIds({ github, context, core, package }) {
-  const packageName = [context.repo.repo, package.type, package.name].join('/');
-  core.info(`Searching for all versions of '${packageName}' package...`);
-  const repoType = await _getRepositoryType({ github, core, owner: context.repo.owner });
-  const isOrg = repoType === 'organization';
-  let versionIds = [];
-  try {
-    let more = true;
-    const perPage = 100;
-    for (let page = 1; more; page++) {
-      const { data } = await github.rest.packages[isOrg
-        ? 'getAllPackageVersionsForPackageOwnedByOrg'
-        : 'getAllPackageVersionsForPackageOwnedByUser']({
-          [isOrg ? 'org' : 'username']: context.repo.owner,
-          package_name: packageName,
-          package_type: 'container',
-          page,
-          per_page: perPage
-        });
-      const versions = data.map(version => ({
-        id: version.id,
-        version: version.name
-      }));
-      versionIds = versionIds.concat(versions);
-      more = data.length === perPage;
-    }
-    const word = versionIds.length === 1 ? 'version' : 'versions';
-    core.info(`Found ${versionIds.length} ${word} for '${packageName}' OCI package`);
-    return versionIds;
-  } catch (error) {
-    utils.handleError(error, core, `get versions for '${packageName}' package`, false);
-    return versionIds;
-  }
-}
-
-/**
  * Gets all release IDs for a specific chart
  * 
  * This helper function queries the GitHub GraphQL API to get all release IDs
@@ -488,11 +437,10 @@ async function createSignedCommit({ github, context, core, git }) {
 }
 
 /**
- * Deletes all versions of a package from GitHub Container Registry
+ * Deletes a package from GitHub Container Registry
  * 
- * This function finds and deletes all versions of a package from GitHub Container Registry
- * using REST API. It uses the _getOciPackageVersionIds helper to retrieve all version IDs
- * and then deletes each version in sequence.
+ * The function determines whether the repository is owned by an organization or user
+ * account and uses the appropriate GitHub REST API endpoint.
  * 
  * @param {Object} params - Function parameters
  * @param {Object} params.github - GitHub API client for making API calls
@@ -501,37 +449,24 @@ async function createSignedCommit({ github, context, core, git }) {
  * @param {Object} params.package - Package information
  * @param {string} params.package.name - Name of the package
  * @param {string} params.package.type - Type of package ('application' or 'library')
- * @returns {Promise<boolean>} - True if at least one package version was deleted successfully, false otherwise
+ * @returns {Promise<boolean>} - True if the package was deleted successfully, false otherwise
  */
 async function deleteOciPackage({ github, context, core, package }) {
   const packageName = [context.repo.repo, package.type, package.name].join('/');
   try {
     core.info(`Deleting '${packageName}' OCI package...`);
-    const versionIds = await _getOciPackageVersionIds({ github, context, core, package });
-    if (!versionIds.length) return false;
     const repoType = await _getRepositoryType({ github, core, owner: context.repo.owner });
     const isOrg = repoType === 'organization';
-    const deletePromises = versionIds.map(async ({ id, version: hash }) => {
-      try {
-        await github.rest.packages[isOrg
-          ? 'deletePackageVersionForOrg'
-          : 'deletePackageVersionForUser'
-        ]({
-          [isOrg ? 'org' : 'username']: context.repo.owner,
-          package_name: packageName,
-          package_type: 'container',
-          package_version_id: id
-        });
-        return { success: true, id, hash };
-      } catch (error) {
-        utils.handleError(error, core, `delete version ${hash} of '${packageName}' OCI package`, false);
-        return { success: false, id, hash, error };
-      }
+    await github.rest.packages[isOrg
+      ? 'deletePackageForOrg'
+      : 'deletePackageForUser'
+    ]({
+      [isOrg ? 'org' : 'username']: context.repo.owner,
+      package_name: packageName,
+      package_type: 'container'
     });
-    const results = await Promise.all(deletePromises);
-    const counter = results.filter(result => result.success).length;
     core.info(`Successfully deleted '${packageName}' OCI package`);
-    return counter > 0;
+    return true;
   } catch (error) {
     utils.handleError(error, core, `delete '${packageName}' OCI package`, false);
     return false;
