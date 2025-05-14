@@ -158,14 +158,15 @@ async function _getReleaseIds({ github, context, core, chart }) {
  * @param {number} [params.options.limit=0] - Maximum number of releases to return (0 for all)
  * @returns {Promise<Array>} - Array of matching release objects or empty array if none found
  */
-async function _getReleases({ github, context, core, options = {} }) {
+async function _getReleases({ github, context, core, options }) {
+  const { tagName, tagPrefix, limit = 0 } = options;
+  const message = tagName
+    ? `repository releases with '${tagName}' tag`
+    : tagPrefix
+      ? `repository releases with '${tagPrefix}' tag prefix`
+      : 'all repository releases';
+  let allReleases = [];
   try {
-    const { tagName, tagPrefix, limit = 0 } = options;
-    const message = tagName
-      ? `releases with '${tagName}' tag`
-      : tagPrefix
-        ? `releases with '${tagPrefix}' tag prefix`
-        : 'all repository releases';
     core.info(`Getting ${message}...`);
     const query = `
       query($owner: String!, $repo: String!, $cursor: String) {
@@ -183,7 +184,6 @@ async function _getReleases({ github, context, core, options = {} }) {
         }
       }
     `;
-    let allReleases = [];
     let hasNextPage = true;
     let endCursor = null;
     while (hasNextPage) {
@@ -224,16 +224,11 @@ async function _getReleases({ github, context, core, options = {} }) {
       endCursor = pageInfo.endCursor;
     }
     const word = allReleases.length === 1 ? 'release' : 'releases';
-    core.info(allReleases.length > 0 ? `Found ${allReleases.length} ${word}` : 'No releases found');
+    core.info(allReleases.length ? `Found ${allReleases.length} repository ${word}` : 'No repository releases found');
     return allReleases;
   } catch (error) {
-    const context = tagName
-      ? `fetch release with tag ${tagName}`
-      : tagPrefix
-        ? `fetch releases with tag prefix ${tagPrefix}`
-        : 'fetch repository releases';
-    utils.handleError(error, core, context, false);
-    return [];
+    utils.handleError(error, core, `get ${message}`, false);
+    return allReleases;
   }
 }
 

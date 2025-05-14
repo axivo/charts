@@ -158,10 +158,10 @@ async function _generateChartsIndex({ github, context, core, exec, distRoot, cha
             const tempPackageFile = path.join(tempDir, packageName);
             try {
               if (!await utils.fileExists(packageFile)) {
-                core.info(`Downloading '${packageName}' chart package to ${tempDir} directory...`);
-                await exec.exec('curl', ['-sSL', url, '-o', tempPackageFile]);
+                core.info(`Downloading '${release.tag_name}' chart package to ${tempDir} directory...`);
+                await exec.exec('curl', ['-sSL', url, '-o', tempPackageFile], { silent: true });
               } else {
-                core.info(`Copying '${packageName}' chart package to ${tempDir} directory...`);
+                core.info(`Copying '${release.tag_name}' chart package to ${tempDir} directory...`);
                 await fs.copyFile(packageFile, tempPackageFile);
               }
             } catch (fileError) {

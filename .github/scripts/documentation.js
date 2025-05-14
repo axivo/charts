@@ -42,7 +42,7 @@ async function installHelmDocs({ core, exec, version }) {
     const packageUrl = [packageBaseUrl, `v${version}`, packageFile].join('/');
     const packagePath = [tmpDir, packageFile].join('/');
     core.info(`Installing helm-docs v${version}...`);
-    const runSudo = async (args) => (await exec.getExecOutput('sudo', args)).stdout.trim();
+    const runSudo = async (args) => (await exec.getExecOutput('sudo', args, { silent: true })).stdout.trim();
     await runSudo(['wget', '-qP', tmpDir, '-t', '10', '-T', '60', packageUrl]);
     await runSudo(['apt-get', '-y', 'install', packagePath]);
     core.info('Successfully installed helm-docs');
@@ -76,7 +76,7 @@ async function installHelmDocs({ core, exec, version }) {
  */
 async function updateDocumentation({ github, context, core, exec, dirs = [] }) {
   try {
-    const runGit = async (args) => (await exec.getExecOutput('git', args)).stdout.trim();
+    const runGit = async (args) => (await exec.getExecOutput('git', args, { silent: true })).stdout.trim();
     const headRef = process.env.GITHUB_HEAD_REF;
     core.info(`Getting the latest changes for '${headRef}' branch...`);
     await runGit(['fetch', 'origin', headRef]);
