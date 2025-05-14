@@ -16,6 +16,7 @@
  */
 
 const fs = require('fs/promises');
+const os = require('os');
 const path = require('path');
 const yaml = require('js-yaml');
 const api = require('./github-api');
@@ -157,7 +158,7 @@ async function _updateAppFiles({ github, context, core, exec, charts }) {
         utils.handleError(error, core, `update application file for ${chartName}`, false);
       }
     }));
-    if (appFiles.length > 0) {
+    if (appFiles.length) {
       const word = appFiles.length === 1 ? 'file' : 'files'
       await _performGitCommit({ github, context, core, exec, files: appFiles, type: `application ${word}` });
       core.info(`Successfully updated ${appFiles.length} application ${word}`);
@@ -206,7 +207,7 @@ async function _updateLockFiles({ github, context, core, exec, charts }) {
         const lockFilePath = path.join(chartDir, 'Chart.lock');
         const yamlFilePath = path.join(chartDir, 'Chart.yaml');
         const yamlFile = yaml.load(await fs.readFile(yamlFilePath, 'utf8'));
-        if (yamlFile.dependencies && yamlFile.dependencies.length > 0) {
+        if (yamlFile.dependencies.length) {
           await exec.exec('helm', ['dependency', 'update', chartDir], { silent: true });
           lockFiles.push(lockFilePath);
           core.info(`Successfully updated dependency lock file for '${chartDir}' chart`);
@@ -221,7 +222,7 @@ async function _updateLockFiles({ github, context, core, exec, charts }) {
         utils.handleError(error, core, `process dependency lock file for '${chartDir}' chart`, false);
       }
     }));
-    if (lockFiles.length > 0) {
+    if (lockFiles.length) {
       const word = lockFiles.length === 1 ? 'file' : 'files';
       await _performGitCommit({ github, context, core, exec, files: lockFiles, type: `dependency lock ${word}` });
       core.info(`Successfully updated ${lockFiles.length} dependency lock ${word}`);
@@ -268,20 +269,21 @@ async function _updateMetadataFiles({ github, context, core, exec, charts }) {
       try {
         const chartName = path.basename(chartDir);
         const baseUrl = [context.payload.repository.html_url, 'releases', 'download'].join('/');
-        const indexPath = path.join(chartDir, 'index.yaml');
+        const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'helm-metadata-'));
+        const indexPath = path.join(tempDir, 'index.yaml')
         const metadataPath = path.join(chartDir, 'metadata.yaml');
         if (await utils.fileExists(metadataPath)) {
-          await fs.rename(metadataPath, indexPath);
+          await fs.copyFile(metadataPath, indexPath);
         }
-        await exec.exec('helm', ['repo', 'index', chartDir, '--url', baseUrl], { silent: true });
-        await fs.rename(indexPath, metadataPath);
+        await exec.exec('helm', ['repo', 'index', tempDir, '--url', baseUrl], { silent: true });
+        await fs.copyFile(indexPath, metadataPath);
         indexFiles.push(metadataPath);
         core.info(`Successfully updated '${chartName}' metadata file`);
       } catch (error) {
         utils.handleError(error, core, `update '${chartDir}' metadata file`, false);
       }
     }));
-    if (indexFiles.length > 0) {
+    if (indexFiles.length) {
       const word = indexFiles.length === 1 ? 'file' : 'files';
       await _performGitCommit({ github, context, core, exec, files: indexFiles, type: `metadata ${word}` });
       core.info(`Successfully updated ${indexFiles.length} chart metadata ${word}`);

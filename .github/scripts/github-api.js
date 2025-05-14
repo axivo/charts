@@ -66,7 +66,7 @@ async function _getLastReleaseDate({ github, context, core, chartName }) {
     const chartReleases = releases.filter(release =>
       release.tagName.startsWith(tagPrefix)
     ).sort((current, previous) => new Date(previous.createdAt) - new Date(current.createdAt));
-    if (chartReleases.length > 0) {
+    if (chartReleases.length) {
       return chartReleases[0].createdAt;
     }
     core.info(`No previous releases found for '${chartName}' chart`);
@@ -211,11 +211,11 @@ async function _getReleases({ github, context, core, options }) {
       allReleases = allReleases.concat(newReleases);
       if (tagName) {
         allReleases = allReleases.filter(release => release.tag_name === tagName);
-        if (allReleases.length > 0) break;
+        if (allReleases.length) break;
       } else if (tagPrefix) {
         allReleases = allReleases.filter(release => release.tag_name.startsWith(tagPrefix));
       }
-      if (limit > 0 && allReleases.length >= limit) {
+      if (limit && allReleases.length >= limit) {
         allReleases = allReleases.slice(0, limit);
         break;
       }
@@ -289,7 +289,7 @@ async function checkWorkflowRunStatus({ github, context, core, runId }) {
     for (const job of jobsResponse.data.jobs) {
       if (job.steps) {
         const failedSteps = job.steps.filter(step => step.conclusion !== 'success');
-        if (failedSteps.length > 0) {
+        if (failedSteps.length) {
           hasFailures = true;
           break;
         }

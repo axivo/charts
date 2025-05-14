@@ -205,12 +205,12 @@ async function _generateChartRelease({ github, context, core, chart }) {
       Dependencies: (chart.metadata.dependencies || []).map(dependency => ({
         Name: dependency.name,
         Repository: dependency.repository,
-        Source: chartSources.length > 0 ? chartSources[0] : null,
+        Source: chartSources.length ? chartSources[0] : null,
         Version: dependency.version
       })),
       Description: chart.metadata.description || '',
       Icon: chart.icon ? config('repository').chart.icon : null,
-      Issues: issues.length > 0 ? issues : null,
+      Issues: issues.length ? issues : null,
       KubeVersion: chart.metadata.kubeVersion || '',
       Name: chart.name,
       RepoURL: repoUrl,
