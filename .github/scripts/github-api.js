@@ -111,15 +111,12 @@ async function _getOciPackageVersionIds({ github, context, core, package }) {
           page,
           per_page: perPage
         });
-      core.info(`DEBUG _getOciPackageVersionIds raw API response keys: ${Object.keys(data).join(', ')}`);
-      const dataArray = Array.isArray(data) ? data : Object.values(data);
-      core.info(`DEBUG _getOciPackageVersionIds page ${page}: ${JSON.stringify(dataArray, null, 2)}`);
-      const versions = dataArray.map(version => ({
+      const versions = data.map(version => ({
         id: version.id,
         version: version.name
       }));
       versionIds = versionIds.concat(versions);
-      more = dataArray.length === perPage;
+      more = data.length === perPage;
     }
     const word = versionIds.length === 1 ? 'version' : 'versions';
     core.info(`Found ${versionIds.length} ${word} for '${packageName}' OCI package`);
@@ -514,23 +511,25 @@ async function deleteOciPackage({ github, context, core, package }) {
     if (!versionIds.length) return false;
     const repoType = await _getRepositoryType({ github, core, owner: context.repo.owner });
     const isOrg = repoType === 'organization';
-    let counter = 0;
-    core.info(`DEBUG deleteOciPackage versionIds: ${JSON.stringify(versionIds, null, 2)}`);
-    for (const version of versionIds) {
+    const deletePromises = versionIds.map(async ({ id, version: hash }) => {
       try {
         await github.rest.packages[isOrg
           ? 'deletePackageVersionForOrg'
-          : 'deletePackageVersionForUser']({
-            [isOrg ? 'org' : 'username']: context.repo.owner,
-            package_name: packageName,
-            package_type: 'container',
-            version_id: version.id
-          });
-        counter++;
+          : 'deletePackageVersionForUser'
+        ]({
+          [isOrg ? 'org' : 'username']: context.repo.owner,
+          package_name: packageName,
+          package_type: 'container',
+          package_version_id: id
+        });
+        return { success: true, id, hash };
       } catch (error) {
-        utils.handleError(error, core, `delete version ${version.version} of '${packageName}' OCI package`, false);
+        utils.handleError(error, core, `delete version ${hash} of '${packageName}' OCI package`, false);
+        return { success: false, id, hash, error };
       }
-    }
+    });
+    const results = await Promise.all(deletePromises);
+    const counter = results.filter(result => result.success).length;
     core.info(`Successfully deleted '${packageName}' OCI package`);
     return counter > 0;
   } catch (error) {
