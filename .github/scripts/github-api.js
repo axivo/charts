@@ -94,7 +94,7 @@ async function _getReleaseIds({ github, context, core, chart }) {
   const titlePrefix = config('release').title
     .replace('{{ .Name }}', chart)
     .replace('{{ .Version }}', '');
-  core.info(`Searching for all releases of '${chart}' chart...`);
+  core.info(`Searching for '${chart}' chart repository releases...`);
   const query = `
     query($owner: String!, $repo: String!, $cursor: String) {
       repository(owner: $owner, name: $repo) {
@@ -133,7 +133,7 @@ async function _getReleaseIds({ github, context, core, chart }) {
       endCursor = pageInfo.endCursor;
     }
     const word = releaseIds.length === 1 ? 'release' : 'releases';
-    core.info(`Found ${releaseIds.length} ${word} for '${chart}' chart`);
+    core.info(`Found ${releaseIds.length} repository ${word} for '${chart}' chart`);
     return releaseIds;
   } catch (error) {
     utils.handleError(error, core, `get releases for '${chart}' chart`, false);
@@ -484,7 +484,6 @@ async function deleteOciPackage({ github, context, core, package }) {
  */
 async function deleteReleases({ github, context, core, chart }) {
   try {
-    core.info(`Deleting releases for '${chart}' chart...`);
     const releaseIds = await _getReleaseIds({ github, context, core, chart });
     if (!releaseIds.length) {
       core.info(`No releases found for '${chart}' chart`);
@@ -512,7 +511,7 @@ async function deleteReleases({ github, context, core, chart }) {
     const results = await Promise.all(promises);
     counter = results.filter((result) => result.success).length;
     const word = counter === 1 ? 'release' : 'releases';
-    core.info(`Successfully deleted ${counter} ${word} for '${chart}' chart`);
+    core.info(`Successfully deleted ${counter} repository ${word} for '${chart}' chart`);
     return counter > 0;
   } catch (error) {
     utils.handleError(error, core, `delete releases for '${chart}' chart`, false);
