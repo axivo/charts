@@ -42,7 +42,7 @@ async function installHelmDocs({ core, exec, version }) {
     const packageUrl = [packageBaseUrl, `v${version}`, packageFile].join('/');
     const packagePath = [tmpDir, packageFile].join('/');
     core.info(`Installing helm-docs v${version}...`);
-    const runSudo = async (args) => (await exec.getExecOutput('sudo', args)).stdout.trim();
+    const runSudo = async (args) => (await exec.getExecOutput('sudo', args, { silent: true })).stdout.trim();
     await runSudo(['wget', '-qP', tmpDir, '-t', '10', '-T', '60', packageUrl]);
     await runSudo(['apt-get', '-y', 'install', packagePath]);
     core.info('Successfully installed helm-docs');
