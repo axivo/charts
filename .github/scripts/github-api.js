@@ -162,7 +162,7 @@ async function _getReleases({ github, context, core, options = {} }) {
   try {
     const { tagName, tagPrefix, limit = 0 } = options;
     const message = tagName
-      ? `release with '${tagName}' tag`
+      ? `releases with '${tagName}' tag`
       : tagPrefix
         ? `releases with '${tagPrefix}' tag prefix`
         : 'all repository releases';
@@ -734,11 +734,6 @@ async function getUpdatedFiles({ github, context, core }) {
         hasNextPage = pageInfo.hasNextPage;
         endCursor = pageInfo.endCursor;
       }
-      const fileCount = Object.keys(files).length;
-      if (fileCount > 0) {
-        const word = fileCount === 1 ? 'file' : 'files';
-        core.info(`Found ${fileCount} updated ${word} in pull request #${context.payload.pull_request.number}`);
-      }
       return files;
     }
     if (eventName === 'push') {
@@ -751,11 +746,6 @@ async function getUpdatedFiles({ github, context, core }) {
       response.data.files.forEach(file => {
         files[file.filename] = file.status;
       });
-      const fileCount = Object.keys(files).length;
-      if (fileCount > 0) {
-        const word = fileCount === 1 ? 'file' : 'files';
-        core.info(`Found ${fileCount} updated ${word} in push event`);
-      }
       return files;
     }
     return files;

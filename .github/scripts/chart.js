@@ -207,7 +207,7 @@ async function _updateLockFiles({ github, context, core, exec, charts }) {
         const yamlFilePath = path.join(chartDir, 'Chart.yaml');
         const yamlFile = yaml.load(await fs.readFile(yamlFilePath, 'utf8'));
         if (yamlFile.dependencies && yamlFile.dependencies.length > 0) {
-          await exec.exec('helm', ['dependency', 'update', chartDir]);
+          await exec.exec('helm', ['dependency', 'update', chartDir], { silent: true });
           lockFiles.push(lockFilePath);
           core.info(`Successfully updated dependency lock file for '${chartDir}' chart`);
         } else {

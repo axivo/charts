@@ -115,7 +115,6 @@ function _extractChartInfo(package) {
  */
 async function _generateChartsIndex({ github, context, core, exec, distRoot, charts }) {
   try {
-    core.info('Fetching all repository releases...');
     const appType = config('repository').chart.type.application;
     const libType = config('repository').chart.type.library;
     const chartDirs = [...charts.application, ...charts.library];
@@ -130,7 +129,8 @@ async function _generateChartsIndex({ github, context, core, exec, distRoot, cha
           .replace('{{ .Name }}', chartName)
           .replace('{{ .Version }}', '');
         const chartReleases = allReleases.filter(release => release.tag_name.startsWith(titlePrefix));
-        core.info(`Found ${chartReleases.length} releases for '${chartType}/${chartName}' chart`);
+        const word = chartReleases.length === 1 ? 'release' : 'releases';
+        core.info(`Found ${chartReleases.length} new ${word} for '${chartType}/${chartName}' chart`);
         if (!chartReleases.length) {
           core.info(`No releases found for '${chartType}/${chartName}' chart, skipping index generation`);
           return;
@@ -172,10 +172,9 @@ async function _generateChartsIndex({ github, context, core, exec, distRoot, cha
             if (await utils.fileExists(indexPath)) {
               cmdArgs.push('--merge', indexPath);
             }
-            await exec.exec('helm', cmdArgs);
+            await exec.exec('helm', cmdArgs, { silent: true });
             const tempIndexPath = path.join(tempDir, 'index.yaml');
             await fs.copyFile(tempIndexPath, indexPath);
-            core.info(`Successfully created ${indexPath} index file`);
             try {
               const redirectTemplate = config('repository').chart.redirect.template;
               const redirectContent = await fs.readFile(redirectTemplate, 'utf8');
@@ -190,7 +189,6 @@ async function _generateChartsIndex({ github, context, core, exec, distRoot, cha
               const redirectHtml = template(redirectContext);
               const redirectPath = path.join(chartOutputDir, 'index.html');
               await fs.writeFile(redirectPath, redirectHtml);
-              core.info(`Successfully created ${redirectPath} redirect file`);
             } catch (redirectError) {
               utils.handleError(redirectError, core, 'create redirect file', false);
             }
@@ -424,10 +422,10 @@ async function _packageCharts({ core, exec, charts }) {
     try {
       core.info(`Packaging '${chartDir}' chart...`);
       core.info(`Updating dependencies for '${chartDir}' chart...`);
-      await exec.exec('helm', ['dependency', 'update', chartDir]);
+      await exec.exec('helm', ['dependency', 'update', chartDir], { silent: true });
       const isAppChartType = chartDir.startsWith(appChartType);
       const packageDest = isAppChartType ? appPackagesDir : libPackagesDir;
-      await exec.exec('helm', ['package', chartDir, '--destination', packageDest]);
+      await exec.exec('helm', ['package', chartDir, '--destination', packageDest], { silent: true });
     } catch (error) {
       utils.handleError(error, core, `package ${chartDir} chart`, false);
     }
@@ -481,7 +479,7 @@ async function _publishChartReleases({ github, context, core, deletedCharts }) {
     const packagesPath = config('release').packages;
     const packages = await _getChartPackages({ core, packagesPath });
     if (!packages.length) {
-      core.info('No packages available for publishing');
+      core.info('No chart packages available for publishing');
       return;
     }
     const word = packages.length === 1 ? 'package' : 'packages'
@@ -549,19 +547,12 @@ async function _publishOciReleases({ github, context, core, exec, deletedCharts 
   try {
     const ociRegistry = config('repository').oci.registry;
     if (!config('repository').oci.packages.enabled) {
-      core.info('OCI packages publishing is disabled');
+      core.info('Publishing of OCI packages is disabled');
       return;
     }
     core.info('Authenticating to OCI registry...');
     try {
-      await exec.exec('helm', [
-        'registry',
-        'login',
-        ociRegistry,
-        '--username',
-        context.repo.owner,
-        '--password-stdin'
-      ], {
+      await exec.exec('helm', ['registry', 'login', ociRegistry, '-u', context.repo.owner, '--password-stdin'], {
         input: Buffer.from(process.env['INPUT_GITHUB-TOKEN']),
         silent: true
       });
@@ -610,19 +601,18 @@ async function _publishOciReleases({ github, context, core, exec, deletedCharts 
       core.info('No packages available for OCI registry publishing');
       return;
     }
-    const word = packages.length === 1 ? 'package' : 'packages';
-    core.info(`Publishing ${packages.length} ${word} to '${ociRegistry}' OCI registry...`);
     for (const package of packages) {
       try {
-        core.info(`Pushing '${package.source}' package to OCI registry...`);
+        core.info(`Publishing '${package.source}' chart package to OCI registry...`);
         const chartPath = path.join(packagesPath, package.type, package.source);
         const registry = ['oci:/', ociRegistry, context.payload.repository.full_name, package.type].join('/');
-        await exec.exec('helm', ['push', chartPath, registry]);
+        await exec.exec('helm', ['push', chartPath, registry], { silent: true });
       } catch (error) {
         utils.handleError(error, core, `push '${package.source}' package`, false);
       }
     }
-    core.info(`Successfully published ${packages.length} ${word} to OCI registry`);
+    const word = packages.length === 1 ? 'package' : 'packages';
+    core.info(`Successfully published ${packages.length} chart ${word} to OCI registry`);
   } catch (error) {
     utils.handleError(error, core, 'publish packages to OCI registry');
   }
