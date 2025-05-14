@@ -121,7 +121,7 @@ async function _generateChartIndexes({ core, distRoot }) {
       const outputDir = path.join(distRoot, chartType, chartName);
       try {
         await fs.mkdir(outputDir, { recursive: true });
-        const sourceIndex = path.join(chartDir, 'index.yaml');
+        const sourceIndex = path.join(chartDir, 'release.yaml');
         const destIndex = path.join(outputDir, 'index.yaml');
         const sourceIndexExists = await utils.fileExists(sourceIndex);
         if (sourceIndexExists) {
