@@ -332,7 +332,7 @@ async function checkWorkflowRunStatus({ github, context, core, runId }) {
  */
 async function createRelease({ github, context, core, name, body, draft = false, prerelease = false }) {
   try {
-    core.info(`Creating '${name}' release...`);
+    core.info(`Creating '${name}' repository release...`);
     const response = await github.rest.repos.createRelease({
       owner: context.repo.owner,
       repo: context.repo.repo,
@@ -353,10 +353,10 @@ async function createRelease({ github, context, core, name, body, draft = false,
       prerelease: release.prerelease,
       html_url: release.html_url
     };
-    core.info(`Successfully created '${name}' release with ${releaseData.id} ID`);
+    core.info(`Successfully created '${name}' repository release with ${releaseData.id} ID`);
     return releaseData;
   } catch (error) {
-    utils.handleError(error, core, 'create release');
+    utils.handleError(error, core, 'create repository release');
   }
 }
 
