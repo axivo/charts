@@ -121,14 +121,12 @@ async function _generateChartIndexes({ core, distRoot }) {
       const outputDir = path.join(distRoot, chartType, chartName);
       try {
         await fs.mkdir(outputDir, { recursive: true });
-        const sourceIndex = path.join(chartDir, 'index.yaml');
-        const destIndex = path.join(outputDir, 'index.yaml');
-        const sourceIndexExists = await utils.fileExists(sourceIndex);
-        if (sourceIndexExists) {
-          await fs.copyFile(sourceIndex, destIndex);
-          core.info(`Successfully generated '${chartType}/${chartName}' chart index`);
-        }
-        if (!sourceIndexExists) return false;
+        const indexPath = path.join(outputDir, 'index.yaml');
+        const metadataPath = path.join(chartDir, 'metadata.yaml');
+        const metadataPathExists = await utils.fileExists(metadataPath);
+        if (!metadataPathExists) return false;
+        await fs.copyFile(metadataPath, indexPath);
+        core.info(`Successfully generated '${chartType}/${chartName}' chart index`);
         const redirectTemplate = config('repository').chart.redirect.template;
         const redirectContent = await fs.readFile(redirectTemplate, 'utf8');
         const repoUrl = config('repository').url;
@@ -207,12 +205,12 @@ async function _generateChartRelease({ github, context, core, chart }) {
       Dependencies: (chart.metadata.dependencies || []).map(dependency => ({
         Name: dependency.name,
         Repository: dependency.repository,
-        Source: chartSources.length > 0 ? chartSources[0] : null,
+        Source: chartSources.length ? chartSources[0] : null,
         Version: dependency.version
       })),
       Description: chart.metadata.description || '',
       Icon: chart.icon ? config('repository').chart.icon : null,
-      Issues: issues.length > 0 ? issues : null,
+      Issues: issues.length ? issues : null,
       KubeVersion: chart.metadata.kubeVersion || '',
       Name: chart.name,
       RepoURL: repoUrl,

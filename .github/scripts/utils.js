@@ -381,7 +381,7 @@ async function updateIssueLabels({ github, context, core }) {
       })
     );
     const createdLabels = results.filter(Boolean);
-    if (createdLabels.length > 0) {
+    if (createdLabels.length) {
       core.info(`Successfully updated ${createdLabels.length} issue labels`);
     }
     return createdLabels;

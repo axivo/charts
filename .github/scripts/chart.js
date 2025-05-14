@@ -16,47 +16,13 @@
  */
 
 const fs = require('fs/promises');
+const os = require('os');
 const path = require('path');
 const yaml = require('js-yaml');
 const api = require('./github-api');
 const config = require('./config');
 const docs = require('./documentation');
 const utils = require('./utils');
-
-/**
- * Downloads a package from a GitHub release asset URL
- * 
- * This function downloads release asset packages from GitHub using the fetch API with proper
- * authentication headers. It handles both public and private repository access by
- * including the GitHub token in the authorization header.
- * 
- * @private
- * @param {Object} params - Function parameters
- * @param {Object} params.core - GitHub Actions Core API for logging and output
- * @param {Object} params.package - Package information
- * @param {string} params.package.url - URL of the package to download
- * @param {string} params.package.name - Name of the package file
- * @param {string} params.package.file - Destination path for the downloaded file
- * @returns {Promise<boolean>} - True if download succeeded, false otherwise
- */
-async function _downloadAssetPackage({ core, package }) {
-  try {
-    const authToken = process.env['INPUT_GITHUB-TOKEN'];
-    const response = await fetch(package.url, {
-      headers: {
-        'Authorization': `token ${authToken}`,
-        'Accept': 'application/octet-stream'
-      }
-    });
-    if (!response.ok) return false;
-    const arrayBuffer = await response.arrayBuffer();
-    await fs.writeFile(package.file, Buffer.from(arrayBuffer));
-    return true;
-  } catch (error) {
-    utils.handleError(error, core, `download '${package.name}' asset package`, false);
-    return false;
-  }
-}
 
 /**
  * Lints charts using the chart-testing (ct) tool
@@ -84,7 +50,7 @@ async function _lintCharts({ core, exec, charts }) {
       core.info('No charts to lint');
       return true;
     }
-    await exec.exec('ct', ['lint', '--charts', chartDirs.join(',')]);
+    await exec.exec('ct', ['lint', '--charts', chartDirs.join(','), '--skip-helm-dependencies'], { silent: true });
     const word = chartDirs.length === 1 ? 'chart' : 'charts';
     core.info(`Successfully linted ${chartDirs.length} ${word}`);
     return true;
@@ -192,90 +158,13 @@ async function _updateAppFiles({ github, context, core, exec, charts }) {
         utils.handleError(error, core, `update application file for ${chartName}`, false);
       }
     }));
-    if (appFiles.length > 0) {
+    if (appFiles.length) {
       const word = appFiles.length === 1 ? 'file' : 'files'
       await _performGitCommit({ github, context, core, exec, files: appFiles, type: `application ${word}` });
       core.info(`Successfully updated ${appFiles.length} application ${word}`);
     }
   } catch (error) {
     utils.handleError(error, core, 'update application files', false);
-  }
-}
-
-/**
- * Updates index.yaml files for modified charts
- * 
- * This function generates or updates the index.yaml file for each modified chart
- * by fetching its releases from GitHub and using helm repo index to create the index.
- * The generated index files are committed to the repository alongside the charts.
- * 
- * @private
- * @param {Object} params - Function parameters
- * @param {Object} params.github - GitHub API client for making API calls
- * @param {Object} params.context - GitHub Actions context containing repository information
- * @param {Object} params.core - GitHub Actions Core API for logging and output
- * @param {Object} params.exec - GitHub Actions exec helpers for running commands
- * @param {Object} params.charts - Object containing application and library chart paths
- * @returns {Promise<void>}
- */
-async function _updateChartIndexes({ github, context, core, exec, charts }) {
-  try {
-    core.info('Updating chart index files...');
-    const indexFiles = [];
-    const chartDirs = [...charts.application, ...charts.library];
-    await Promise.all(chartDirs.map(async (chartDir) => {
-      try {
-        const chartName = path.basename(chartDir);
-        const chartType = charts.application.includes(chartDir)
-          ? config('repository').chart.type.application
-          : config('repository').chart.type.library;
-        const titlePrefix = config('release').title
-          .replace('{{ .Name }}', chartName)
-          .replace('{{ .Version }}', '');
-        const allReleases = await api.getReleases({ github, context, core, tagPrefix: titlePrefix });
-        if (!allReleases.length) {
-          core.info(`No releases found for '${chartName}' chart, skipping index generation`);
-          return;
-        }
-        const retention = config('repository').chart.packages.retention;
-        let releases = allReleases;
-        if (retention > 0 && releases.length > retention) {
-          releases = releases.sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).slice(0, retention);
-        }
-        const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'chart-index-'));
-        for (const release of releases) {
-          const asset = release.assets.find(file => file.name.endsWith('.tgz'));
-          if (!asset) continue;
-          const packageUrl = asset.browser_download_url;
-          const packageName = path.basename(packageUrl);
-          const tempPackageFile = path.join(tempDir, packageName);
-          const package = {
-            url: packageUrl,
-            name: packageName,
-            file: tempPackageFile
-          };
-          const downloaded = await _downloadAssetPackage({ core, package });
-          if (!downloaded) continue;
-        }
-        const baseUrl = [context.payload.repository.html_url, 'releases', 'download'].join('/');
-        await exec.exec('helm', ['repo', 'index', tempDir, '--url', baseUrl], { silent: true });
-        const sourceIndex = path.join(tempDir, 'index.yaml');
-        const destIndex = path.join(chartDir, 'index.yaml');
-        await fs.copyFile(sourceIndex, destIndex);
-        indexFiles.push(destIndex);
-        core.info(`Successfully updated index for '${chartName}' chart`);
-        await fs.rm(tempDir, { recursive: true, force: true });
-      } catch (error) {
-        utils.handleError(error, core, `update index for '${chartDir}'`, false);
-      }
-    }));
-    if (indexFiles.length > 0) {
-      const word = indexFiles.length === 1 ? 'file' : 'files';
-      await _performGitCommit({ github, context, core, exec, files: indexFiles, type: `index ${word}` });
-      core.info(`Successfully updated ${indexFiles.length} index ${word}`);
-    }
-  } catch (error) {
-    utils.handleError(error, core, 'update chart indexes', false);
   }
 }
 
@@ -318,7 +207,7 @@ async function _updateLockFiles({ github, context, core, exec, charts }) {
         const lockFilePath = path.join(chartDir, 'Chart.lock');
         const yamlFilePath = path.join(chartDir, 'Chart.yaml');
         const yamlFile = yaml.load(await fs.readFile(yamlFilePath, 'utf8'));
-        if (yamlFile.dependencies && yamlFile.dependencies.length > 0) {
+        if (yamlFile.dependencies.length) {
           await exec.exec('helm', ['dependency', 'update', chartDir], { silent: true });
           lockFiles.push(lockFilePath);
           core.info(`Successfully updated dependency lock file for '${chartDir}' chart`);
@@ -333,13 +222,86 @@ async function _updateLockFiles({ github, context, core, exec, charts }) {
         utils.handleError(error, core, `process dependency lock file for '${chartDir}' chart`, false);
       }
     }));
-    if (lockFiles.length > 0) {
+    if (lockFiles.length) {
       const word = lockFiles.length === 1 ? 'file' : 'files';
       await _performGitCommit({ github, context, core, exec, files: lockFiles, type: `dependency lock ${word}` });
       core.info(`Successfully updated ${lockFiles.length} dependency lock ${word}`);
     }
   } catch (error) {
     utils.handleError(error, core, 'update dependency lock files');
+  }
+}
+
+/**
+ * Updates metadata files for charts in a pull request
+ * 
+ * This function refreshes the metadata.yaml files for all charts in the repository by:
+ * 
+ * 1. Iterating through all application and library charts
+ * 2. Creating a temporary directory for clean index generation
+ * 3. Packaging the chart to the temporary directory
+ * 4. Copying existing metadata.yaml to the temp directory for merging (if it exists)
+ * 5. Running 'helm repo index' on the temp directory to generate the chart index
+ * 6. Copying the generated index.yaml back to the chart directory as metadata.yaml
+ * 7. Adding updated metadata files to a list for commit
+ * 
+ * The function ensures clean index generation by using a temporary directory that
+ * contains only the chart's own package, avoiding pollution from dependency packages.
+ * 
+ * After processing all charts, it commits the changed metadata files using _performGitCommit().
+ * This ensures that all charts have up-to-date repository metadata, including proper
+ * URLs and version information for chart distribution.
+ * 
+ * @private
+ * @param {Object} params - Function parameters
+ * @param {Object} params.github - GitHub API client for making API calls
+ * @param {Object} params.context - GitHub Actions context containing repository information
+ * @param {Object} params.core - GitHub Actions Core API for logging and output
+ * @param {Object} params.exec - GitHub Actions exec helpers for running commands
+ * @param {Object} params.charts - Object containing application and library chart paths
+ * @returns {Promise<void>}
+ */
+async function _updateMetadataFiles({ github, context, core, exec, charts }) {
+  try {
+    core.info('Updating metadata files...');
+    const indexFiles = [];
+    const appType = config('repository').chart.type.application;
+    const libType = config('repository').chart.type.library;
+    const chartDirs = [...charts.application, ...charts.library];
+    await Promise.all(chartDirs.map(async (chartDir) => {
+      try {
+        const chartName = path.basename(chartDir);
+        const chartType = charts.application.includes(chartDir) ? appType : libType;
+        const baseUrl = [context.payload.repository.html_url, 'releases', 'download'].join('/');
+        const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'helm-metadata-'));
+        const indexPath = path.join(tempDir, 'index.yaml')
+        const metadataPath = path.join(chartDir, 'metadata.yaml');
+        await exec.exec('helm', ['package', chartDir, '--destination', tempDir], { silent: true });
+        if (await utils.fileExists(metadataPath)) {
+          const metadata = yaml.load(await fs.readFile(metadataPath, 'utf8'));
+          const entries = metadata.entries[chartName];
+          const retention = config('repository').chart.packages.retention;
+          if (entries.length >= retention) {
+            const deletedEntries = entries.length - retention + 1;
+            metadata.entries[chartName] = entries.slice(deletedEntries);
+          }
+          await fs.writeFile(indexPath, yaml.dump(metadata), 'utf8');
+        }
+        await exec.exec('helm', ['repo', 'index', tempDir, '--url', baseUrl], { silent: true });
+        await fs.copyFile(indexPath, metadataPath);
+        indexFiles.push(metadataPath);
+        core.info(`Successfully updated '${chartType}/${chartName}' metadata file`);
+      } catch (error) {
+        utils.handleError(error, core, `update '${chartDir}' metadata file`, false);
+      }
+    }));
+    if (indexFiles.length) {
+      const word = indexFiles.length === 1 ? 'file' : 'files';
+      await _performGitCommit({ github, context, core, exec, files: indexFiles, type: `metadata ${word}` });
+      core.info(`Successfully updated ${indexFiles.length} chart metadata ${word}`);
+    }
+  } catch (error) {
+    utils.handleError(error, core, 'update metadata files', false);
   }
 }
 
@@ -379,7 +341,7 @@ async function updateCharts({ github, context, core, exec }) {
       await _updateAppFiles({ github, context, core, exec, charts });
       await _updateLockFiles({ github, context, core, exec, charts });
       if (config('repository').chart.packages.enabled) {
-        await _updateChartIndexes({ github, context, core, exec, charts });
+        await _updateMetadataFiles({ github, context, core, exec, charts });
       }
       await _lintCharts({ core, exec, charts });
     }
