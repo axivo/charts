@@ -14,7 +14,6 @@
  */
 
 const fs = require('fs/promises');
-const os = require('os');
 const path = require('path');
 const yaml = require('js-yaml');
 const api = require('./github-api');
