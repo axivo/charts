@@ -5,9 +5,9 @@ entries:
         org.opencontainers.image.documentation: https://github.com/axivo/charts/blob/main/library/common/README.md
         org.opencontainers.image.licenses: BSD-3-Clause
       apiVersion: v2
-      created: '2025-05-15T04:11:15.376660192Z'
+      created: '2025-05-15T04:19:41.922287593Z'
       description: Common library for Helm charts
-      digest: 3a470dd4733aeb5ed592ca06811a0fb011de093d49a266413a2cde3eb813d522
+      digest: 9f08f1ceac1c82e2a73be7e375b27412c73fcae64488d90f4b4002f7cbed681f
       home: https://github.com/axivo/charts
       icon: >-
         https://raw.githubusercontent.com/axivo/charts/refs/heads/main/library/common/icon.png
@@ -26,4 +26,4 @@ entries:
         - >-
           https://github.com/axivo/charts/releases/download/common-1.0.0/library.tgz
       version: 1.0.0
-generated: '2025-05-15T04:11:15.375621282Z'
+generated: '2025-05-15T04:19:41.921439358Z'
