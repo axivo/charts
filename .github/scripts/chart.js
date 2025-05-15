@@ -208,16 +208,14 @@ async function _updateLockFiles({ github, context, core, exec, charts }) {
         const chartLockPath = path.join(chartDir, 'Chart.lock');
         const chartYamlPath = path.join(chartDir, 'Chart.yaml');
         const chart = yaml.load(await fs.readFile(chartYamlPath, 'utf8'));
-        if (chart.dependencies.length) {
+        if (chart.dependencies?.length) {
           await exec.exec('helm', ['dependency', 'update', chartDir], { silent: true });
           lockFiles.push(chartLockPath);
           core.info(`Successfully updated '${chartDir}' dependency lock file`);
-        } else {
-          if (await utils.fileExists(chartLockPath)) {
-            await fs.unlink(chartLockPath);
-            lockFiles.push(chartLockPath);
-            core.info(`Successfully removed '${chartDir}' dependency lock file`);
-          }
+        } else if (await utils.fileExists(chartLockPath)) {
+          await fs.unlink(chartLockPath);
+          lockFiles.push(chartLockPath);
+          core.info(`Successfully removed '${chartDir}' dependency lock file`);
         }
       } catch (error) {
         utils.handleError(error, core, `process '${chartDir}' dependency lock file`, false);
