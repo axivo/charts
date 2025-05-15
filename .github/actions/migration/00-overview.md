@@ -104,10 +104,11 @@ async function configureGitRepository({ core, exec }) {
 - Features: dependency injection, context management, lifecycle hooks
 - Status: **Complete**
 
-#### 1.4 Logger
-- Create: `actions/core/Logger.js`
+#### ✓ 1.4 Logger
+- Created: `actions/core/Logger.js`
 - Wrap: core.info, core.warning, core.error
 - Features: structured logging, timing, log levels
+- Status: **Complete**
 
 ### Phase 2: Services
 

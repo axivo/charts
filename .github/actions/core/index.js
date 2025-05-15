@@ -6,8 +6,10 @@
  */
 const Action = require('./Action');
 const Configuration = require('./Configuration');
+const Logger = require('./Logger');
 
 module.exports = {
   Action,
-  Configuration
+  Configuration,
+  Logger
 };
