@@ -144,8 +144,9 @@ async function _updateAppFiles({ github, context, core, exec, charts }) {
         const appYamlPath = path.join(chartDir, 'application.yaml');
         if (!await utils.fileExists(appYamlPath)) return;
         const appConfig = yaml.load(await fs.readFile(appYamlPath, 'utf8'));
-        if (!appConfig.spec?.source) return;
-        const chartMetadata = yaml.load(await fs.readFile(path.join(chartDir, 'Chart.yaml'), 'utf8'));
+        if (!appConfig.spec.source) return;
+        const chartYamlPath = path.join(chartDir, 'Chart.yaml');
+        const chartMetadata = yaml.load(await fs.readFile(chartYamlPath, 'utf8'));
         const tagName = config('repository').release.title
           .replace('{{ .Name }}', chartName)
           .replace('{{ .Version }}', chartMetadata.version);
@@ -153,9 +154,9 @@ async function _updateAppFiles({ github, context, core, exec, charts }) {
         appConfig.spec.source.targetRevision = tagName;
         await fs.writeFile(appYamlPath, yaml.dump(appConfig, { lineWidth: -1 }), 'utf8');
         appFiles.push(appYamlPath);
-        core.info(`Successfully updated '${tagName}' target revision in ${appYamlPath}`);
+        core.info(`Successfully updated '${chartDir}' application file`);
       } catch (error) {
-        utils.handleError(error, core, `update application file for ${chartName}`, false);
+        utils.handleError(error, core, `process '${chartDir}' application file`, false);
       }
     }));
     if (appFiles.length) {
@@ -204,22 +205,22 @@ async function _updateLockFiles({ github, context, core, exec, charts }) {
     const chartDirs = [...charts.application, ...charts.library];
     await Promise.all(chartDirs.map(async (chartDir) => {
       try {
-        const lockFilePath = path.join(chartDir, 'Chart.lock');
-        const yamlFilePath = path.join(chartDir, 'Chart.yaml');
-        const yamlFile = yaml.load(await fs.readFile(yamlFilePath, 'utf8'));
-        if (yamlFile.dependencies.length) {
+        const chartLockPath = path.join(chartDir, 'Chart.lock');
+        const chartYamlPath = path.join(chartDir, 'Chart.yaml');
+        const chart = yaml.load(await fs.readFile(chartYamlPath, 'utf8'));
+        if (chart.dependencies.length) {
           await exec.exec('helm', ['dependency', 'update', chartDir], { silent: true });
-          lockFiles.push(lockFilePath);
-          core.info(`Successfully updated dependency lock file for '${chartDir}' chart`);
+          lockFiles.push(chartLockPath);
+          core.info(`Successfully updated '${chartDir}' dependency lock file`);
         } else {
-          if (await utils.fileExists(lockFilePath)) {
-            await fs.unlink(lockFilePath);
-            lockFiles.push(lockFilePath);
-            core.info(`Successfully removed dependency lock file for '${chartDir}' chart`);
+          if (await utils.fileExists(chartLockPath)) {
+            await fs.unlink(chartLockPath);
+            lockFiles.push(chartLockPath);
+            core.info(`Successfully removed '${chartDir}' dependency lock file`);
           }
         }
       } catch (error) {
-        utils.handleError(error, core, `process dependency lock file for '${chartDir}' chart`, false);
+        utils.handleError(error, core, `process '${chartDir}' dependency lock file`, false);
       }
     }));
     if (lockFiles.length) {
@@ -277,22 +278,19 @@ async function _updateMetadataFiles({ github, context, core, exec, charts }) {
       try {
         let metadata = null;
         const chartName = path.basename(chartDir);
-        const chartPath = path.join(chartDir, 'Chart.yaml');
+        const chartYamlPath = path.join(chartDir, 'Chart.yaml');
         const metadataPath = path.join(chartDir, 'metadata.yaml');
         if (await utils.fileExists(metadataPath)) {
-          const chart = yaml.load(await fs.readFile(chartPath, 'utf8'));
+          const chart = yaml.load(await fs.readFile(chartYamlPath, 'utf8'));
           metadata = yaml.load(await fs.readFile(metadataPath, 'utf8'));
           if (metadata.entries[chartName].some(entry => entry.version === chart.version)) return;
         }
-        const chartType = charts.application.includes(chartDir)
-          ? config('repository').chart.type.application
-          : config('repository').chart.type.library;
         const assetName = [chartType, 'tgz'].join('.');
         const baseUrl = [context.payload.repository.html_url, 'releases', 'download'].join('/');
         const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'helm-metadata-'));
-        const indexPath = path.join(tempDir, 'index.yaml')
         await exec.exec('helm', ['package', chartDir, '--destination', tempDir], { silent: true });
         await exec.exec('helm', ['repo', 'index', tempDir, '--url', baseUrl], { silent: true });
+        const indexPath = path.join(tempDir, 'index.yaml')
         const index = yaml.load(await fs.readFile(indexPath, 'utf8'));
         index.entries[chartName].forEach(entry => {
           const tagName = config('repository').release.title
@@ -312,9 +310,9 @@ async function _updateMetadataFiles({ github, context, core, exec, charts }) {
         await fs.writeFile(indexPath, yaml.dump(index), 'utf8');
         await fs.copyFile(indexPath, metadataPath);
         metadataFiles.push(metadataPath);
-        core.info(`Successfully updated '${chartType}/${chartName}' metadata file`);
+        core.info(`Successfully updated '${chartDir}' metadata file`);
       } catch (error) {
-        utils.handleError(error, core, `update '${chartDir}' metadata file`, false);
+        utils.handleError(error, core, `process '${chartDir}' metadata file`, false);
       }
     }));
     if (metadataFiles.length) {
