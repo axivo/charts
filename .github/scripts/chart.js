@@ -146,7 +146,7 @@ async function _updateAppFiles({ github, context, core, exec, charts }) {
         const appConfig = yaml.load(await fs.readFile(appYamlPath, 'utf8'));
         if (!appConfig.spec?.source) return;
         const chartMetadata = yaml.load(await fs.readFile(path.join(chartDir, 'Chart.yaml'), 'utf8'));
-        const tagName = config('release').title
+        const tagName = config('repository').release.title
           .replace('{{ .Name }}', chartName)
           .replace('{{ .Version }}', chartMetadata.version);
         if (appConfig.spec.source.targetRevision === tagName) return;

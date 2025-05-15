@@ -165,16 +165,16 @@ Example usage:
 const config = require('./config');
 
 // Get a specific section of configuration
-const releaseConfig = config('release');
+const releaseConfig = config('repository').release;
 
 // Access specific configuration properties
-const templatePath = config('release').template;
+const templatePath = config('repository').release.template;
 const chartTypes = config('repository').chart.type;
 ```
 
 ## Deployment Types
 
-The scripts support two deployment types controlled by the `config('release').deployment` setting:
+The scripts support two deployment types controlled by the `config('repository').release.deployment` setting:
 
 - `production`: Builds charts and deploys to GitHub Pages. This is the default mode used when running on the main repository.
 - `staging`: Builds charts locally on the current branch without deploying to GitHub Pages. This mode is useful for testing changes before applying them to production.

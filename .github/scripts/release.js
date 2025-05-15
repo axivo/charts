@@ -52,7 +52,7 @@ const utils = require('./utils');
  */
 async function _buildChartRelease({ github, context, core, chart }) {
   try {
-    const tagName = config('release').title
+    const tagName = config('repository').release.title
       .replace('{{ .Name }}', chart.name)
       .replace('{{ .Version }}', chart.version);
     core.info(`Processing '${tagName}' repository release...`);
@@ -187,7 +187,7 @@ async function _generateChartIndexes({ core, distRoot }) {
 async function _generateChartRelease({ github, context, core, chart }) {
   try {
     core.info(`Generating repository release content for '${chart.type}/${chart.name}' chart...`);
-    releaseTemplate = config('release').template;
+    releaseTemplate = config('repository').release.template;
     try {
       await fs.access(releaseTemplate);
     } catch (accessError) {
@@ -198,7 +198,7 @@ async function _generateChartRelease({ github, context, core, chart }) {
     const Handlebars = utils.registerHandlebarsHelpers(repoUrl);
     const template = Handlebars.compile(templateContent);
     const issues = await api.getReleaseIssues({ github, context, core, chart });
-    const tagName = config('release').title
+    const tagName = config('repository').release.title
       .replace('{{ .Name }}', chart.name)
       .replace('{{ .Version }}', chart.version);
     const templateContext = {
@@ -359,7 +359,7 @@ async function _getChartPackages({ core, packagesPath }) {
  * @returns {Promise<void>}
  */
 async function _packageCharts({ core, exec, charts }) {
-  const packagesPath = config('release').packages;
+  const packagesPath = config('repository').release.packages;
   const appChartType = config('repository').chart.type.application;
   const libChartType = config('repository').chart.type.library;
   core.info(`Creating ${packagesPath} directory...`);
@@ -428,7 +428,7 @@ async function _publishChartReleases({ github, context, core, deletedCharts }) {
         }
       }));
     }
-    const packagesPath = config('release').packages;
+    const packagesPath = config('repository').release.packages;
     const packages = await _getChartPackages({ core, packagesPath });
     if (!packages.length) {
       core.info('No chart packages available for publishing');
@@ -529,7 +529,7 @@ async function _publishOciReleases({ github, context, core, exec, deletedCharts 
         }
       }));
     }
-    const packagesPath = config('release').packages;
+    const packagesPath = config('repository').release.packages;
     const allPackages = await _getChartPackages({ core, packagesPath });
     if (!allPackages.length) {
       core.info('No packages available for OCI registry publishing');
@@ -638,7 +638,7 @@ async function processReleases({ github, context, core, exec }) {
  * @returns {Promise<void>}
  */
 async function setupBuildEnvironment({ context, core }) {
-  core.info(`Setting up build environment for '${config('release').deployment}' deployment`);
+  core.info(`Setting up build environment for '${config('repository').release.deployment}' deployment`);
   await _generateFrontpage({ context, core });
   try {
     core.info(`Copying Jekyll theme config to ./_config.yml...`);
@@ -661,9 +661,9 @@ async function setupBuildEnvironment({ context, core }) {
     utils.handleError(error, core, 'copy Jekyll theme custom layout content', false);
   }
   const private = context.payload.repository.private === true;
-  const publish = !private && config('release').deployment === 'production';
+  const publish = !private && config('repository').release.deployment === 'production';
   core.setOutput('publish', publish);
-  core.info(`Successfully completed setup for '${config('release').deployment}' deployment`);
+  core.info(`Successfully completed setup for '${config('repository').release.deployment}' deployment`);
 }
 
 /**

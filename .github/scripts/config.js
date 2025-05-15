@@ -326,69 +326,6 @@ const CONFIG = {
   },
 
   /**
-   * Release-specific configuration
-   * 
-   * @type {Object}
-   */
-  release: {
-    /**
-     * Deployment target environment for chart releases
-     * 
-     * Controls how the build and deployment process behaves based on the context.
-     * In production mode, charts are built and deployed to GitHub Pages.
-     * In staging mode, charts are built locally for testing without publishing.
-     * 
-     * @type {string}
-     * @default 'production'
-     * @see setupBuildEnvironment - Function in release.js that uses this setting to determine deployment behavior
-     */
-    deployment: 'production',
-
-    /**
-     * Path to the chart packages directory
-     * 
-     * This directory is used to store packaged chart files (.tgz) during the release process.
-     * The charts are packaged here first before being uploaded to GitHub Releases.
-     * It also serves as a cache for chart downloads when generating index.yaml files.
-     * The directory follows a structure of [packages]/[type]/[chart-name-version.tgz].
-     * 
-     * @type {string}
-     * @default '.cr-release-packages'
-     * @see processReleases - Function in release.js that creates this directory
-     * @see _generateChartsIndex - Function in release.js that uses charts from this directory
-     * @see _publishChartReleases - Function in release.js that uploads charts from this directory
-     */
-    packages: '.cr-release-packages',
-
-    /**
-     * Path to the Handlebars template for GitHub release notes
-     * 
-     * This template defines the structure and content of release notes
-     * that appear on GitHub releases. It includes chart metadata, dependency
-     * information, and related issues that were addressed in the release.
-     * 
-     * @type {string}
-     * @default '.github/templates/release.md.hbs'
-     * @see _generateChartRelease - Function in release.js that uses this template to create release content
-     */
-    template: '.github/templates/release.md.hbs',
-
-    /**
-     * Format string for release tags and titles
-     * 
-     * This template string is used to generate consistent release tags and titles
-     * for chart releases. It supports variables that are replaced with actual
-     * chart information during the release process.
-     * 
-     * @type {string}
-     * @default '{{ .Name }}-{{ .Version }}'
-     * @see _buildChartRelease - Function in release.js that uses this pattern to generate release tags
-     * @see _getLastReleaseDate - Function in github-api.js that uses this pattern to find previous releases
-     */
-    title: '{{ .Name }}-{{ .Version }}'
-  },
-
-  /**
    * Repository-specific configuration
    * 
    * @type {Object}
@@ -559,6 +496,73 @@ const CONFIG = {
        * @see _processOciReleases - Function in release.js that uses this registry URL
        */
       registry: 'ghcr.io'
+    },
+
+    /**
+     * Configuration for Helm release structure and organization
+     * 
+     * Settings that control the release process for Helm charts, including tag formats,
+     * deployment modes, package storage, and release note generation. These settings
+     * ensure consistent release patterns across all charts in the repository.
+     * 
+     * @type {Object}
+     */
+    release: {
+      /**
+       * Deployment target environment for chart releases
+       * 
+       * Controls how the build and deployment process behaves based on the context.
+       * In production mode, charts are built and deployed to GitHub Pages.
+       * In staging mode, charts are built locally for testing without publishing.
+       * 
+       * @type {string}
+       * @default 'production'
+       * @see setupBuildEnvironment - Function in release.js that uses this setting to determine deployment behavior
+       */
+      deployment: 'production',
+
+      /**
+       * Path to the chart packages directory
+       * 
+       * This directory is used to store packaged chart files (.tgz) during the release process.
+       * The charts are packaged here first before being uploaded to GitHub Releases.
+       * It also serves as a cache for chart downloads when generating index.yaml files.
+       * The directory follows a structure of [packages]/[type]/[chart-name-version.tgz].
+       * 
+       * @type {string}
+       * @default '.cr-release-packages'
+       * @see processReleases - Function in release.js that creates this directory
+       * @see _generateChartsIndex - Function in release.js that uses charts from this directory
+       * @see _publishChartReleases - Function in release.js that uploads charts from this directory
+       */
+      packages: '.cr-release-packages',
+
+      /**
+       * Path to the Handlebars template for GitHub release notes
+       * 
+       * This template defines the structure and content of release notes
+       * that appear on GitHub releases. It includes chart metadata, dependency
+       * information, and related issues that were addressed in the release.
+       * 
+       * @type {string}
+       * @default '.github/templates/release.md.hbs'
+       * @see _generateChartRelease - Function in release.js that uses this template to create release content
+       */
+      template: '.github/templates/release.md.hbs',
+
+      /**
+       * Format string for release tags and titles
+       * 
+       * This template string is used to generate consistent release tags and titles
+       * for chart releases. It supports variables that are replaced with actual
+       * chart information during the release process.
+       * 
+       * @type {string}
+       * @default '{{ .Name }}-{{ .Version }}'
+       * @see _buildChartRelease - Function in release.js that uses this pattern to generate release tags
+       * @see _getLastReleaseDate - Function in github-api.js that uses this pattern to find previous releases
+       */
+      title: '{{ .Name }}-{{ .Version }}'
     },
 
     /**
