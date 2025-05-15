@@ -160,7 +160,7 @@ async function _updateAppFiles({ github, context, core, exec, charts }) {
       }
     }));
     if (appFiles.length) {
-      const word = appFiles.length === 1 ? 'file' : 'files'
+      const word = appFiles.length === 1 ? 'file' : 'files';
       await _performGitCommit({ github, context, core, exec, files: appFiles, type: `application ${word}` });
       core.info(`Successfully updated ${appFiles.length} application ${word}`);
     }
