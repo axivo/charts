@@ -277,17 +277,19 @@ async function _updateMetadataFiles({ github, context, core, exec, charts }) {
         const indexPath = path.join(tempDir, 'index.yaml')
         const metadataPath = path.join(chartDir, 'metadata.yaml');
         await exec.exec('helm', ['package', chartDir, '--destination', tempDir], { silent: true });
+        await exec.exec('helm', ['repo', 'index', tempDir, '--url', baseUrl], { silent: true });
         if (await utils.fileExists(metadataPath)) {
+          const index = yaml.load(await fs.readFile(indexPath, 'utf8'));
           const metadata = yaml.load(await fs.readFile(metadataPath, 'utf8'));
-          const entries = metadata.entries[chartName];
+          const entries = [...index.entries[chartName], ...metadata.entries[chartName]];
+          entries.sort((current, next) => next.version.localeCompare(current.version));
           const retention = config('repository').chart.packages.retention;
           if (entries.length >= retention) {
-            const deletedEntries = entries.length - retention + 1;
+            const deletedEntries = entries.length - retention;
             metadata.entries[chartName] = entries.slice(deletedEntries);
           }
           await fs.writeFile(indexPath, yaml.dump(metadata), 'utf8');
         }
-        await exec.exec('helm', ['repo', 'index', tempDir, '--url', baseUrl], { silent: true });
         await fs.copyFile(indexPath, metadataPath);
         indexFiles.push(metadataPath);
         core.info(`Successfully updated '${chartType}/${chartName}' metadata file`);
