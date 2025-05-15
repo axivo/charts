@@ -271,7 +271,7 @@ async function _updateLockFiles({ github, context, core, exec, charts }) {
 async function _updateMetadataFiles({ github, context, core, exec, charts }) {
   try {
     core.info('Updating metadata files...');
-    const indexFiles = [];
+    const metadataFiles = [];
     const chartDirs = [...charts.application, ...charts.library];
     await Promise.all(chartDirs.map(async (chartDir) => {
       try {
@@ -311,16 +311,16 @@ async function _updateMetadataFiles({ github, context, core, exec, charts }) {
         }
         await fs.writeFile(indexPath, yaml.dump(index), 'utf8');
         await fs.copyFile(indexPath, metadataPath);
-        indexFiles.push(metadataPath);
+        metadataFiles.push(metadataPath);
         core.info(`Successfully updated '${chartType}/${chartName}' metadata file`);
       } catch (error) {
         utils.handleError(error, core, `update '${chartDir}' metadata file`, false);
       }
     }));
-    if (indexFiles.length) {
-      const word = indexFiles.length === 1 ? 'file' : 'files';
-      await _performGitCommit({ github, context, core, exec, files: indexFiles, type: `metadata ${word}` });
-      core.info(`Successfully updated ${indexFiles.length} chart metadata ${word}`);
+    if (metadataFiles.length) {
+      const word = metadataFiles.length === 1 ? 'file' : 'files';
+      await _performGitCommit({ github, context, core, exec, files: metadataFiles, type: `metadata ${word}` });
+      core.info(`Successfully updated ${metadataFiles.length} chart metadata ${word}`);
     }
   } catch (error) {
     utils.handleError(error, core, 'update metadata files', false);
