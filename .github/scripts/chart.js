@@ -275,7 +275,15 @@ async function _updateMetadataFiles({ github, context, core, exec, charts }) {
     const chartDirs = [...charts.application, ...charts.library];
     await Promise.all(chartDirs.map(async (chartDir) => {
       try {
+        let metadata = null;
         const chartName = path.basename(chartDir);
+        const chartPath = path.join(chartDir, 'Chart.yaml');
+        const metadataPath = path.join(chartDir, 'metadata.yaml');
+        if (await utils.fileExists(metadataPath)) {
+          const chart = yaml.load(await fs.readFile(chartPath, 'utf8'));
+          metadata = yaml.load(await fs.readFile(metadataPath, 'utf8'));
+          if (metadata.entries[chartName].some(entry => entry.version === chart.version)) return;
+        }
         const chartType = charts.application.includes(chartDir)
           ? config('repository').chart.type.application
           : config('repository').chart.type.library;
@@ -283,7 +291,6 @@ async function _updateMetadataFiles({ github, context, core, exec, charts }) {
         const baseUrl = [context.payload.repository.html_url, 'releases', 'download'].join('/');
         const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'helm-metadata-'));
         const indexPath = path.join(tempDir, 'index.yaml')
-        const metadataPath = path.join(chartDir, 'metadata.yaml');
         await exec.exec('helm', ['package', chartDir, '--destination', tempDir], { silent: true });
         await exec.exec('helm', ['repo', 'index', tempDir, '--url', baseUrl], { silent: true });
         const index = yaml.load(await fs.readFile(indexPath, 'utf8'));
@@ -293,8 +300,7 @@ async function _updateMetadataFiles({ github, context, core, exec, charts }) {
             .replace('{{ .Version }}', entry.version);
           entry.urls = [[baseUrl, tagName, assetName].join('/')];
         });
-        if (await utils.fileExists(metadataPath)) {
-          const metadata = yaml.load(await fs.readFile(metadataPath, 'utf8'));
+        if (metadata) {
           let entries = [...index.entries[chartName], ...metadata.entries[chartName]];
           entries.sort((current, next) => next.version.localeCompare(current.version));
           const seen = new Set();
