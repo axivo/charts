@@ -65,7 +65,7 @@ async function _getLastReleaseDate({ github, context, core, chart }) {
     };
     const result = await github.graphql(query, variables);
     const releases = result.repository.releases.nodes;
-    const tagName = config('release').title
+    const tagName = config('repository').release.title
       .replace('{{ .Name }}', chart.name)
       .replace('{{ .Version }}', '');
     const chartReleases = releases.filter(release =>
@@ -97,7 +97,7 @@ async function _getLastReleaseDate({ github, context, core, chart }) {
  * @returns {Promise<Array>} - Array of release objects with databaseId and tagName properties
  */
 async function _getReleaseIds({ github, context, core, chart }) {
-  const tagName = config('release').title
+  const tagName = config('repository').release.title
     .replace('{{ .Name }}', chart)
     .replace('{{ .Version }}', '');
   core.info(`Searching for '${chart}' chart repository releases...`);

@@ -299,7 +299,7 @@ async function _validateChart({ exec, chartDir, tempDir }) {
  */
 async function processLocalReleases({ core, exec }) {
   try {
-    if (config('release').deployment === 'production') {
+    if (config('repository').release.deployment === 'production') {
       console.log("In 'production' deployment mode, skipping local releases process");
       return;
     }
