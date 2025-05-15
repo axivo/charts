@@ -197,15 +197,17 @@ async function _generateChartRelease({ github, context, core, chart }) {
     const templateContent = await fs.readFile(releaseTemplate, 'utf8');
     const Handlebars = utils.registerHandlebarsHelpers(repoUrl);
     const template = Handlebars.compile(templateContent);
-    const chartSources = chart.metadata.sources || [];
-    const issues = await api.getReleaseIssues({ github, context, core, chartName: chart.name, chartType: chart.type });
+    const issues = await api.getReleaseIssues({ github, context, core, chart });
+    const tagName = config('release').title
+      .replace('{{ .Name }}', chart.name)
+      .replace('{{ .Version }}', chart.version);
     const templateContext = {
       AppVersion: chart.metadata.appVersion || '',
       Branch: context.payload.repository.default_branch,
       Dependencies: (chart.metadata.dependencies || []).map(dependency => ({
         Name: dependency.name,
         Repository: dependency.repository,
-        Source: chartSources.length ? chartSources[0] : null,
+        Source: [repoUrl, 'blob', tagName, chart.type, chart.name, 'Chart.yaml'].join('/'),
         Version: dependency.version
       })),
       Description: chart.metadata.description || '',

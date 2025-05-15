@@ -132,7 +132,7 @@ async function _performGitCommit({ github, context, core, exec, files, type }) {
  * @param {Object} params.core - GitHub Actions Core API for logging and output
  * @param {Object} params.exec - GitHub Actions exec helpers for running commands
  * @param {Object} params.charts - Object containing application and library chart paths
- * @returns {Promise<string[]>} - Array of updated application file paths
+ * @returns {Promise<void>}
  */
 async function _updateAppFiles({ github, context, core, exec, charts }) {
   try {
@@ -265,13 +265,13 @@ async function _updateMetadataFiles({ github, context, core, exec, charts }) {
   try {
     core.info('Updating metadata files...');
     const indexFiles = [];
-    const appType = config('repository').chart.type.application;
-    const libType = config('repository').chart.type.library;
     const chartDirs = [...charts.application, ...charts.library];
     await Promise.all(chartDirs.map(async (chartDir) => {
       try {
         const chartName = path.basename(chartDir);
-        const chartType = charts.application.includes(chartDir) ? appType : libType;
+        const chartType = charts.application.includes(chartDir)
+          ? config('repository').chart.type.application
+          : config('repository').chart.type.library;
         const baseUrl = [context.payload.repository.html_url, 'releases', 'download'].join('/');
         const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'helm-metadata-'));
         const indexPath = path.join(tempDir, 'index.yaml')

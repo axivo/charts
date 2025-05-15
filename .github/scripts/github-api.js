@@ -36,10 +36,16 @@ const utils = require('./utils');
  * @param {Object} options.github - GitHub API client for making API calls
  * @param {Object} options.context - GitHub Actions context containing repository information
  * @param {Object} options.core - GitHub Actions Core API for logging and output
- * @param {string} options.chartName - Name of the chart to find releases for
+ * @param {Object} params.chart - Chart object containing all chart information
+ * @param {boolean} params.chart.icon - Whether an icon exists for the chart
+ * @param {Object} params.chart.metadata - Chart metadata from Chart.yaml
+ * @param {string} params.chart.name - Name of the chart
+ * @param {string} params.chart.type - Type of chart ("application" or "library")
+ * @param {string} params.chart.version - Version of the chart
  * @returns {Promise<string|null>} - ISO date string of the last release or null if none found
  */
-async function _getLastReleaseDate({ github, context, core, chartName }) {
+async function _getLastReleaseDate({ github, context, core, chart }) {
+  const chartPath = [chart.type, chart.name].join('/');
   try {
     const query = `
       query($owner: String!, $repo: String!) {
@@ -59,20 +65,20 @@ async function _getLastReleaseDate({ github, context, core, chartName }) {
     };
     const result = await github.graphql(query, variables);
     const releases = result.repository.releases.nodes;
-    const titlePattern = config('release').title
-      .replace('{{ .Name }}', chartName)
+    const tagName = config('release').title
+      .replace('{{ .Name }}', chart.name)
       .replace('{{ .Version }}', '');
-    const tagPrefix = titlePattern.substring(0, titlePattern.indexOf('{{ .Version }}'));
     const chartReleases = releases.filter(release =>
-      release.tagName.startsWith(tagPrefix)
+      release.tagName.startsWith(tagName)
     ).sort((current, previous) => new Date(previous.createdAt) - new Date(current.createdAt));
     if (chartReleases.length) {
       return chartReleases[0].createdAt;
     }
-    core.info(`No previous releases found for '${chartName}' chart`);
+    core.info(`No previous releases found for '${chartPath}' chart`);
     return null;
   } catch (error) {
-    utils.handleError(error, core, `get last release date for '${chartName}' chart`);
+    utils.handleError(error, core, `get last release date for '${chartPath}' chart`);
+    return null;
   }
 }
 
@@ -91,7 +97,7 @@ async function _getLastReleaseDate({ github, context, core, chartName }) {
  * @returns {Promise<Array>} - Array of release objects with databaseId and tagName properties
  */
 async function _getReleaseIds({ github, context, core, chart }) {
-  const titlePrefix = config('release').title
+  const tagName = config('release').title
     .replace('{{ .Name }}', chart)
     .replace('{{ .Version }}', '');
   core.info(`Searching for '${chart}' chart repository releases...`);
@@ -122,7 +128,7 @@ async function _getReleaseIds({ github, context, core, chart }) {
         cursor: endCursor
       });
       const releases = result.repository.releases.nodes
-        .filter(release => release.tagName.startsWith(titlePrefix))
+        .filter(release => release.tagName.startsWith(tagName))
         .map(release => ({
           databaseId: release.databaseId,
           tagName: release.tagName
@@ -137,7 +143,7 @@ async function _getReleaseIds({ github, context, core, chart }) {
     return releaseIds;
   } catch (error) {
     utils.handleError(error, core, `get releases for '${chart}' chart`, false);
-    return [];
+    return releaseIds;
   }
 }
 
@@ -255,6 +261,7 @@ async function _getRepositoryType({ github, core, owner }) {
     return response.repositoryOwner.__typename.toLowerCase();
   } catch (error) {
     utils.handleError(error, core, 'determine repository type', false);
+    return null;
   }
 }
 
@@ -331,6 +338,7 @@ async function checkWorkflowRunStatus({ github, context, core, runId }) {
  * @returns {Promise<Object>} - Standardized object containing the created release data
  */
 async function createRelease({ github, context, core, name, body, draft = false, prerelease = false }) {
+  let releaseData = {};
   try {
     core.info(`Creating '${name}' repository release...`);
     const response = await github.rest.repos.createRelease({
@@ -357,6 +365,7 @@ async function createRelease({ github, context, core, name, body, draft = false,
     return releaseData;
   } catch (error) {
     utils.handleError(error, core, 'create repository release');
+    return releaseData;
   }
 }
 
@@ -428,6 +437,7 @@ async function createSignedCommit({ github, context, core, git }) {
     return commitOid;
   } catch (error) {
     utils.handleError(error, core, 'create signed commit');
+    return null;
   }
 }
 
@@ -542,10 +552,8 @@ async function getReleaseByTag({ github, context, core, tagName }) {
     const releases = await _getReleases({ github, context, core, options: { tagName } });
     return releases.length > 0 ? releases[0] : null;
   } catch (error) {
-    if (error.errors && error.errors.some(e => e.type === 'NOT_FOUND')) {
-      return null;
-    }
-    utils.handleError(error, core, `check for release with tag ${tagName}`);
+    utils.handleError(error, core, `get release with tag ${tagName}`);
+    return null;
   }
 }
 
@@ -588,21 +596,21 @@ async function getReleases({ github, context, core, tagPrefix, limit = 0 }) {
  * @param {Object} options.github - GitHub API client for making API calls
  * @param {Object} options.context - GitHub Actions context containing repository information
  * @param {Object} options.core - GitHub Actions Core API for logging and output
- * @param {string} options.chartName - Name of the chart to find issues for
- * @param {string} options.chartType - Type of chart ('application' or 'library')
+ * @param {Object} params.chart - Chart object containing all chart information
+ * @param {boolean} params.chart.icon - Whether an icon exists for the chart
+ * @param {Object} params.chart.metadata - Chart metadata from Chart.yaml
+ * @param {string} params.chart.name - Name of the chart
+ * @param {string} params.chart.type - Type of chart ("application" or "library")
+ * @param {string} params.chart.version - Version of the chart
  * @param {number} [options.maxIssues=50] - Maximum number of issues to retrieve
  * @returns {Promise<Array>} - Array of chart-related issues with standardized properties
  */
-async function getReleaseIssues({ github, context, core, chartName, chartType, maxIssues = 50 }) {
-  const chartPath = `${chartType}/${chartName}`;
+async function getReleaseIssues({ github, context, core, chart, maxIssues = 50 }) {
+  let issues = [];
+  const chartPath = [chart.type, chart.name].join('/');
   try {
     core.info(`Fetching '${chartPath}' chart issues...`);
-    const lastReleaseDate = await _getLastReleaseDate({
-      github,
-      context,
-      core,
-      chartName
-    });
+    const lastReleaseDate = await _getLastReleaseDate({ github, context, core, chart });
     const queryParams = lastReleaseDate
       ? '($owner: String!, $repo: String!, $maxIssues: Int!, $lastReleaseDate: DateTime)'
       : '($owner: String!, $repo: String!, $maxIssues: Int!)';
@@ -633,10 +641,10 @@ async function getReleaseIssues({ github, context, core, chartName, chartType, m
     }
     const result = await github.graphql(query, variables);
     const allIssues = result.repository.issues.nodes;
-    const chartNameRegex = new RegExp(`chart:\\s*${chartName}\\b`, 'i');
+    const chartNameRegex = new RegExp(`chart:\\s*${chart.name}\\b`, 'i');
     const relevantIssues = allIssues.filter(issue => {
       const hasChartName = chartNameRegex.test(issue.bodyText);
-      const hasChartTypeLabel = issue.labels.nodes.some(label => label.name === chartType);
+      const hasChartTypeLabel = issue.labels.nodes.some(label => label.name === chart.type);
       return hasChartName && hasChartTypeLabel;
     });
     if (!relevantIssues.length) {
@@ -655,6 +663,7 @@ async function getReleaseIssues({ github, context, core, chartName, chartType, m
     return issues;
   } catch (error) {
     utils.handleError(error, core, `fetch issues for '${chartPath}' chart`);
+    return issues;
   }
 }
 
@@ -769,18 +778,20 @@ async function getUpdatedFiles({ github, context, core }) {
  * @returns {Promise<Object>} - The uploaded asset data from GitHub API
  */
 async function uploadReleaseAsset({ github, context, core, releaseId, assetName, assetData }) {
+  let asset = {};
   try {
     core.info(`Uploading '${assetName}' asset to ${releaseId} ID...`);
-    const asset = await github.rest.repos.uploadReleaseAsset({
+    const response = await github.rest.repos.uploadReleaseAsset({
       owner: context.repo.owner,
       repo: context.repo.repo,
       release_id: releaseId,
       name: assetName,
       data: assetData
     });
-    return asset.data;
+    return response.data || asset;
   } catch (error) {
     utils.handleError(error, core, 'upload release asset');
+    return asset;
   }
 }
 
