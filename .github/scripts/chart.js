@@ -281,8 +281,10 @@ async function _updateMetadataFiles({ github, context, core, exec, charts }) {
         if (await utils.fileExists(metadataPath)) {
           const index = yaml.load(await fs.readFile(indexPath, 'utf8'));
           const metadata = yaml.load(await fs.readFile(metadataPath, 'utf8'));
-          const entries = [...index.entries[chartName], ...metadata.entries[chartName]];
+          let entries = [...index.entries[chartName], ...metadata.entries[chartName]];
           entries.sort((current, next) => next.version.localeCompare(current.version));
+          const seen = new Set();
+          entries = entries.filter(entry => !seen.has(entry.version) && seen.add(entry.version));
           const retention = config('repository').chart.packages.retention;
           if (entries.length > retention) entries.splice(retention);
           index.entries[chartName] = entries;
