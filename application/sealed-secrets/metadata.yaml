@@ -30,6 +30,6 @@ entries:
     - https://github.com/bitnami-labs/sealed-secrets
     type: application
     urls:
-    - https://github.com/axivo/charts/releases/download/sealed-secrets-1.0.0.tgz
+    - https://github.com/axivo/charts/releases/download/sealed-secrets-1.0.0/application.tgz
     version: 1.0.0
 generated: "2025-05-15T02:21:11.688703765Z"

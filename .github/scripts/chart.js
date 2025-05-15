@@ -279,14 +279,21 @@ async function _updateMetadataFiles({ github, context, core, exec, charts }) {
         const chartType = charts.application.includes(chartDir)
           ? config('repository').chart.type.application
           : config('repository').chart.type.library;
+        const assetName = [chartType, 'tgz'].join('.');
         const baseUrl = [context.payload.repository.html_url, 'releases', 'download'].join('/');
         const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'helm-metadata-'));
         const indexPath = path.join(tempDir, 'index.yaml')
         const metadataPath = path.join(chartDir, 'metadata.yaml');
         await exec.exec('helm', ['package', chartDir, '--destination', tempDir], { silent: true });
         await exec.exec('helm', ['repo', 'index', tempDir, '--url', baseUrl], { silent: true });
+        const index = yaml.load(await fs.readFile(indexPath, 'utf8'));
+        index.entries[chartName].forEach(entry => {
+          const tagName = config('repository').release.title
+            .replace('{{ .Name }}', chartName)
+            .replace('{{ .Version }}', entry.version);
+          entry.urls = [[baseUrl, tagName, assetName].join('/')];
+        });
         if (await utils.fileExists(metadataPath)) {
-          const index = yaml.load(await fs.readFile(indexPath, 'utf8'));
           const metadata = yaml.load(await fs.readFile(metadataPath, 'utf8'));
           let entries = [...index.entries[chartName], ...metadata.entries[chartName]];
           entries.sort((current, next) => next.version.localeCompare(current.version));
@@ -295,8 +302,8 @@ async function _updateMetadataFiles({ github, context, core, exec, charts }) {
           const retention = config('repository').chart.packages.retention;
           if (entries.length > retention) entries.splice(retention);
           index.entries[chartName] = entries;
-          await fs.writeFile(indexPath, yaml.dump(index), 'utf8');
         }
+        await fs.writeFile(indexPath, yaml.dump(index), 'utf8');
         await fs.copyFile(indexPath, metadataPath);
         indexFiles.push(metadataPath);
         core.info(`Successfully updated '${chartType}/${chartName}' metadata file`);

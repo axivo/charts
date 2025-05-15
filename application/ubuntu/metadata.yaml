@@ -30,7 +30,7 @@ entries:
         - https://ubuntu.com/server
       type: application
       urls:
-        - https://github.com/axivo/charts/releases/download/ubuntu-1.0.2.tgz
+        - https://github.com/axivo/charts/releases/download/ubuntu-1.0.2/application.tgz
       version: 1.0.2
     - annotations:
         org.opencontainers.image.documentation: https://github.com/axivo/charts/blob/main/application/ubuntu/README.md
@@ -61,7 +61,7 @@ entries:
         - https://ubuntu.com/server
       type: application
       urls:
-        - https://github.com/axivo/charts/releases/download/ubuntu-1.0.1.tgz
+        - https://github.com/axivo/charts/releases/download/ubuntu-1.0.1/application.tgz
       version: 1.0.1
     - annotations:
         org.opencontainers.image.documentation: https://github.com/axivo/charts/blob/main/application/ubuntu/README.md
@@ -92,6 +92,6 @@ entries:
         - https://ubuntu.com/server
       type: application
       urls:
-        - https://github.com/axivo/charts/releases/download/ubuntu-1.0.0.tgz
+        - https://github.com/axivo/charts/releases/download/ubuntu-1.0.0/application.tgz
       version: 1.0.0
 generated: '2025-05-15T03:27:10.950729189Z'
