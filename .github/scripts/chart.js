@@ -284,11 +284,9 @@ async function _updateMetadataFiles({ github, context, core, exec, charts }) {
           const entries = [...index.entries[chartName], ...metadata.entries[chartName]];
           entries.sort((current, next) => next.version.localeCompare(current.version));
           const retention = config('repository').chart.packages.retention;
-          if (entries.length >= retention) {
-            const deletedEntries = entries.length - retention;
-            metadata.entries[chartName] = entries.slice(deletedEntries);
-          }
-          await fs.writeFile(indexPath, yaml.dump(metadata), 'utf8');
+          if (entries.length > retention) entries.splice(retention);
+          index.entries[chartName] = entries;
+          await fs.writeFile(indexPath, yaml.dump(index), 'utf8');
         }
         await fs.copyFile(indexPath, metadataPath);
         indexFiles.push(metadataPath);
