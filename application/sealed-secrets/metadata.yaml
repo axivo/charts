@@ -5,7 +5,7 @@ entries:
       org.opencontainers.image.documentation: https://github.com/axivo/charts/blob/main/application/sealed-secrets/README.md
       org.opencontainers.image.licenses: BSD-3-Clause
     apiVersion: v2
-    created: "2025-05-14T22:40:17.989122508Z"
+    created: "2025-05-15T02:21:11.691639331Z"
     dependencies:
     - name: common
       repository: oci://ghcr.io/axivo/charts/library
@@ -14,7 +14,7 @@ entries:
       repository: https://bitnami-labs.github.io/sealed-secrets
       version: 2.17.2
     description: Kubernetes secrets controller used for secure Git storage
-    digest: 4a26cf69e07908aa2b6ce9f92933c9cbf56125707d51943534c531848afa8f95
+    digest: 921e4113b59c6d96fc57ebad902e9b992ab02d1ac3a51ccac9788febec3d0142
     home: https://github.com/axivo/charts
     icon: https://raw.githubusercontent.com/axivo/charts/refs/heads/main/application/sealed-secrets/icon.png
     keywords:
@@ -32,4 +32,4 @@ entries:
     urls:
     - https://github.com/axivo/charts/releases/download/sealed-secrets-1.0.0.tgz
     version: 1.0.0
-generated: "2025-05-14T22:40:17.981887034Z"
+generated: "2025-05-15T02:21:11.688703765Z"
