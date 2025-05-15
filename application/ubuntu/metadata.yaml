@@ -6,13 +6,13 @@ entries:
         org.opencontainers.image.licenses: BSD-3-Clause
       apiVersion: v2
       appVersion: '24.04'
-      created: '2025-05-15T03:27:10.952076208Z'
+      created: '2025-05-15T04:11:15.37643025Z'
       dependencies:
         - name: common
           repository: oci://ghcr.io/axivo/charts/library
           version: 1.0.0
       description: Ubuntu Server LTS troubleshooting container for Kubernetes
-      digest: 24938e1fe6cdbd148525d9da2b5b2574ed5ee6be11ee2f420388dde5188ad690
+      digest: 35afc884455927190bd3a8ed64d72c447dd632e45cef4a39cb0364eff2831c5c
       home: https://github.com/axivo/charts
       icon: >-
         https://raw.githubusercontent.com/axivo/charts/refs/heads/main/application/ubuntu/icon.png
@@ -30,7 +30,8 @@ entries:
         - https://ubuntu.com/server
       type: application
       urls:
-        - https://github.com/axivo/charts/releases/download/ubuntu-1.0.2/application.tgz
+        - >-
+          https://github.com/axivo/charts/releases/download/ubuntu-1.0.2/application.tgz
       version: 1.0.2
     - annotations:
         org.opencontainers.image.documentation: https://github.com/axivo/charts/blob/main/application/ubuntu/README.md
@@ -61,7 +62,8 @@ entries:
         - https://ubuntu.com/server
       type: application
       urls:
-        - https://github.com/axivo/charts/releases/download/ubuntu-1.0.1/application.tgz
+        - >-
+          https://github.com/axivo/charts/releases/download/ubuntu-1.0.1/application.tgz
       version: 1.0.1
     - annotations:
         org.opencontainers.image.documentation: https://github.com/axivo/charts/blob/main/application/ubuntu/README.md
@@ -92,6 +94,7 @@ entries:
         - https://ubuntu.com/server
       type: application
       urls:
-        - https://github.com/axivo/charts/releases/download/ubuntu-1.0.0/application.tgz
+        - >-
+          https://github.com/axivo/charts/releases/download/ubuntu-1.0.0/application.tgz
       version: 1.0.0
-generated: '2025-05-15T03:27:10.950729189Z'
+generated: '2025-05-15T04:11:15.374375132Z'
