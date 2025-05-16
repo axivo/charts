@@ -1,5 +1,16 @@
 # Migration Overview
 
+## ⚠️ CRITICAL MIGRATION BOUNDARIES
+
+**NEVER MODIFY EXISTING PRODUCTION CODE DURING MIGRATION PHASES 1-3**
+- Only create new files in the `.github/actions/` directory
+- Existing code in `.github/scripts/` remains untouched until Phase 4
+- No tests, examples, or backward compatibility adapters allowed
+
+**VIOLATION OF THESE BOUNDARIES WILL RESULT IN IMMEDIATE REJECTION**
+
+---
+
 ## Goal
 Migrate procedural JavaScript to object-oriented architecture for GitHub Actions.
 
@@ -13,6 +24,10 @@ Migrate procedural JavaScript to object-oriented architecture for GitHub Actions
 4. **NO COMMENTS IN CODE** - No inline comments, no block comments, no explanatory comments
 5. **METHODS IN ALPHABETICAL ORDER** - All class methods must be in alphabetical order
 6. **FOLLOW EXISTING PATTERNS** - Copy the exact style from the current codebase
+7. **STRICT CODE SEPARATION** - Never modify existing code in `.github/scripts/` during migration
+8. **ONE PHASE AT A TIME** - Only implement the specific service/handler for the current phase
+9. **NO BACKWARD COMPATIBILITY YET** - Do not create adapters until Phase 4
+10. **NO TESTS OR EXAMPLES** - Do not create test files, examples, or demo implementations
 
 ### EXAMPLE OF CORRECT CODE:
 
@@ -82,6 +97,8 @@ async function configureGitRepository({ core, exec }) {
 - **No example files**: Documentation in JSDoc only
 - **No tests**: Workflows are tested in production with feature flags
 - **No example implementations**: No demonstration code, only production code
+
+---
 
 ## Error Handling Design Pattern
 
@@ -315,10 +332,12 @@ class ExampleService extends Action {
 - Methods: execute, generateIndex, lint, package, updateDependencies
 - Status: **Complete**
 
-#### 2.5 Template Service
-- Create: `actions/services/Template.js`
-- Migrate: `registerHandlebarsHelpers()`
-- Methods: registerHelpers, render, compile
+#### ✓ 2.5 Template Service
+- Created: `actions/services/Template.js`
+- Created: `actions/utils/errors/Template.js`
+- Migrated: `registerHandlebarsHelpers()`
+- Methods: isEqual, setRepoRawUrl, render, compile, get
+- Status: **Complete**
 
 ### Phase 3: Handlers
 
@@ -385,6 +404,22 @@ class ExampleService extends Action {
 - Must work with `actions/github-script@v7`
 - No build step - runs directly in GitHub Actions
 - Packages installed via workflow: js-yaml, handlebars, sharp
+
+---
+
+## PRE-IMPLEMENTATION FINAL CHECKLIST
+
+**BEFORE STARTING ANY IMPLEMENTATION, VERIFY:**
+- [ ] You will only create new files in `.github/actions/` directory
+- [ ] You will not modify any existing code in `.github/scripts/`
+- [ ] You will not create tests, examples, or demo implementations
+- [ ] You will not create backward compatibility adapters yet
+- [ ] You understand all mandatory coding guidelines and principles
+- [ ] You are only implementing features for the current phase
+
+**VIOLATION OF THESE GUIDELINES WILL RESULT IN IMMEDIATE REJECTION**
+
+---
 
 ## Code Example
 ```javascript
