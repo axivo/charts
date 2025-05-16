@@ -8,9 +8,13 @@
 const AppError = require('./App');
 const GitError = require('./Git');
 const GitHubApiError = require('./GitHubApi');
+const FileError = require('./File');
+const HelmError = require('./Helm');
 
 module.exports = {
   AppError,
   GitError,
-  GitHubApiError
+  GitHubApiError,
+  FileError,
+  HelmError
 };

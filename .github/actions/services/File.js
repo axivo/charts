@@ -11,7 +11,7 @@ const path = require('path');
 const glob = require('glob');
 const yaml = require('js-yaml');
 const Action = require('../core/Action');
-const { AppError } = require('../utils/errors');
+const { FileError } = require('../utils/errors');
 
 class File extends Action {
   /**
@@ -85,6 +85,22 @@ class File extends Action {
         operation: `delete file ${filePath}`,
         file: filePath
       });
+    }
+  }
+
+  /**
+   * Executes a file system operation
+   * 
+   * @param {string} operation - File operation to perform
+   * @param {function} action - Async function to execute
+   * @param {string} [filePath] - Path to the file involved in the operation
+   * @returns {Promise<any>} - Operation result
+   */
+  async execute(operation, action, filePath) {
+    try {
+      return await action();
+    } catch (error) {
+      throw new FileError(operation, error, filePath);
     }
   }
 
@@ -230,17 +246,12 @@ class File extends Action {
    * @returns {Promise<string|Buffer>} - File contents
    */
   async read(filePath, options = {}) {
-    try {
+    return this.execute('read file', async () => {
       if (!await this.exists(filePath)) {
         throw new Error(`File does not exist: ${filePath}`);
       }
       return await fs.readFile(filePath, options.encoding || 'utf8');
-    } catch (error) {
-      this.errorHandler.handle(error, {
-        operation: `read file ${filePath}`,
-        file: filePath
-      });
-    }
+    }, filePath);
   }
 
   /**
@@ -271,18 +282,13 @@ class File extends Action {
    * @returns {Promise<void>}
    */
   async write(filePath, content, options = {}) {
-    try {
+    return this.execute('write file', async () => {
       if (options.createDir !== false) {
         await this.createDir(path.dirname(filePath), { silent: true });
       }
       await fs.writeFile(filePath, content);
       this.logger.info(`Wrote file: ${filePath}`);
-    } catch (error) {
-      this.errorHandler.handle(error, {
-        operation: `write file ${filePath}`,
-        file: filePath
-      });
-    }
+    }, filePath);
   }
 
   /**
