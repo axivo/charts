@@ -8,10 +8,54 @@
  */
 const path = require('path');
 const Action = require('../core/Action');
-
-const { AppError } = require('../utils/errors');
+const { HelmError } = require('../utils/errors');
 
 class Helm extends Action {
+  /**
+   * Executes a Helm command
+   * 
+   * @param {string[]} args - Command arguments
+   * @param {Object} options - Execution options
+   * @param {boolean} options.silent - Whether to suppress command output
+   * @returns {Promise<string>} - Command output
+   */
+  async execute(args, options = {}) {
+    try {
+      return await this.executeCommand('helm', args, options);
+    } catch (error) {
+      throw new HelmError(`helm ${args[0]}`, error);
+    }
+  }
+
+  /**
+   * Generates a Helm repository index file
+   * 
+   * @param {string} dir - Directory containing chart packages
+   * @param {Object} options - Index options
+   * @param {string} options.url - URL prefix for chart references
+   * @param {string} options.merge - Path to existing index file to merge with
+   * @param {boolean} options.generateMetadata - Generate missing metadata from chart contents
+   * @returns {Promise<boolean>} - True if index was generated successfully
+   */
+  async generateIndex(dir, options = {}) {
+    try {
+      const args = ['repo', 'index', dir];
+      if (options.url) args.push('--url', options.url);
+      if (options.merge) args.push('--merge', options.merge);
+      if (options.generateMetadata) args.push('--generate-metadata');
+      this.logger.info(`Generating index file for: ${dir}`);
+      await this.execute(args);
+      this.logger.info(`Successfully generated index file for ${dir}`);
+      return true;
+    } catch (error) {
+      this.errorHandler.handle(error, {
+        operation: `generate index for ${dir}`,
+        fatal: false
+      });
+      return false;
+    }
+  }
+
   /**
    * Lints a chart
    * 
@@ -23,7 +67,7 @@ class Helm extends Action {
   async lint(chartDir, options = {}) {
     try {
       this.logger.info(`Linting chart: ${chartDir}`);
-      await this.executeCommand('helm', ['lint', chartDir, ...(options.strict ? ['--strict'] : [])]);
+      await this.execute(['lint', chartDir, ...(options.strict ? ['--strict'] : [])]);
       this.logger.info(`Lint passed for ${chartDir}`);
       return true;
     } catch (error) {
@@ -50,7 +94,7 @@ class Helm extends Action {
       if (options.version) args.push('--version', options.version);
       if (options.appVersion) args.push('--app-version', options.appVersion);
       this.logger.info(`Packaging chart: ${chartDir}`);
-      const output = await this.executeCommand('helm', args, { output: true });
+      const output = await this.execute(args, { output: true });
       const lines = output.split('\n');
       let packagePath = null;
       for (const line of lines) {
@@ -79,7 +123,7 @@ class Helm extends Action {
   async updateDependencies(chartDir) {
     try {
       this.logger.info(`Updating dependencies for ${chartDir}`);
-      await this.executeCommand('helm', ['dependency', 'update', chartDir]);
+      await this.execute(['dependency', 'update', chartDir]);
       this.logger.info(`Dependencies updated for ${chartDir}`);
       return true;
     } catch (error) {

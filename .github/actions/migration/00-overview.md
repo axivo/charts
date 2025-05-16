@@ -7,8 +7,8 @@ Migrate procedural JavaScript to object-oriented architecture for GitHub Actions
 
 **THESE RULES ARE NON-NEGOTIABLE:**
 
-1. **NO EMPTY LINES INSIDE FUNCTIONS** - Functions must be compact with no blank lines
-2. **NO COMMENTS INSIDE FUNCTIONS** - Zero comments allowed inside function bodies
+1. **NO EMPTY LINES INSIDE METHODS OR FUNCTIONS** - Functions must be compact with no blank lines
+2. **NO COMMENTS INSIDE METHODS OR FUNCTIONS** - Zero comments allowed inside function bodies
 3. **JSDOC ONLY** - All documentation goes in JSDoc format above the function
 4. **NO COMMENTS IN CODE** - No inline comments, no block comments, no explanatory comments
 5. **METHODS IN ALPHABETICAL ORDER** - All class methods must be in alphabetical order
@@ -83,6 +83,182 @@ async function configureGitRepository({ core, exec }) {
 - **No tests**: Workflows are tested in production with feature flags
 - **No example implementations**: No demonstration code, only production code
 
+## Error Handling Design Pattern
+
+**THIS PATTERN IS MANDATORY FOR ALL SERVICE CLASSES:**
+
+1. **Specialized Error Classes**: Each service must have its own error class that extends `AppError`
+   - Create error class in `/utils/errors/{ServiceName}.js`
+   - Export via `/utils/errors/index.js`
+
+2. **Command Execution Pattern**: Service classes that execute commands MUST follow this pattern:
+   - Create an `execute` method that wraps `this.executeCommand` and throws specialized errors
+   - All other methods in the service MUST use this `execute` method, NOT `executeCommand` directly
+
+3. **Error Propagation**: Methods should generally propagate errors and NOT handle them internally
+   - Exceptions: methods like `configure()` that should handle their own errors
+
+### Example Git.js Pattern:
+
+```javascript
+// In Git.js
+async execute(args, options = {}) {
+  try {
+    return await this.executeCommand('git', args, options);
+  } catch (error) {
+    throw new GitError(`git ${args[0]}`, error);
+  }
+}
+
+// Method using execute - do NOT call executeCommand directly
+async add(files) {
+  if (!files || !files.length) return '';
+  return this.execute(['add', ...files]);
+}
+```
+
+### Example Helm.js Pattern:
+
+```javascript
+// In Helm.js
+async execute(args, options = {}) {
+  try {
+    return await this.executeCommand('helm', args, options);
+  } catch (error) {
+    throw new HelmError(`helm ${args[0]}`, error);
+  }
+}
+
+// Method using execute - do NOT call executeCommand directly
+async lint(chartDir, options = {}) {
+  try {
+    this.logger.info(`Linting chart: ${chartDir}`);
+    await this.execute(['lint', chartDir, ...(options.strict ? ['--strict'] : [])]);
+    this.logger.info(`Lint passed for ${chartDir}`);
+    return true;
+  } catch (error) {
+    this.errorHandler.handle(error, {
+      operation: `lint chart ${chartDir}`,
+      fatal: false
+    });
+    return false;
+  }
+}
+```
+
+### Example File.js Pattern (for non-command services):
+
+```javascript
+// In File.js
+async execute(operation, action, filePath) {
+  try {
+    return await action();
+  } catch (error) {
+    throw new FileError(operation, error, filePath);
+  }
+}
+
+// Method using execute
+async read(filePath, options = {}) {
+  return this.execute('read file', async () => {
+    if (!await this.exists(filePath)) {
+      throw new Error(`File does not exist: ${filePath}`);
+    }
+    return await fs.readFile(filePath, options.encoding || 'utf8');
+  }, filePath);
+}
+```
+
+⚠️ **IMPORTANT**: Using `executeCommand` directly in service methods instead of through an `execute` method is considered an error. All command execution must be encapsulated by service-specific error handling.
+
+## Additional Implementation Patterns
+
+### Method Spacing and Organization
+
+1. **Method Spacing**: All methods must be separated by exactly one blank line
+   - No extra blank lines between methods
+   - Ensure there's always one blank line between methods
+
+2. **Methods in Alphabetical Order**: Methods must be in strict alphabetical order
+   - The `execute` method is the only exception - it should appear in proper alphabetical position
+   - Constructor should always be first
+   - Method ordering is non-negotiable and enforced
+
+### Method Implementation Patterns
+
+1. **No Empty Lines Inside Methods**: Methods should have compact implementation without blank lines
+   - All statements must be consecutive with no blank lines between them
+
+2. **Method Return Values**: 
+   - Methods should have consistent return types
+   - Promise-returning methods should be explicitly async
+   - Methods that can fail should return a boolean success indicator when appropriate
+
+3. **Logging Pattern**:
+   - Use `this.logger.info()` for informational messages
+   - Log before and after significant operations
+   - Keep log messages concise and consistent in format
+
+### Error Handling Strategy
+
+1. **Two-Tier Error Handling**:
+   - Core operations throw domain-specific errors (via `execute`)
+   - Public/convenience methods can catch errors and use `errorHandler.handle()` with `fatal: false`
+
+2. **Operation Context**:
+   - Always provide clear operation context in error handling
+   - Include specific identifiers (file path, chart name, etc.) in error context
+
+3. **Error Classification**:
+   - Only mark errors as non-fatal (`fatal: false`) when the operation can safely continue
+   - Use fatal errors by default for serious issues
+
+### Example of Proper Method Organization:
+
+```javascript
+class ExampleService extends Action {
+  /**
+   * Creates a new ExampleService instance
+   * 
+   * @param {Object} params - Service parameters
+   */
+  constructor(params) {
+    super(params);
+    // initialization
+  }
+
+  /**
+   * Core operation A
+   */
+  async coreOperationA() {
+    // implementation without blank lines
+  }
+
+  /**
+   * Core operation B
+   */
+  async coreOperationB() {
+    // implementation without blank lines
+  }
+
+  /**
+   * Executes the primary service command
+   */
+  async execute() {
+    // Error handling and command execution
+  }
+
+  /**
+   * Helper method Z
+   */
+  helperMethodZ() {
+    // implementation without blank lines
+  }
+}
+```
+
+⚠️ **IMPORTANT**: Following these patterns consistently is critical for maintainability. Deviation from these patterns will result in rejected code.
+
 ## Migration Phases
 
 ### Phase 1: Core Infrastructure
@@ -112,15 +288,19 @@ async function configureGitRepository({ core, exec }) {
 
 ### Phase 2: Services
 
-#### 2.1 Git Service
-- Create: `actions/services/Git.js`
-- Migrate: `configureGitRepository()`, `getGitStagedChanges()`
-- Methods: configure, commit, push, getStatus, getChangedFiles
+#### ✓ 2.1 Git Service
+- Created: `actions/services/Git.js`
+- Created: `actions/utils/errors/Git.js`
+- Migrated: `configureGitRepository()`, `getGitStagedChanges()`
+- Methods: add, commit, configure, execute, fetch, getStatus, etc.
+- Status: **Complete**
 
-#### 2.2 File Service
-- Create: `actions/services/File.js`
-- Migrate: `fileExists()`, direct fs calls
-- Methods: exists, read, write, mkdir, copy, delete, findFiles
+#### ✓ 2.2 File Service
+- Created: `actions/services/File.js`
+- Created: `actions/utils/errors/File.js`
+- Migrated: `fileExists()`, direct fs calls
+- Methods: execute, copy, createDir, delete, exists, read, write, etc.
+- Status: **Complete**
 
 #### 2.3 GitHub Services
 - Create: `actions/services/github/Rest.js`
@@ -129,9 +309,11 @@ async function configureGitRepository({ core, exec }) {
   - Migrate: getReleases, getIssuesSince, createSignedCommit
   - Extract: paginateQuery helper, common patterns
 
-#### 2.4 Helm Service
-- Create: `actions/services/Helm.js`
-- Methods: lint, package, updateDependencies, generateIndex
+#### ✓ 2.4 Helm Service
+- Created: `actions/services/Helm.js`
+- Created: `actions/utils/errors/Helm.js`
+- Methods: execute, generateIndex, lint, package, updateDependencies
+- Status: **Complete**
 
 #### 2.5 Template Service
 - Create: `actions/services/Template.js`
@@ -288,7 +470,17 @@ class LocalRelease {
 ⚠️ **Note**: Individual migration documents need revision - they don't show proper decomposition into small methods.
 
 ## Next Steps
-1. Start with Phase 1.1: Configuration System
-2. Look at existing config.js
-3. Create Configuration class with get() method
-4. Test in actual workflow
+1. Complete GitHub Services Implementation
+   - Create GitHub Rest API service class
+   - Create GitHub GraphQL service class
+   - Ensure proper error handling pattern
+
+2. Begin Handler Classes Implementation
+   - Start with Chart Handler
+   - Implement all handlers with consistent patterns
+   - Apply error handling strategy across handlers
+
+3. Testing
+   - Test all implemented services in isolation
+   - Validate error handling scenarios
+   - Ensure backward compatibility
