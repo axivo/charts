@@ -17,7 +17,7 @@ class ErrorHandler {
   constructor(core) {
     this.core = core;
   }
-  
+
   /**
    * Creates GitHub annotation for errors
    * 
@@ -40,7 +40,7 @@ class ErrorHandler {
       }
     }
   }
-  
+
   /**
    * Extracts detailed information from an error
    * 
@@ -60,7 +60,7 @@ class ErrorHandler {
       col: context.col
     };
   }
-  
+
   /**
    * Handles errors in a standardized way
    * 

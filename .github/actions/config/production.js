@@ -1,7 +1,7 @@
 /**
- * Default configuration values
+ * Production configuration values
  * 
- * This module defines the default configuration values used throughout the application.
+ * This module defines the production configuration values used throughout the application.
  */
 module.exports = {
   /**
