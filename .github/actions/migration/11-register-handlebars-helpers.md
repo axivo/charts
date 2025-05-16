@@ -33,7 +33,7 @@ The function:
 ## Target Architecture
 
 - **Target Class**: `Template` (in `/services/Template.js`)
-- **Target Method**: `registerHelpers()` and integrated into constructor
+- **Target Methods**: `isEqual()`, `setRepoRawUrl()`, `render()`, `get()`
 - **New Dependencies**: 
   - Handlebars library
   - Base service class
@@ -52,58 +52,77 @@ The function:
 
 ```javascript
 // services/Template.js
-const Service = require('../core/Service');
+const Action = require('../core/Action');
 const Handlebars = require('handlebars');
+const { TemplateError } = require('../utils/errors');
 
-class Template extends Service {
+class Template extends Action {
   constructor(context) {
     super(context);
     this.handlebars = Handlebars.create();
-    this.registerHelpers();
+    this.isEqual();
   }
 
   /**
-   * Register common Handlebars helpers
-   * @private
+   * Executes a template operation with error handling
    */
-  registerHelpers() {
-    this.handlebars.registerHelper('eq', function (a, b) {
-      return a === b;
+  execute(operation, action) {
+    try {
+      return action();
+    } catch (error) {
+      throw new TemplateError(operation, error);
+    }
+  }
+
+  /**
+   * Gets the configured Handlebars instance
+   */
+  get() {
+    return this.handlebars;
+  }
+
+  /**
+   * Sets up isEqual helper for equality comparison
+   */
+  isEqual() {
+    this.execute('register isEqual helper', () => {
+      this.handlebars.registerHelper('isEqual', function (a, b) {
+        return a === b;
+      });
     });
   }
 
   /**
-   * Register repository-specific helpers
-   * @param {string} repoUrl - Repository URL for URL transformations
+   * Sets up RepoRawURL helper for GitHub URL transformations
    */
-  registerRepoHelpers(repoUrl) {
-    this.handlebars.registerHelper('RepoRawURL', function () {
-      return String(repoUrl).replace('github.com', 'raw.githubusercontent.com');
+  setRepoRawUrl(repoUrl) {
+    this.execute('set repo raw URL helper', () => {
+      this.handlebars.registerHelper('RepoRawURL', function () {
+        return String(repoUrl).replace('github.com', 'raw.githubusercontent.com');
+      });
     });
   }
 
   /**
-   * Render a template with provided context
-   * @param {string} template - Template string to render
-   * @param {Object} context - Data context for the template
-   * @param {Object} [options] - Additional options
-   * @param {string} [options.repoUrl] - Repository URL for repo-specific helpers
-   * @returns {string} Rendered template output
+   * Renders a template with provided context
    */
   render(template, context, options = {}) {
-    if (options.repoUrl) {
-      this.registerRepoHelpers(options.repoUrl);
+    try {
+      if (options.repoUrl) {
+        this.setRepoRawUrl(options.repoUrl);
+      }
+      const compiledTemplate = this.compile(template);
+      if (!compiledTemplate) {
+        throw new Error('Failed to compile template');
+      }
+      return this.execute('render', () => compiledTemplate(context));
+    } catch (error) {
+      this.errorHandler.handle(error, {
+        operation: 'render template',
+        fatal: false
+      });
+      return null;
     }
-    const compiledTemplate = this.handlebars.compile(template);
-    return compiledTemplate(context);
-  }
-
-  /**
-   * Get the configured Handlebars instance
-   * @returns {Object} Configured Handlebars instance
-   */
-  getHandlebars() {
-    return this.handlebars;
   }
 }
 
@@ -118,8 +137,8 @@ const Template = require('./.github/actions/services/Template');
 
 function registerHandlebarsHelpers(repoUrl) {
   const templateService = new Template({});
-  templateService.registerRepoHelpers(repoUrl);
-  return templateService.getHandlebars();
+  templateService.setRepoRawUrl(repoUrl);
+  return templateService.get();
 }
 
 module.exports = {
