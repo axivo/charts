@@ -20,7 +20,7 @@ class Git extends Action {
     if (!files || !files.length) return '';
     return this.execute(['add', ...files]);
   }
-  
+
   /**
    * Commits staged changes
    * 
@@ -36,7 +36,7 @@ class Git extends Action {
     if (options.noVerify) args.push('--no-verify');
     return this.execute(args);
   }
-  
+
   /**
    * Configures git repository with user identity
    * 
@@ -53,7 +53,7 @@ class Git extends Action {
       this.errorHandler.handle(error, { operation: 'configure git repository' });
     }
   }
-  
+
   /**
    * Executes a git command
    * 
@@ -64,15 +64,12 @@ class Git extends Action {
    */
   async execute(args, options = {}) {
     try {
-      const result = await this.exec.getExecOutput('git', args, {
-        silent: options.silent ?? true
-      });
-      return result.stdout.trim();
+      return await this.executeCommand('git', args, options);
     } catch (error) {
       throw new GitError(`git ${args[0]}`, error);
     }
   }
-  
+
   /**
    * Fetches from a remote
    * 
@@ -85,7 +82,7 @@ class Git extends Action {
     if (ref) args.push(ref);
     return this.execute(args);
   }
-  
+
   /**
    * Gets the current branch name
    * 
@@ -94,14 +91,14 @@ class Git extends Action {
   async getCurrentBranch() {
     return this.execute(['rev-parse', '--abbrev-ref', 'HEAD']);
   }
-  
+
   /**
-   * Gets a list of files that have changed
+   * Gets changes between working tree and reference
    * 
    * @param {string} [ref] - Reference to compare against working tree
    * @returns {Promise<Object>} - Object with files property containing array of changed files
    */
-  async getChangedFiles(ref) {
+  async getChanges(ref) {
     const args = ['diff', '--name-only'];
     if (ref) args.push(ref);
     const result = await this.execute(args);
@@ -109,7 +106,7 @@ class Git extends Action {
       files: result ? result.split('\n').filter(Boolean) : []
     };
   }
-  
+
   /**
    * Gets the revision hash for a reference
    * 
@@ -119,7 +116,7 @@ class Git extends Action {
   async getRevision(ref = 'HEAD') {
     return this.execute(['rev-parse', ref]);
   }
-  
+
   /**
    * Gets staged changes from git
    * 
@@ -137,7 +134,7 @@ class Git extends Action {
       deletions: this.parseGitStatus(deletions)
     };
   }
-  
+
   /**
    * Gets the git status
    * 
@@ -160,7 +157,7 @@ class Git extends Action {
     }
     return { modified, untracked, staged };
   }
-  
+
   /**
    * Parses git status output into structured format
    * 
@@ -177,7 +174,7 @@ class Git extends Action {
         return { status, path };
       });
   }
-  
+
   /**
    * Pulls the latest changes from remote
    * 
@@ -190,7 +187,7 @@ class Git extends Action {
     this.logger.info(`Pulling latest changes from ${remote}/${targetBranch}`);
     return this.execute(['pull', remote, targetBranch]);
   }
-  
+
   /**
    * Pushes changes to remote
    * 
@@ -206,7 +203,7 @@ class Git extends Action {
     if (options.force) args.push('--force');
     return this.execute(args);
   }
-  
+
   /**
    * Switches to a different branch
    * 

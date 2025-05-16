@@ -31,7 +31,7 @@ class Action {
     this.logger = new Logger(core, { context: this.constructor.name });
     this.initialized = false;
   }
-  
+
   /**
    * Hook that runs after execution
    * 
@@ -41,7 +41,7 @@ class Action {
   async afterExecute(result) {
     return;
   }
-  
+
   /**
    * Hook that runs after initialization
    * 
@@ -50,7 +50,7 @@ class Action {
   async afterInitialize() {
     return;
   }
-  
+
   /**
    * Hook that runs before execution
    * 
@@ -59,7 +59,7 @@ class Action {
   async beforeExecute() {
     return;
   }
-  
+
   /**
    * Hook that runs before initialization
    * 
@@ -68,7 +68,7 @@ class Action {
   async beforeInitialize() {
     return;
   }
-  
+
   /**
    * Executes the action logic
    * 
@@ -91,7 +91,67 @@ class Action {
       this.errorHandler.handle(error, createErrorContext('execute action'));
     }
   }
-  
+
+  /**
+   * Executes a shell command
+   * 
+   * @param {string} command - Command to execute
+   * @param {string[]} args - Command arguments
+   * @param {Object} options - Execution options
+   * @param {boolean} options.silent - Whether to suppress command output (default: true)
+   * @param {boolean} options.output - Whether to capture and return command output (default: false)
+   * @param {boolean} options.throwOnError - Whether to throw on non-zero exit code (default: true)
+   * @returns {Promise<string|Object>} - Command output or result object
+   */
+  async executeCommand(command, args, options = {}) {
+    try {
+      const {
+        silent = true,
+        output = false,
+        throwOnError = true,
+        returnFullResult = false,
+        ...execOptions
+      } = options;
+      if (output) {
+        const result = await this.exec.getExecOutput(command, args, {
+          silent,
+          ...execOptions
+        });
+        if (throwOnError && result.exitCode !== 0) {
+          throw new Error(`Command failed: ${command} ${args.join(' ')}\n${result.stderr}`);
+        }
+        return returnFullResult ? {
+          stdout: result.stdout.trim(),
+          stderr: result.stderr.trim(),
+          exitCode: result.exitCode
+        } : result.stdout.trim();
+      } else {
+        await this.exec.exec(command, args, {
+          silent,
+          ...execOptions
+        });
+        return '';
+      }
+    } catch (error) {
+      if (options.fatal !== false) {
+        this.errorHandler.handle(error, {
+          operation: `execute command: ${command}`,
+          fatal: true
+        });
+      } else {
+        this.logger.warning(`Command failed: ${command} ${args.join(' ')}\n${error.message}`);
+      }
+      if (options.throwOnError !== false) {
+        throw error;
+      }
+      return options.returnFullResult ? {
+        stdout: '',
+        stderr: error.message,
+        exitCode: 1
+      } : '';
+    }
+  }
+
   /**
    * Helper method to handle errors
    * 
@@ -103,7 +163,7 @@ class Action {
   handleError(error, operation, options = {}) {
     return this.errorHandler.handle(error, createErrorContext(operation, options));
   }
-  
+
   /**
    * Initializes the action and its dependencies
    * 
@@ -120,7 +180,7 @@ class Action {
       this.errorHandler.handle(error, createErrorContext('initialize action'));
     }
   }
-  
+
   /**
    * Main action implementation
    * 
