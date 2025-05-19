@@ -8,9 +8,20 @@
  */
 const path = require('path');
 const Action = require('../core/Action');
+const Shell = require('./Shell');
 const { HelmError } = require('../utils/errors');
 
 class Helm extends Action {
+  /**
+   * Creates a new Helm service instance
+   * 
+   * @param {Object} params - Service parameters
+   */
+  constructor(params) {
+    super(params);
+    this.shellService = new Shell(params);
+  }
+
   /**
    * Executes a Helm command
    * 
@@ -21,7 +32,7 @@ class Helm extends Action {
    */
   async execute(args, options = {}) {
     try {
-      return await this.executeCommand('helm', args, options);
+      return await this.shellService.execute('helm', args, options);
     } catch (error) {
       throw new HelmError(`helm ${args[0]}`, error);
     }

@@ -7,9 +7,20 @@
  * @license BSD-3-Clause
  */
 const Action = require('../core/Action');
+const Shell = require('./Shell');
 const { GitError } = require('../utils/errors');
 
 class Git extends Action {
+  /**
+   * Creates a new Git service instance
+   * 
+   * @param {Object} params - Service parameters
+   */
+  constructor(params) {
+    super(params);
+    this.shellService = new Shell(params);
+  }
+
   /**
    * Adds files to git staging area
    * 
@@ -64,7 +75,7 @@ class Git extends Action {
    */
   async execute(args, options = {}) {
     try {
-      return await this.executeCommand('git', args, options);
+      return await this.shellService.execute('git', args, options);
     } catch (error) {
       throw new GitError(`git ${args[0]}`, error);
     }

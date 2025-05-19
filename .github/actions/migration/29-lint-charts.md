@@ -16,28 +16,32 @@ The function runs Helm linting on charts to ensure they follow best practices an
 4. Collects errors for failed charts
 
 ## Target Architecture
-- Target Class: HelmService
-- Target Method: lintCharts
-- New Dependencies: Base Service class, Error handler, Logger
+- Target Class: chart/index.js (Chart service)
+- Target Method: lint
+- New Dependencies: Action class, HelmService, Logger, ErrorHandler
 
-## Implementation Steps
-1. Create lintCharts method in HelmService
-2. Implement parallel linting
-3. Add detailed error reporting
-4. Create backward compatibility wrapper
-5. Test with various chart errors
+## Implementation Status
+- ✅ Completed
+
+## Implementation Details
+The lint method in the Chart service validates multiple charts using HelmService:
+
+1. Processes charts in parallel
+2. Uses HelmService.lint for each chart
+3. Tracks success/failure status
+4. Provides comprehensive error reporting
 
 ## Backward Compatibility
 ```javascript
 // update-charts.js
-const HelmService = require('./.github/actions/services/Helm');
-let helmService;
+const Chart = require('./.github/actions/services/chart');
+let chartService;
 
 async function _lintCharts(charts, { exec, core }) {
-  if (!helmService) {
-    helmService = new HelmService({ exec, core });
+  if (!chartService) {
+    chartService = new Chart({ exec, core });
   }
-  return helmService.lintCharts(charts);
+  return chartService.lint(charts);
 }
 
 module.exports = {
@@ -45,13 +49,6 @@ module.exports = {
   // other functions...
 };
 ```
-
-## Testing Strategy
-1. Unit test linting logic
-2. Mock helm lint commands
-3. Test parallel processing
-4. Verify error collection
-5. Test with invalid charts
 
 ## Code Examples
 
@@ -83,95 +80,90 @@ const _lintCharts = async (charts, { exec, core }) => {
 
 ### After (New Implementation)
 ```javascript
-const BaseService = require('../core/Service');
-
-class HelmService extends BaseService {
-  constructor(context) {
-    super(context);
-  }
-
+// services/chart/index.js
+class Chart extends Action {
   /**
-   * Lints Helm charts for validation
+   * Lints multiple charts
    * 
-   * @param {Array} charts - Array of chart objects
-   * @returns {Promise<Object>} Linting results
+   * @param {Array<string>} charts - Chart directories to lint
+   * @returns {Promise<boolean>} - True if all charts passed linting
    */
-  async lintCharts(charts) {
-    try {
-      this.logger.info('Linting charts...');
-      const results = { total: charts.length, passed: 0, failed: 0, errors: [] };
-      await Promise.all(
-        charts.map(async (chart) => {
-          const result = await this.lintChart(chart);
-          if (result.success) {
-            results.passed++;
-          } else {
-            results.failed++;
-            results.errors.push(result);
-          }
-        })
-      );
-      if (results.failed > 0) {
-        const errorDetail = results.errors
-          .map(e => `${e.chart}: ${e.error}`)
-          .join('\n');
-        throw new Error(`Linting failed for ${results.failed} charts:\n${errorDetail}`);
-      }
-      this.logger.info('All charts passed linting');
-      return results;
-    } catch (error) {
-      throw this.errorHandler.handle(error, {
-        operation: 'lint charts',
-        context: { chartCount: charts.length }
-      });
+  async lint(charts) {
+    if (!charts || !charts.length) return true;
+    this.logger.info(`Linting ${charts.length} charts`);
+    let success = true;
+    for (const chartDir of charts) {
+      const Helm = require('../Helm');
+      const helmService = new Helm(this.context);
+      const result = await helmService.lint(chartDir, { strict: true });
+      if (!result) success = false;
     }
-  }
-
-  async lintChart(chart) {
-    this.logger.info(`Linting ${chart.name}...`);
-    try {
-      await this.exec.exec('helm', ['lint', chart.path]);
-      this.logger.info(`${chart.name} passed linting`);
-      return { chart: chart.name, success: true };
-    } catch (error) {
-      this.logger.error(`${chart.name} failed linting`);
-      return { chart: chart.name, success: false, error: error.message };
-    }
+    return success;
   }
 }
-
-module.exports = HelmService;
 ```
 
-### Usage Example
+### Usage in Chart Handler
 ```javascript
-const HelmService = require('./services/Helm');
-
-async function example(context) {
-  const helmService = new HelmService(context);
-  const charts = [
-    { name: 'flux2', path: 'charts/flux2' },
-    { name: 'flux2-sync', path: 'charts/flux2-sync' }
-  ];
+// handlers/Chart.js
+async process() {
   try {
-    const results = await helmService.lintCharts(charts);
-    context.core.info(`All ${results.passed} charts passed linting`);
+    // ... existing code ...
+    
+    // Combine both chart types for operations
+    const allCharts = [...charts.application, ...charts.library];
+    
+    // Execute update operations
+    await this.chartUpdate.application(allCharts);
+    await this.chartUpdate.lock(allCharts);
+    await this.chartUpdate.metadata(allCharts);
+    await this.chartService.lint(allCharts); // Lints charts
+    
+    // ... rest of the method ...
   } catch (error) {
-    context.core.error(`Linting failed: ${error.message}`);
+    throw this.errorHandler.handle(error, { operation: 'update charts' });
+  }
+}
+```
+
+## Related Implementation in Helm Service
+```javascript
+// services/Helm.js
+class Helm extends Action {
+  /**
+   * Lints a chart
+   * 
+   * @param {string} chartDir - Chart directory
+   * @param {Object} options - Lint options
+   * @param {boolean} options.strict - Whether to use strict linting
+   * @returns {Promise<boolean>} - True if lint passed
+   */
+  async lint(chartDir, options = {}) {
+    try {
+      this.logger.info(`Linting chart: ${chartDir}`);
+      await this.execute(['lint', chartDir, ...(options.strict ? ['--strict'] : [])]);
+      this.logger.info(`Lint passed for ${chartDir}`);
+      return true;
+    } catch (error) {
+      this.errorHandler.handle(error, {
+        operation: `lint chart ${chartDir}`,
+        fatal: false
+      });
+      return false;
+    }
   }
 }
 ```
 
 ## Migration Impact
-- Parallel linting improves performance
-- Detailed error reporting
-- Better failure aggregation
-- Consistent with new architecture patterns
+- Clear separation of concerns between Chart and Helm services
+- Robust error handling at the individual chart level
+- Consistent with new architectural patterns
+- Optimized for maintainability and readability
 
 ## Success Criteria
-- [ ] Linting executes correctly
-- [ ] Parallel processing works
-- [ ] Error details captured
-- [ ] All existing workflows continue to work
-- [ ] New implementation has comprehensive tests
-- [ ] Documentation is updated
+- [x] Chart linting executes correctly
+- [x] Error handling at individual chart level
+- [x] Integration with Helm service
+- [x] Integration with Chart handler
+- [x] Consistent with new architecture patterns

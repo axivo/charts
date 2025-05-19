@@ -137,6 +137,34 @@ class File extends Action {
   }
 
   /**
+   * Filters paths to only include existing files
+   * 
+   * @param {Array<string>} dirs - Directories
+   * @param {Array<string>} [fileTypes] - File types to filter (default: standard chart files)
+   * @returns {Promise<Array<string>>} - List of existing files
+   */
+  async filter(dirs, fileTypes) {
+    const defaultFileTypes = [
+      'Chart.yaml',
+      'Chart.lock',
+      'values.yaml',
+      'application.yaml',
+      'metadata.yaml'
+    ];
+    const types = fileTypes || defaultFileTypes;
+    const filePaths = dirs.flatMap(dir => 
+      types.map(type => `${dir}/${type}`)
+    );
+    const existingFiles = [];
+    for (const filePath of filePaths) {
+      if (await this.exists(filePath)) {
+        existingFiles.push(filePath);
+      }
+    }
+    return existingFiles;
+  }
+
+  /**
    * Filters path by pattern
    * 
    * @param {Array<string>} files - List of file paths to check

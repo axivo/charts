@@ -6,6 +6,7 @@
  * @author AXIVO
  * @license BSD-3-Clause
  */
+const fs = require('fs');
 const Api = require('./Api');
 const { GitHubApiError } = require('../../utils/errors');
 
@@ -124,28 +125,44 @@ class Rest extends Api {
   }
 
   /**
-   * Gets updated files in a pull request
+   * Gets updated files in a repository based on event type
    * 
    * @param {Object} params - Function parameters
-   * @param {string} params.owner - Repository owner
-   * @param {string} params.repo - Repository name
-   * @param {number} params.pullNumber - Pull request number
+   * @param {Object} params.context - GitHub Actions context
    * @returns {Promise<Object>} - Map of files to their statuses
    */
-  async getUpdatedFiles({ owner, repo, pullNumber }) {
-    const fileMap = await this.paginate('pulls', 'listFiles', {
-      owner,
-      repo,
-      pull_number: pullNumber
-    }, (data, currentMap = {}) => {
-      const updatedMap = { ...currentMap };
-      data.forEach(file => {
-        updatedMap[file.filename] = file.status;
-      });
-      return updatedMap;
-    });
-    this.logger.info(`Found ${Object.keys(fileMap).length} files in pull request #${pullNumber}`);
-    return fileMap;
+  async getUpdatedFiles({ context }) {
+    const fileMap = {};
+    try {
+      const result = this.validateContextPayload(context);
+      if (!result.valid) return fileMap;
+      const eventName = result.eventName;
+      switch (eventName) {
+        case 'pull_request':
+          return await this.paginate('pulls', 'listFiles', {
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            pull_number: context.payload.pull_request.number
+          }, (data, currentMap = {}) => {
+            const updatedMap = { ...currentMap };
+            data.forEach(file => { updatedMap[file.filename] = file.status; });
+            return updatedMap;
+          });
+        default:
+          const response = await this.execute('compareCommits', 'repos', 'compareCommits', {
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            base: context.payload.before,
+            head: context.payload.after
+          });
+          response.data.files.forEach(file => { fileMap[file.filename] = file.status; });
+          this.logger.info(`Found ${Object.keys(fileMap).length} files in ${eventName} event`);
+          return fileMap;
+      }
+    } catch (error) {
+      this.errorHandler.handle(error, { operation: 'get updated files', fatal: false });
+      return fileMap;
+    }
   }
 
   /**
@@ -189,7 +206,6 @@ class Rest extends Api {
    * @returns {Promise<Object>} - Uploaded asset
    */
   async uploadReleaseAsset({ owner, repo, releaseId, assetPath, assetName, contentType }) {
-    const fs = require('fs');
     const data = fs.readFileSync(assetPath);
     const response = await this.execute('uploadReleaseAsset', 'repos', 'uploadReleaseAsset', {
       owner,
@@ -209,6 +225,30 @@ class Rest extends Api {
       url: response.data.browser_download_url,
       size: response.data.size
     };
+  }
+
+  /**
+   * Validates context payload for specific event types
+   * 
+   * @param {Object} context - GitHub Actions context
+   * @returns {Object} - Validation result with valid flag and reason
+   */
+  validateContextPayload(context) {
+    const eventName = context.eventName || 'push';
+    switch (eventName) {
+      case 'pull_request':
+        if (!context.payload.pull_request || !context.payload.pull_request.number) {
+          this.logger.warning('Pull request data missing from context');
+          return { valid: false, reason: 'missing_pull_request_data' };
+        }
+        break;
+      default:
+        if (!context.payload.before || !context.payload.after) {
+          this.logger.warning('Commit data missing from context');
+          return { valid: false, reason: 'missing_commit_data' };
+        }
+    }
+    return { valid: true, eventName };
   }
 }
 

@@ -11,22 +11,6 @@ const { GitHubApiError } = require('../../utils/errors');
 
 class GraphQL extends Api {
   /**
-   * Executes a GraphQL query with error handling
-   * 
-   * @param {string} operationName - Name of the operation (for error reporting)
-   * @param {string} query - GraphQL query
-   * @param {Object} variables - Query variables
-   * @returns {Promise<Object>} - Query response
-   */
-  async execute(operationName, query, variables) {
-    try {
-      return await this.github.graphql(query, variables);
-    } catch (error) {
-      throw new GitHubApiError(operationName, error);
-    }
-  }
-
-  /**
    * Creates a signed commit using GitHub API
    * 
    * @param {Object} params - Function parameters
@@ -52,16 +36,14 @@ class GraphQL extends Api {
         path: file.path
       }));
     }
-    const query = `
-      mutation CreateCommit($input: CreateCommitOnBranchInput!) {
+    const query = `mutation CreateCommit($input: CreateCommitOnBranchInput!) {
         createCommitOnBranch(input: $input) {
           commit {
             url
             oid
           }
         }
-      }
-    `;
+      }`;
     const variables = {
       input: {
         branch: {
@@ -85,6 +67,22 @@ class GraphQL extends Api {
   }
 
   /**
+   * Executes a GraphQL query with error handling
+   * 
+   * @param {string} operationName - Name of the operation (for error reporting)
+   * @param {string} query - GraphQL query
+   * @param {Object} variables - Query variables
+   * @returns {Promise<Object>} - Query response
+   */
+  async execute(operationName, query, variables) {
+    try {
+      return await this.github.graphql(query, variables);
+    } catch (error) {
+      throw new GitHubApiError(operationName, error);
+    }
+  }
+
+  /**
    * Gets release issues since a specified date
    * 
    * @param {Object} params - Function parameters
@@ -97,8 +95,7 @@ class GraphQL extends Api {
    */
   async getReleaseIssues({ owner, repo, chartName, chartType, since }) {
     const sinceDate = since ? new Date(since) : new Date(0);
-    const query = `
-      query GetIssues($owner: String!, $repo: String!, $chartLabel: String!, $typeLabel: String!, $cursor: String) {
+    const query = `query GetIssues($owner: String!, $repo: String!, $chartLabel: String!, $typeLabel: String!, $cursor: String) {
         repository(owner: $owner, name: $repo) {
           issues(
             first: 100,
@@ -126,8 +123,7 @@ class GraphQL extends Api {
             }
           }
         }
-      }
-    `;
+      }`;
     const issues = await this.paginate(query,
       this.setVariables({ owner, repo }, {
         chartLabel: chartName,
@@ -156,8 +152,7 @@ class GraphQL extends Api {
    * @returns {Promise<Array<Object>>} - Releases
    */
   async getReleases({ owner, repo, limit = 100 }) {
-    const query = `
-      query GetReleases($owner: String!, $repo: String!, $cursor: String) {
+    const query = `query GetReleases($owner: String!, $repo: String!, $cursor: String) {
         repository(owner: $owner, name: $repo) {
           releases(
             first: 100,
@@ -189,8 +184,7 @@ class GraphQL extends Api {
             }
           }
         }
-      }
-    `;
+      }`;
     const releases = await this.paginate(query,
       this.setVariables({ owner, repo }),
       (data) => data.repository.releases,

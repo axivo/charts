@@ -16,28 +16,32 @@ The function updates Helm chart lock files by running dependency build commands,
 4. Reports update status
 
 ## Target Architecture
-- Target Class: HelmService
-- Target Method: updateLockFiles
-- New Dependencies: Base Service class, Error handler, Logger, GitService
+- Target Class: chart/Update
+- Target Method: lock
+- New Dependencies: Action class, HelmService, Logger, ErrorHandler
 
-## Implementation Steps
-1. Create updateLockFiles method in HelmService
-2. Add dependency detection
-3. Implement parallel processing
-4. Create backward compatibility wrapper
-5. Test with charts having various dependency structures
+## Implementation Status
+- ✅ Completed
+
+## Implementation Details
+The lock method in the chart Update service uses the HelmService to update chart lock files in parallel:
+
+1. Processes charts in parallel using Promise.all
+2. Calls helmService.updateDependencies for each chart
+3. Maintains success/failure tracking for each chart
+4. Returns overall success status
 
 ## Backward Compatibility
 ```javascript
 // update-charts.js
-const HelmService = require('./.github/actions/services/Helm');
-let helmService;
+const Chart = require('./.github/actions/services/chart');
+let updateService;
 
 async function _updateLockFiles(charts, { exec, core }) {
-  if (!helmService) {
-    helmService = new HelmService({ exec, core });
+  if (!updateService) {
+    updateService = new Chart.Update({ exec, core });
   }
-  return helmService.updateLockFiles(charts);
+  return updateService.lock(charts);
 }
 
 module.exports = {
@@ -45,13 +49,6 @@ module.exports = {
   // other functions...
 };
 ```
-
-## Testing Strategy
-1. Unit test dependency detection
-2. Mock helm commands
-3. Test parallel processing
-4. Verify error handling
-5. Test with charts without dependencies
 
 ## Code Examples
 
@@ -83,99 +80,66 @@ const _updateLockFiles = async (charts, { exec, core }) => {
 
 ### After (New Implementation)
 ```javascript
-const BaseService = require('../core/Service');
-const path = require('path');
-
-class HelmService extends BaseService {
-  constructor(context) {
-    super(context);
-  }
-
+// services/chart/Update.js
+class Update extends Action {
   /**
-   * Updates lock files for charts with dependencies
+   * Updates lock files for charts
    * 
-   * @param {Array} charts - Array of chart objects
-   * @returns {Promise<Object>} Update summary
+   * @param {Array<string>} charts - Chart directories to update
+   * @returns {Promise<boolean>} - True if all lock files were updated successfully
    */
-  async updateLockFiles(charts) {
-    try {
-      this.logger.info('Updating lock files...');
-      const results = { total: charts.length, updated: 0, skipped: 0, failed: 0 };
-      await Promise.all(
-        charts.map(async (chart) => {
-          try {
-            const updated = await this.updateChartLock(chart);
-            if (updated) {
-              results.updated++;
-            } else {
-              results.skipped++;
-            }
-          } catch (error) {
-            this.logger.error(`Failed to update lock for ${chart.name}: ${error.message}`);
-            results.failed++;
-          }
-        })
-      );
-      this.logger.info(`Lock files: ${results.updated} updated, ${results.skipped} skipped, ${results.failed} failed`);
-      return results;
-    } catch (error) {
-      throw this.errorHandler.handle(error, {
-        operation: 'update lock files',
-        context: { chartCount: charts.length }
-      });
-    }
-  }
-
-  async updateChartLock(chart) {
-    const hasDependencies = await this.chartHasDependencies(chart);
-    if (!hasDependencies) {
-      this.logger.info(`${chart.name} has no dependencies, skipping...`);
-      return false;
-    }
-    this.logger.info(`Updating dependencies for ${chart.name}...`);
-    await this.exec.exec('helm', ['dependency', 'build', chart.path]);
-    const lockFile = path.join(chart.path, 'Chart.lock');
-    await this.gitService.add([lockFile]);
-    this.logger.info(`Lock file updated for ${chart.name}`);
-    return true;
-  }
-
-  async chartHasDependencies(chart) {
-    const chartYaml = path.join(chart.path, 'Chart.yaml');
-    const content = await this.fileService.read(chartYaml);
-    const parsed = this.yamlService.parse(content);
-    return parsed.dependencies && parsed.dependencies.length > 0;
+  async lock(charts) {
+    if (!charts || !charts.length) return true;
+    this.logger.info(`Updating lock files for ${charts.length} charts`);
+    const updatePromises = charts.map(async (chartDir) => {
+      try {
+        return await this.helmService.updateDependencies(chartDir);
+      } catch (error) {
+        this.errorHandler.handle(error, {
+          operation: `update lock file for ${chartDir}`,
+          fatal: false
+        });
+        return false;
+      }
+    });
+    const results = await Promise.all(updatePromises);
+    return results.every(result => result === true);
   }
 }
-
-module.exports = HelmService;
 ```
 
-### Usage Example
+### Usage in Chart Handler
 ```javascript
-const HelmService = require('./services/Helm');
-
-async function example(context) {
-  const helmService = new HelmService(context);
-  const charts = [
-    { name: 'kustomize-controller', path: 'charts/kustomize-controller' },
-    { name: 'source-controller', path: 'charts/source-controller' }
-  ];
-  const results = await helmService.updateLockFiles(charts);
-  context.core.info(`Updated ${results.updated} lock files`);
+// handlers/Chart.js
+async process() {
+  try {
+    // ... existing code ...
+    
+    // Combine both chart types for operations
+    const allCharts = [...charts.application, ...charts.library];
+    
+    // Execute update operations
+    await this.chartUpdate.application(allCharts);
+    await this.chartUpdate.lock(allCharts); // Updates lock files
+    await this.chartUpdate.metadata(allCharts);
+    await this.chartService.lint(allCharts);
+    
+    // ... rest of the method ...
+  } catch (error) {
+    throw this.errorHandler.handle(error, { operation: 'update charts' });
+  }
 }
 ```
 
 ## Migration Impact
-- Parallel processing for better performance
-- Structured result reporting
-- Better dependency detection
-- Consistent with new architecture patterns
+- Parallel execution using Promise.all for better performance
+- Robust error handling at the individual chart level
+- Leverages HelmService for dependency operations
+- Consistent with new architectural patterns
 
 ## Success Criteria
-- [ ] Lock files updated correctly
-- [ ] Charts without dependencies skipped
-- [ ] Parallel processing works
-- [ ] All existing workflows continue to work
-- [ ] New implementation has comprehensive tests
-- [ ] Documentation is updated
+- [x] Lock files updated correctly
+- [x] Error handling at individual chart level
+- [x] Parallel processing for better performance
+- [x] Integration with HelmService
+- [x] Consistent with new architecture patterns

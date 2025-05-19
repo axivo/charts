@@ -91,6 +91,7 @@ async function configureGitRepository({ core, exec }) {
 
 ## Principles
 - **No redundant suffixes**: Git.js not GitService.js
+- **Consistent naming conventions**: Use PascalCase for service exports (e.g., GitHub, not github)
 - **Small methods**: 5-20 lines each, single responsibility
 - **CommonJS only**: No ES6 imports (GitHub Actions constraint)
 - **Dependency injection**: Services get context via constructor
@@ -105,7 +106,7 @@ async function configureGitRepository({ core, exec }) {
 **THIS PATTERN IS MANDATORY FOR ALL SERVICE CLASSES:**
 
 1. **Specialized Error Classes**: Each service must have its own error class that extends `AppError`
-   - Create error class in `/utils/errors/{ServiceName}.js`
+   - Create error class in `/utils/errors/{ServiceName}.js` (e.g., HelmError.js, ReleaseError.js)
    - Export via `/utils/errors/index.js`
 
 2. **Command Execution Pattern**: Service classes that execute commands MUST follow this pattern:
@@ -316,15 +317,19 @@ class ExampleService extends Action {
 - Created: `actions/services/File.js`
 - Created: `actions/utils/errors/File.js`
 - Migrated: `fileExists()`, direct fs calls
-- Methods: execute, copy, createDir, delete, exists, read, write, etc.
+- Methods: copy, createDir, delete, exists, execute, filter, find, read, write, etc.
+  - Added `filter` method to identify existing files from a list of directories
 - Status: **Complete**
 
-#### 2.3 GitHub Services
-- Create: `actions/services/github/Rest.js`
-  - Migrate: createRelease, uploadReleaseAsset, checkWorkflowRunStatus
-- Create: `actions/services/github/GraphQL.js`
-  - Migrate: getReleases, getIssuesSince, createSignedCommit
-  - Extract: paginateQuery helper, common patterns
+#### ✓ 2.3 GitHub Services
+- Created: `actions/services/github/Rest.js`
+  - Implemented: createRelease, uploadReleaseAsset, checkWorkflowRunStatus, etc.
+- Created: `actions/services/github/GraphQL.js`
+  - Implemented: getReleases, createSignedCommit, getReleaseIssues, etc.
+- Created: `actions/services/github/Api.js` (base class)
+- Created: `actions/utils/errors/GitHubApi.js`
+- Methods follow proper alphabetical order and error handling patterns
+- Status: **Complete**
 
 #### ✓ 2.4 Helm Service
 - Created: `actions/services/Helm.js`
@@ -341,25 +346,30 @@ class ExampleService extends Action {
 
 ### Phase 3: Handlers
 
-#### 3.1 Chart Handler
-- Create: `actions/handlers/Chart.js`
-- Migrate: `updateCharts()` and all _update* functions
-- Decompose: process, updateApplicationCharts, updateLibraryCharts, validateCharts
+#### ✓ 3.1 Chart Handler
+- Created: `actions/handlers/Chart.js`
+- Migrated: `updateCharts()` and all _update* functions
+- Decomposed: process, updateApplicationCharts, updateLibraryCharts, validateCharts
+- Status: **Complete**
 
 #### 3.2 Release Handler
 - Create: `actions/handlers/Release.js`
+- Create: `actions/services/release/index.js`
+- Create: `actions/services/release/Package.js`
+- Create: `actions/services/release/Publish.js`
 - Migrate: `processReleases()` and all _generate*, _publish* functions
-- Decompose: process, buildReleases, publishToGitHub, publishToOCI
+- Decompose: process, packageReleases, publishToGitHub, publishToOCI
 
 #### 3.3 Local Release Handler
 - Create: `actions/handlers/LocalRelease.js`
 - Migrate: `processLocalReleases()` and all validation functions
 - Decompose: process, validateEnvironment, packageCharts
 
-#### 3.4 Documentation Handler
-- Create: `actions/handlers/Documentation.js`
-- Migrate: `installHelmDocs()`, `updateDocumentation()`
-- Decompose: process, installTools, generateDocs
+#### ✓ 3.4 Documentation Handler
+- Created: `actions/handlers/Documentation.js`
+- Migrated: `installHelmDocs()`, `updateDocumentation()`
+- Decomposed: process, generate, commitChanges
+- Status: **Complete**
 
 #### 3.5 Issue Handler
 - Create: `actions/handlers/Issue.js`
@@ -505,14 +515,15 @@ class LocalRelease {
 ⚠️ **Note**: Individual migration documents need revision - they don't show proper decomposition into small methods.
 
 ## Next Steps
-1. Complete GitHub Services Implementation
-   - Create GitHub Rest API service class
-   - Create GitHub GraphQL service class
+1. Complete Release Handler Implementation
+   - Create Release Handler class
+   - Create specialized release services (Package, Publish)
+   - Create ReleaseError class
    - Ensure proper error handling pattern
 
-2. Begin Handler Classes Implementation
-   - Start with Chart Handler
-   - Implement all handlers with consistent patterns
+2. Continue Handler Classes Implementation
+   - Implement LocalRelease Handler
+   - Implement Issue Handler
    - Apply error handling strategy across handlers
 
 3. Testing
