@@ -8,8 +8,7 @@
  */
 const path = require('path');
 const Action = require('../../core/Action');
-const File = require('../File');
-const Helm = require('../Helm');
+const { File, Helm } = require('../');
 
 class Update extends Action {
   /**

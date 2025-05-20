@@ -352,18 +352,25 @@ class ExampleService extends Action {
 - Decomposed: process, updateApplicationCharts, updateLibraryCharts, validateCharts
 - Status: **Complete**
 
-#### 3.2 Release Handler
+#### ✓ 3.2 Release Handler
 - Create: `actions/handlers/Release.js`
 - Create: `actions/services/release/index.js`
 - Create: `actions/services/release/Package.js`
 - Create: `actions/services/release/Publish.js`
 - Migrate: `processReleases()` and all _generate*, _publish* functions
-- Decompose: process, packageReleases, publishToGitHub, publishToOCI
+- Decompose: process, packageReleases, github, oci
+- Status: **Complete**
 
 #### 3.3 Local Release Handler
-- Create: `actions/handlers/LocalRelease.js`
+- Create directory: `actions/handlers/release/`
+- Move: `actions/handlers/Release.js` to `actions/handlers/release/index.js`
+- Create: `actions/handlers/release/Local.js`
 - Migrate: `processLocalReleases()` and all validation functions
 - Decompose: process, validateEnvironment, packageCharts
+- Follow import guidelines: 
+  - For single imports: use direct path `const Service = require('./Service');`
+  - For multiple imports: use destructuring `const { Service1, Service2 } = require('../');`
+- Follow class naming convention: class name matches the file name (without 'Handler' suffix)
 
 #### ✓ 3.4 Documentation Handler
 - Created: `actions/handlers/Documentation.js`
