@@ -9,9 +9,9 @@
 const Action = require('../core/Action');
 const { Chart, File, Git, Helm, GitHub } = require('../services');
 
-class ChartHandler extends Action {
+class Chart extends Action {
   /**
-   * Creates a new Chart handler instance
+   * Creates a new Chart instance
    * 
    * @param {Object} params - Handler parameters
    */
@@ -69,4 +69,4 @@ class ChartHandler extends Action {
   }
 }
 
-module.exports = ChartHandler;
+module.exports = Chart;
