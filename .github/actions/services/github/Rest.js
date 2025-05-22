@@ -12,28 +12,30 @@ const { GitHubApiError } = require('../../utils/errors');
 
 class Rest extends Api {
   /**
-   * Checks the status of a workflow run
+   * Creates a label in a repository
    * 
    * @param {Object} params - Function parameters
    * @param {string} params.owner - Repository owner
    * @param {string} params.repo - Repository name
-   * @param {number} params.runId - Workflow run ID
-   * @returns {Promise<Object>} - Workflow run status
+   * @param {string} params.name - Label name
+   * @param {string} params.color - Label color (hex without #)
+   * @param {string} params.description - Label description
+   * @returns {Promise<Object>} - Created label
    */
-  async checkWorkflowRunStatus({ owner, repo, runId }) {
-    const response = await this.execute('getWorkflowRun', 'actions', 'getWorkflowRun', {
+  async createLabel({ owner, repo, name, color, description }) {
+    const response = await this.execute('createLabel', 'issues', 'createLabel', {
       owner,
       repo,
-      run_id: runId
+      name,
+      color,
+      description
     });
-    this.logger.info(`Workflow run status: ${response.data.status}, conclusion: ${response.data.conclusion}`);
+    this.logger.info(`Created label: ${name} (${color})`);
     return {
       id: response.data.id,
-      status: response.data.status,
-      conclusion: response.data.conclusion,
-      url: response.data.html_url,
-      createdAt: response.data.created_at,
-      updatedAt: response.data.updated_at
+      name: response.data.name,
+      color: response.data.color,
+      description: response.data.description
     };
   }
 
@@ -84,6 +86,37 @@ class Rest extends Api {
       return await this.github.rest[namespace][method](params);
     } catch (error) {
       throw new GitHubApiError(operationName, error);
+    }
+  }
+
+  /**
+   * Gets a label from a repository
+   * 
+   * @param {Object} params - Function parameters
+   * @param {string} params.owner - Repository owner
+   * @param {string} params.repo - Repository name
+   * @param {string} params.name - Label name
+   * @returns {Promise<Object|null>} - Label or null if not found
+   */
+  async getLabel({ owner, repo, name }) {
+    try {
+      const response = await this.execute('getLabel', 'issues', 'getLabel', {
+        owner,
+        repo,
+        name
+      });
+      return {
+        id: response.data.id,
+        name: response.data.name,
+        color: response.data.color,
+        description: response.data.description
+      };
+    } catch (error) {
+      if (error.status === 404) {
+        this.logger.info(`Label not found: ${name}`);
+        return null;
+      }
+      throw error;
     }
   }
 
@@ -163,6 +196,32 @@ class Rest extends Api {
       this.errorHandler.handle(error, { operation: 'get updated files', fatal: false });
       return fileMap;
     }
+  }
+
+  /**
+   * Gets workflow run data
+   * 
+   * @param {Object} params - Function parameters
+   * @param {string} params.owner - Repository owner
+   * @param {string} params.repo - Repository name
+   * @param {number} params.runId - Workflow run ID
+   * @returns {Promise<Object>} - Workflow run data
+   */
+  async getWorkflowRun({ owner, repo, runId }) {
+    const response = await this.execute('getWorkflowRun', 'actions', 'getWorkflowRun', {
+      owner,
+      repo,
+      run_id: runId
+    });
+    this.logger.info(`Workflow run status: ${response.data.status}, conclusion: ${response.data.conclusion}`);
+    return {
+      id: response.data.id,
+      status: response.data.status,
+      conclusion: response.data.conclusion,
+      url: response.data.html_url,
+      createdAt: response.data.created_at,
+      updatedAt: response.data.updated_at
+    };
   }
 
   /**

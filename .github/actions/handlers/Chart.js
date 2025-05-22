@@ -7,7 +7,7 @@
  * @license BSD-3-Clause
  */
 const Action = require('../core/Action');
-const { Chart, File, Git, Helm, GitHub } = require('../services');
+const { Chart, Docs, File, Git, GitHub, Helm } = require('../services');
 
 class Chart extends Action {
   /**
@@ -18,6 +18,7 @@ class Chart extends Action {
   constructor(params) {
     super(params);
     this.chartService = new Chart(params);
+    this.docsService = new Docs(params);
     this.fileService = new File(params);
     this.gitService = new Git(params);
     this.helmService = new Helm(params);
@@ -44,6 +45,7 @@ class Chart extends Action {
       await this.chartUpdate.lock(allCharts);
       await this.chartUpdate.metadata(allCharts);
       await this.chartService.lint(allCharts);
+      await this.docsService.generate(allCharts);
       const modifiedFiles = await this.fileService.filter(allCharts);
       if (modifiedFiles.length) {
         await this.gitService.add(modifiedFiles);

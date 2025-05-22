@@ -152,7 +152,7 @@ class File extends Action {
       'metadata.yaml'
     ];
     const types = fileTypes || defaultFileTypes;
-    const filePaths = dirs.flatMap(dir => 
+    const filePaths = dirs.flatMap(dir =>
       types.map(type => `${dir}/${type}`)
     );
     const existingFiles = [];
