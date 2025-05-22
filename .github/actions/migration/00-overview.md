@@ -11,6 +11,23 @@
 
 ---
 
+## ALWAYS ADHERE TO THESE GUIDELINES
+
+**ESSENTIAL REQUIREMENTS FOR ALL CODE SUBMISSIONS:**
+
+1. **EXACT IMPLEMENTATION ONLY** - Implement exactly what is specified, with no additional features
+2. **NO IMPROVEMENTS** - Do not add "better" implementations unless explicitly requested
+3. **MATCH EXISTING PATTERNS** - Copy the exact approach used in similar classes/methods
+4. **MINIMAL RESPONSES** - Provide only the requested code or analysis, without unnecessary explanation
+5. **NO FEATURE CREEP** - If not in the specifications, do not add it
+6. **ASSUME CODE IS CORRECT** - Existing code is correct by definition, do not "fix" it
+7. **ABSOLUTE HONESTY** - If you don't understand something, say so instead of guessing
+8. **DIRECT ANSWERS** - For yes/no questions, answer directly without elaboration
+
+⚠️ **EVERY VIOLATION OF THESE GUIDELINES RESULTS IN WASTED TIME**
+
+---
+
 ## Goal
 Migrate procedural JavaScript to object-oriented architecture for GitHub Actions.
 
@@ -361,16 +378,13 @@ class ExampleService extends Action {
 - Decompose: process, packageReleases, github, oci
 - Status: **Complete**
 
-#### 3.3 Local Release Handler
-- Create directory: `actions/handlers/release/`
-- Move: `actions/handlers/Release.js` to `actions/handlers/release/index.js`
-- Create: `actions/handlers/release/Local.js`
-- Migrate: `processLocalReleases()` and all validation functions
-- Decompose: process, validateEnvironment, packageCharts
-- Follow import guidelines: 
-  - For single imports: use direct path `const Service = require('./Service');`
-  - For multiple imports: use destructuring `const { Service1, Service2 } = require('../');`
-- Follow class naming convention: class name matches the file name (without 'Handler' suffix)
+#### ✓ 3.3 Local Release Handler
+- Created directory: `actions/handlers/release/`
+- Moved: `actions/handlers/Release.js` to `actions/handlers/release/index.js`
+- Created: `actions/handlers/release/Local.js`
+- Migrated: `processLocalReleases()` functionality
+- Implemented: execute, process, run
+- Status: **Complete**
 
 #### ✓ 3.4 Documentation Handler
 - Created: `actions/handlers/Documentation.js`
@@ -386,12 +400,9 @@ class ExampleService extends Action {
 ### Phase 4: Testing & Deployment
 
 #### 4.1 Backward Compatibility
-- Add adapters in original files
-- Maintain same function signatures
-- Route to new classes
+- Route to new classes, into workflows
 
 #### 4.2 Workflow Testing
-- Create test workflows
 - Compare old vs new outputs
 - Validate error handling
 
@@ -430,7 +441,7 @@ class ExampleService extends Action {
 - [ ] You will only create new files in `.github/actions/` directory
 - [ ] You will not modify any existing code in `.github/scripts/`
 - [ ] You will not create tests, examples, or demo implementations
-- [ ] You will not create backward compatibility adapters yet
+- [ ] You will not create backward compatibility adapters
 - [ ] You understand all mandatory coding guidelines and principles
 - [ ] You are only implementing features for the current phase
 

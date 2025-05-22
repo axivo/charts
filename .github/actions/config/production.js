@@ -381,9 +381,9 @@ module.exports = {
          * during processing.
          * 
          * @type {string}
-         * @default '.github/templates/redirect.html.hbs'
+         * @default '.github/actions/templates/redirect.html.hbs'
          */
-        template: '.github/templates/redirect.html.hbs'
+        template: '.github/actions/templates/redirect.html.hbs'
       },
 
       /**
@@ -507,9 +507,9 @@ module.exports = {
        * information, and related issues that were addressed in the release.
        * 
        * @type {string}
-       * @default '.github/templates/release.md.hbs'
+       * @default '.github/actions/templates/release.md.hbs'
        */
-      template: '.github/templates/release.md.hbs',
+      template: '.github/actions/templates/release.md.hbs',
 
       /**
        * Format string for release tags and titles
@@ -603,9 +603,9 @@ module.exports = {
        * It's copied to the root directory during the build process.
        * 
        * @type {string}
-       * @default '.github/templates/config.yml'
+       * @default '.github/actions/templates/config.yml'
        */
-      file: '.github/templates/config.yml'
+      file: '.github/actions/templates/config.yml'
     },
 
     /**
@@ -625,9 +625,9 @@ module.exports = {
        * a comprehensive listing of all available charts.
        * 
        * @type {string}
-       * @default '.github/templates/index.md.hbs'
+       * @default '.github/actions/templates/index.md.hbs'
        */
-      template: '.github/templates/index.md.hbs'
+      template: '.github/actions/templates/index.md.hbs'
     },
 
     /**
@@ -647,9 +647,9 @@ module.exports = {
        * or metadata tags. It's processed during the site generation process.
        * 
        * @type {string}
-       * @default '.github/templates/head-custom.html'
+       * @default '.github/actions/templates/head-custom.html'
        */
-      template: '.github/templates/head-custom.html'
+      template: '.github/actions/templates/head-custom.html'
     },
 
     /**
@@ -669,9 +669,9 @@ module.exports = {
        * It's processed during the site generation process.
        * 
        * @type {string}
-       * @default '.github/templates/layout.html'
+       * @default '.github/actions/templates/layout.html'
        */
-      template: '.github/templates/layout.html'
+      template: '.github/actions/templates/layout.html'
     }
   },
 
@@ -723,9 +723,9 @@ module.exports = {
      * It includes placeholders for workflow name, branch, commit, and run details.
      * 
      * @type {string}
-     * @default '.github/templates/workflow.md.hbs'
+     * @default '.github/actions/templates/workflow.md.hbs'
      */
-    template: '.github/templates/workflow.md.hbs',
+    template: '.github/actions/templates/workflow.md.hbs',
 
     /**
      * Standard title prefix for workflow-generated issues

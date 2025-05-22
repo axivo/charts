@@ -2,14 +2,14 @@
  * Helm service for Helm CLI operations
  * 
  * @class Helm
- * @module services/Helm
+ * @module services/helm
  * @author AXIVO
  * @license BSD-3-Clause
  */
 const path = require('path');
-const Action = require('../core/Action');
-const Shell = require('./Shell');
-const { HelmError } = require('../utils/errors');
+const Action = require('../../core/Action');
+const Shell = require('../Shell');
+const { HelmError } = require('../../utils/errors');
 
 class Helm extends Action {
   /**

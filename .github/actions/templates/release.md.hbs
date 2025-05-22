@@ -1,0 +1,38 @@
+### Release Details
+
+{{#if Icon}}
+<a href="{{ RepoURL }}/tree/{{ Branch }}/{{ Type }}/{{ Name }}">
+  <img align="right" width="128" height="128" src="{{ RepoRawURL }}/{{ Branch }}/{{ Type }}/{{ Name }}/{{ Icon }}" alt="AXIVO {{ Name }} Chart" />
+</a>
+
+{{/if}}
+{{#if Description}}
+- Description: {{ Description }}
+{{/if}}
+- Type: `{{ Type }}`
+{{#if AppVersion}}
+- App Version: `{{ AppVersion }}`
+{{/if}}
+{{#if KubeVersion}}
+- Kubernetes Version: `{{{ KubeVersion }}}`
+{{/if}}
+{{#if Dependencies}}
+
+#### Dependencies
+
+{{#each Dependencies as |Dependency|}}
+- {{#if Dependency.Source}}[{{ Dependency.Name }}]({{ Dependency.Source }}){{else}}{{ Dependency.Name }}{{/if}}: `{{ Dependency.Version }}`
+{{/each}}
+{{/if}}
+{{#if Issues}}
+
+#### Related Issues
+
+{{#each Issues as |Issue|}}
+- {{#if (eq Issue.State "CLOSED")}}🟢{{else}}🔵{{/if}} [{{ Issue.Title }} #{{ Issue.Number }}]({{ Issue.URL }})
+{{/each}}
+{{/if}}
+
+#### Documentation
+
+Review the related chart [README]({{ RepoURL }}/tree/{{ Branch }}/{{ Type }}/{{ Name }}), for additional details.
