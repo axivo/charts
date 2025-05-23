@@ -42,7 +42,7 @@ jobs:
       - name: Setup helm
         uses: azure/setup-helm@v4
         with:
-          version: v3.17.3
+          version: v3.18.0
 
       - name: Setup node
         uses: actions/setup-node@v4
