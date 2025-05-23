@@ -16,6 +16,7 @@ class ErrorHandler {
    */
   constructor(core) {
     this.core = core;
+    this.debug = process.env.ACTIONS_STEP_DEBUG === 'true';
   }
 
   /**
@@ -82,7 +83,11 @@ class ErrorHandler {
       throw new AppError(errorInfo);
     } else {
       this.createAnnotation(errorInfo, context.annotationType || 'warning');
-      this.core.warning(errorInfo.message);
+      if (this.debug && errorInfo.stack) {
+        this.core.warning(`${errorInfo.message}\n\nStack trace:\n${errorInfo.stack}`);
+      } else {
+        this.core.warning(errorInfo.message);
+      }
     }
     return errorInfo.message;
   }

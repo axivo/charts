@@ -50,21 +50,21 @@ const docsService = new Docs({
 
 ---
 
-### 3. File Constructor Error
-**Status**: ❌ Needs Fix  
+### 3. File Constructor Error in Update.js
+**Status**: ✅ Fixed  
 **Severity**: Critical - Blocks workflow execution  
 **Error**: `Failed to update charts: File is not a constructor`
 **Location**: "Update repository charts" step at `services/chart/Update.js:21:24`
 
 **Root Cause**: Same issue as Helm.Docs - circular dependency causes `File` to be undefined when the constructor is called. The `services/chart/Update.js` imports `{ File, Helm }` from `../` which creates a circular reference.
 
-**Recommended Fix**:
+**Fix Applied**:
 ```javascript
 // In services/chart/Update.js, line 11
-// CURRENT (causes circular dependency):
+// BEFORE:
 const { File, Helm } = require('../');
 
-// FIXED (direct imports):
+// AFTER:
 const File = require('../File');
 const Helm = require('../helm');
 ```
@@ -73,7 +73,59 @@ const Helm = require('../helm');
 
 ---
 
-### 4. Circular Dependency Warnings
+### 4. File Constructor Error in chart/index.js
+**Status**: ✅ Fixed  
+**Severity**: Critical - Blocks workflow execution  
+**Error**: `Failed to find modified charts: File is not a constructor`
+**Location**: Chart service `find()` method at `services/chart/index.js:68`
+
+**Root Cause**: Another circular dependency - `services/chart/index.js` was importing `{ File, Helm }` from `../` causing `File` to be undefined when instantiated.
+
+**Fix Applied**:
+```javascript
+// In services/chart/index.js, line 12
+// BEFORE:
+const { File, Helm } = require('../');
+
+// AFTER:
+const File = require('../File');
+const Helm = require('../helm');
+```
+
+**Pattern Validation**: Consistent with the fixes applied to Update.js and the Helm.Docs pattern.
+
+---
+
+### 5. Debug Mode Enhancement
+**Status**: ✅ Implemented  
+**Severity**: Enhancement - Improves debugging capability  
+**Purpose**: Show stack traces for non-fatal errors to aid in debugging
+
+**Implementation**: Modified `ErrorHandler` to check for `ACTIONS_STEP_DEBUG` environment variable:
+
+```javascript
+// In utils/ErrorHandler.js constructor
+constructor(core) {
+  this.core = core;
+  this.debug = process.env.ACTIONS_STEP_DEBUG === 'true';
+}
+
+// In handle method for warnings
+if (this.debug && errorInfo.stack) {
+  this.core.warning(`${errorInfo.message}\n\nStack trace:\n${errorInfo.stack}`);
+} else {
+  this.core.warning(errorInfo.message);
+}
+```
+
+**Usage**: 
+- Added `ACTIONS_STEP_DEBUG: true` to workflow environment
+- Can be enabled via GitHub UI "Enable debug logging"
+- Follows GitHub Actions conventions
+
+---
+
+### 6. Circular Dependency Warnings
 **Status**: ⚠️ Non-blocking but needs attention  
 **Severity**: Medium - Code quality issue  
 **Warning**: Multiple "Accessing non-existent property of module exports inside circular dependency"
@@ -143,13 +195,14 @@ const GitHub = require('../github');
    - Fixed the `Helm.Docs` constructor error in `handlers/Workflow.js`
    - Workflow now proceeds past the `Install helm-docs` step
 
-2. **Second Priority** (New Blocking Issue):
-   - Fix the `File` constructor error in `services/chart/Update.js`
-   - This is now preventing the workflow from completing the `Update repository charts` step
+2. **Second Priority** (Blocking Issue) - ✅ COMPLETED:
+   - Fixed the `File` constructor error in `services/chart/Update.js` 
+   - Fixed the `File` constructor error in `services/chart/index.js`
+   - Workflow should now complete the `Update repository charts` step
 
 3. **Third Priority** (Code Quality):
    - Fix remaining circular dependencies in service modules
-   - These are causing the constructor errors and need systematic fixing
+   - These are causing the warnings and potential future constructor errors
 
 ---
 
@@ -161,10 +214,11 @@ const GitHub = require('../github');
 - ❌ New error discovered: `File is not a constructor`
 
 ### Next Testing Steps:
-1. Apply the `File` constructor fix in `services/chart/Update.js`
-2. Re-run workflow to check for additional constructor errors
-3. Continue fixing circular dependencies until workflow completes
-4. Remove `NODE_OPTIONS: '--trace-warnings'` once all issues are resolved
+1. ✅ Applied the `File` constructor fix in `services/chart/Update.js`
+2. ✅ Applied the `File` constructor fix in `services/chart/index.js`
+3. Re-run workflow to check for additional constructor errors
+4. Continue fixing circular dependencies until workflow completes
+5. Remove `ACTIONS_STEP_DEBUG: true` and `NODE_OPTIONS: '--trace-warnings'` once all issues are resolved
 
 ## Pattern Analysis
 

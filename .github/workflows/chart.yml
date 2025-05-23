@@ -29,6 +29,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
+      ACTIONS_STEP_DEBUG: true
       NODE_OPTIONS: "--trace-warnings"
     steps:
       - name: Checkout repository
