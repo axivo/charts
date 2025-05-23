@@ -7,8 +7,8 @@
  * @license BSD-3-Clause
  */
 const Action = require('../core/Action');
-const Shell = require('./Shell');
 const { GitError } = require('../utils/errors');
+const Shell = require('./Shell');
 
 class Git extends Action {
   /**

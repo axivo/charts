@@ -6,9 +6,10 @@
  * @license BSD-3-Clause
  */
 const AppError = require('./App');
+const FileError = require('./File');
+const FrontpageError = require('./Frontpage');
 const GitError = require('./Git');
 const GitHubApiError = require('./GitHubApi');
-const FileError = require('./File');
 const HelmError = require('./Helm');
 const IssueError = require('./Issue');
 const ReleaseError = require('./Release');
@@ -17,9 +18,10 @@ const TemplateError = require('./Template');
 
 module.exports = {
   AppError,
+  FileError,
+  FrontpageError,
   GitError,
   GitHubApiError,
-  FileError,
   HelmError,
   IssueError,
   ReleaseError,
