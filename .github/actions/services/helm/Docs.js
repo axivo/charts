@@ -37,13 +37,19 @@ class Docs extends Action {
   async commit(headRef, files) {
     try {
       const currentHead = await this.gitService.getRevision('HEAD');
-      const graphqlService = new GitHub.GraphQL(this);
+      const graphqlService = new GitHub.GraphQL({
+        github: this.github,
+        context: this.context,
+        core: this.core,
+        exec: this.exec,
+        config: this.config
+      });
       const stagedChanges = await this.gitService.getStagedChanges();
       const { additions, deletions } = stagedChanges;
       if (additions.length + deletions.length) {
         await graphqlService.createSignedCommit({
-          owner: this.github.context.repo.owner,
-          repo: this.github.context.repo.repo,
+          owner: this.context.repo.owner,
+          repo: this.context.repo.repo,
           branchName: headRef,
           expectedHeadOid: currentHead,
           additions,

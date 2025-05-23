@@ -38,8 +38,8 @@ class Label extends Action {
     const githubRest = this.github.rest || this.github;
     try {
       await githubRest.issues.getLabel({
-        owner: this.github.context.repo.owner,
-        repo: this.github.context.repo.repo,
+        owner: this.context.repo.owner,
+        repo: this.context.repo.repo,
         name: name
       });
       return true;
@@ -51,8 +51,8 @@ class Label extends Action {
             return false;
           }
           await githubRest.issues.createLabel({
-            owner: this.github.context.repo.owner,
-            repo: this.github.context.repo.repo,
+            owner: this.context.repo.owner,
+            repo: this.context.repo.repo,
             name: name,
             color: labelConfig.color,
             description: labelConfig.description

@@ -49,7 +49,7 @@ class Release extends Action {
   async process() {
     return this.execute('process releases', async () => {
       this.logger.info('Starting chart release process...');
-      const files = await this.githubService.getUpdatedFiles();
+      const files = await this.githubService.getUpdatedFiles({ context: this.context });
       const charts = await this.releaseService.find(files);
       if (!charts.total && !charts.deleted.length) {
         this.logger.info(`No ${charts.word} chart releases found`);
