@@ -9,9 +9,12 @@
 const path = require('path');
 const yaml = require('js-yaml');
 const Action = require('../../core/Action');
-const { File, Helm, GitHub, Template } = require('../');
-const Package = require('./Package');
 const { ReleaseError } = require('../../utils/errors');
+const File = require('../File');
+const GitHub = require('../github');
+const Helm = require('../helm');
+const Package = require('./Package');
+const Template = require('../Template');
 
 class Publish extends Action {
   /**

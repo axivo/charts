@@ -9,10 +9,10 @@
 const path = require('path');
 const yaml = require('js-yaml');
 const Action = require('../core/Action');
+const { FrontpageError } = require('../utils/errors');
 const Chart = require('./chart');
 const File = require('./File');
 const Template = require('./Template');
-const { FrontpageError } = require('../utils/errors');
 
 class Frontpage extends Action {
   /**

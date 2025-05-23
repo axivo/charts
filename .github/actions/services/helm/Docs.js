@@ -10,10 +10,10 @@ const fs = require('fs/promises');
 const os = require('os');
 const path = require('path');
 const Action = require('../../core/Action');
+const { HelmError } = require('../../utils/errors');
 const Git = require('../Git');
 const GitHub = require('../github');
 const Shell = require('../Shell');
-const { HelmError } = require('../../utils/errors');
 
 class Docs extends Action {
   /**

@@ -1,0 +1,1141 @@
+﻿2025-05-23T19:28:36.5101617Z Current runner version: '2.324.0'
+2025-05-23T19:28:36.5137595Z ##[group]Operating System
+2025-05-23T19:28:36.5138654Z Ubuntu
+2025-05-23T19:28:36.5139367Z 24.04.2
+2025-05-23T19:28:36.5140245Z LTS
+2025-05-23T19:28:36.5140980Z ##[endgroup]
+2025-05-23T19:28:36.5141865Z ##[group]Runner Image
+2025-05-23T19:28:36.5142784Z Image: ubuntu-24.04
+2025-05-23T19:28:36.5143610Z Version: 20250511.1.0
+2025-05-23T19:28:36.5145240Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20250511.1/images/ubuntu/Ubuntu2404-Readme.md
+2025-05-23T19:28:36.5147935Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20250511.1
+2025-05-23T19:28:36.5149439Z ##[endgroup]
+2025-05-23T19:28:36.5150172Z ##[group]Runner Image Provisioner
+2025-05-23T19:28:36.5151206Z 2.0.437.1
+2025-05-23T19:28:36.5151884Z ##[endgroup]
+2025-05-23T19:28:36.5153814Z ##[group]GITHUB_TOKEN Permissions
+2025-05-23T19:28:36.5156490Z Checks: write
+2025-05-23T19:28:36.5157329Z Contents: write
+2025-05-23T19:28:36.5158488Z Issues: write
+2025-05-23T19:28:36.5159296Z Metadata: read
+2025-05-23T19:28:36.5160159Z ##[endgroup]
+2025-05-23T19:28:36.5162883Z Secret source: Actions
+2025-05-23T19:28:36.5164027Z Prepare workflow directory
+2025-05-23T19:28:36.5747717Z Prepare all required actions
+2025-05-23T19:28:36.5802205Z Getting action download info
+2025-05-23T19:28:36.9186790Z ##[group]Download immutable action package 'actions/checkout@v4'
+2025-05-23T19:28:36.9187871Z Version: 4.2.2
+2025-05-23T19:28:36.9188896Z Digest: sha256:ccb2698953eaebd21c7bf6268a94f9c26518a7e38e27e0b83c1fe1ad049819b1
+2025-05-23T19:28:36.9190236Z Source commit SHA: 11bd71901bbe5b1630ceea73d27597364c9af683
+2025-05-23T19:28:36.9191041Z ##[endgroup]
+2025-05-23T19:28:37.0169788Z Download action repository 'azure/setup-helm@v4' (SHA:b9e51907a09c216f16ebe8536097933489208112)
+2025-05-23T19:28:37.1822649Z ##[group]Download immutable action package 'actions/setup-node@v4'
+2025-05-23T19:28:37.1823661Z Version: 4.4.0
+2025-05-23T19:28:37.1824589Z Digest: sha256:9427cefe82346e992fb5b949e3569b39d537ae41aa3086483b14eceebfc16bc1
+2025-05-23T19:28:37.1826179Z Source commit SHA: 49933ea5288caeca8642d1e84afbd3f7d6820020
+2025-05-23T19:28:37.1827028Z ##[endgroup]
+2025-05-23T19:28:37.2855028Z ##[group]Download immutable action package 'actions/github-script@v7'
+2025-05-23T19:28:37.2856281Z Version: 7.0.1
+2025-05-23T19:28:37.2856970Z Digest: sha256:bce02966afe3a75123f766b765abe432fac5464b74976015dc06b811ac9054c7
+2025-05-23T19:28:37.2857956Z Source commit SHA: 60a0d83039c74a4aee543508d2ffcb1c3799cdea
+2025-05-23T19:28:37.2858629Z ##[endgroup]
+2025-05-23T19:28:37.5013383Z Download action repository 'helm/chart-testing-action@v2' (SHA:0d28d3144d3a25ea2cc349d6e59901c4ff469b3b)
+2025-05-23T19:28:37.7259214Z Getting action download info
+2025-05-23T19:28:37.8328751Z Download action repository 'sigstore/cosign-installer@dc72c7d5c4d10cd6bcb8cf6e3fd625a9e5e537da' (SHA:dc72c7d5c4d10cd6bcb8cf6e3fd625a9e5e537da)
+2025-05-23T19:28:38.0778118Z Complete job name: Updates
+2025-05-23T19:28:38.1628471Z ##[group]Run actions/checkout@v4
+2025-05-23T19:28:38.1629707Z with:
+2025-05-23T19:28:38.1630392Z   repository: axivo/charts
+2025-05-23T19:28:38.1631463Z   token: ***
+2025-05-23T19:28:38.1632137Z   ssh-strict: true
+2025-05-23T19:28:38.1632839Z   ssh-user: git
+2025-05-23T19:28:38.1633563Z   persist-credentials: true
+2025-05-23T19:28:38.1634375Z   clean: true
+2025-05-23T19:28:38.1635100Z   sparse-checkout-cone-mode: true
+2025-05-23T19:28:38.1636252Z   fetch-depth: 1
+2025-05-23T19:28:38.1636967Z   fetch-tags: false
+2025-05-23T19:28:38.1637698Z   show-progress: true
+2025-05-23T19:28:38.1638415Z   lfs: false
+2025-05-23T19:28:38.1639077Z   submodules: false
+2025-05-23T19:28:38.1639814Z   set-safe-directory: true
+2025-05-23T19:28:38.1640837Z env:
+2025-05-23T19:28:38.1641542Z   NODE_OPTIONS: --trace-warnings
+2025-05-23T19:28:38.1642370Z ##[endgroup]
+2025-05-23T19:28:38.4580932Z Syncing repository: axivo/charts
+2025-05-23T19:28:38.4583928Z ##[group]Getting Git version info
+2025-05-23T19:28:38.4585179Z Working directory is '/home/runner/work/charts/charts'
+2025-05-23T19:28:38.4587538Z [command]/usr/bin/git version
+2025-05-23T19:28:38.4697186Z git version 2.49.0
+2025-05-23T19:28:38.4728678Z ##[endgroup]
+2025-05-23T19:28:38.4743340Z Temporarily overriding HOME='/home/runner/work/_temp/4d6ffc9a-fd42-406f-9214-43a8091da34f' before making global git config changes
+2025-05-23T19:28:38.4747909Z Adding repository directory to the temporary git global config as a safe directory
+2025-05-23T19:28:38.4751350Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/charts/charts
+2025-05-23T19:28:38.4801097Z Deleting the contents of '/home/runner/work/charts/charts'
+2025-05-23T19:28:38.4804601Z ##[group]Initializing the repository
+2025-05-23T19:28:38.4808671Z [command]/usr/bin/git init /home/runner/work/charts/charts
+2025-05-23T19:28:38.4951179Z hint: Using 'master' as the name for the initial branch. This default branch name
+2025-05-23T19:28:38.4953546Z hint: is subject to change. To configure the initial branch name to use in all
+2025-05-23T19:28:38.4955404Z hint: of your new repositories, which will suppress this warning, call:
+2025-05-23T19:28:38.4957372Z hint:
+2025-05-23T19:28:38.4958914Z hint: 	git config --global init.defaultBranch <name>
+2025-05-23T19:28:38.4961121Z hint:
+2025-05-23T19:28:38.4962559Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+2025-05-23T19:28:38.4964320Z hint: 'development'. The just-created branch can be renamed via this command:
+2025-05-23T19:28:38.4965858Z hint:
+2025-05-23T19:28:38.4966761Z hint: 	git branch -m <name>
+2025-05-23T19:28:38.4968388Z Initialized empty Git repository in /home/runner/work/charts/charts/.git/
+2025-05-23T19:28:38.4973218Z [command]/usr/bin/git remote add origin https://github.com/axivo/charts
+2025-05-23T19:28:38.5012558Z ##[endgroup]
+2025-05-23T19:28:38.5014790Z ##[group]Disabling automatic garbage collection
+2025-05-23T19:28:38.5017076Z [command]/usr/bin/git config --local gc.auto 0
+2025-05-23T19:28:38.5049240Z ##[endgroup]
+2025-05-23T19:28:38.5051393Z ##[group]Setting up auth
+2025-05-23T19:28:38.5055803Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2025-05-23T19:28:38.5090192Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2025-05-23T19:28:38.5492217Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2025-05-23T19:28:38.5529924Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2025-05-23T19:28:38.5779733Z [command]/usr/bin/git config --local http.https://github.com/.extraheader AUTHORIZATION: basic ***
+2025-05-23T19:28:38.5819976Z ##[endgroup]
+2025-05-23T19:28:38.5822785Z ##[group]Fetching the repository
+2025-05-23T19:28:38.5830765Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +00f88ae236ce4d8d2064dc01439e326e7d50c027:refs/remotes/pull/209/merge
+2025-05-23T19:28:38.9554889Z From https://github.com/axivo/charts
+2025-05-23T19:28:38.9557573Z  * [new ref]         00f88ae236ce4d8d2064dc01439e326e7d50c027 -> pull/209/merge
+2025-05-23T19:28:38.9582475Z ##[endgroup]
+2025-05-23T19:28:38.9584105Z ##[group]Determining the checkout info
+2025-05-23T19:28:38.9585999Z ##[endgroup]
+2025-05-23T19:28:38.9590974Z [command]/usr/bin/git sparse-checkout disable
+2025-05-23T19:28:38.9644109Z [command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
+2025-05-23T19:28:38.9672861Z ##[group]Checking out the ref
+2025-05-23T19:28:38.9676557Z [command]/usr/bin/git checkout --progress --force refs/remotes/pull/209/merge
+2025-05-23T19:28:38.9780611Z Note: switching to 'refs/remotes/pull/209/merge'.
+2025-05-23T19:28:38.9782031Z 
+2025-05-23T19:28:38.9783252Z You are in 'detached HEAD' state. You can look around, make experimental
+2025-05-23T19:28:38.9787083Z changes and commit them, and you can discard any commits you make in this
+2025-05-23T19:28:38.9790457Z state without impacting any branches by switching back to a branch.
+2025-05-23T19:28:38.9791529Z 
+2025-05-23T19:28:38.9792399Z If you want to create a new branch to retain commits you create, you may
+2025-05-23T19:28:38.9794182Z do so (now or later) by using -c with the switch command. Example:
+2025-05-23T19:28:38.9795212Z 
+2025-05-23T19:28:38.9795805Z   git switch -c <new-branch-name>
+2025-05-23T19:28:38.9796497Z 
+2025-05-23T19:28:38.9796875Z Or undo this operation with:
+2025-05-23T19:28:38.9797482Z 
+2025-05-23T19:28:38.9797821Z   git switch -
+2025-05-23T19:28:38.9798360Z 
+2025-05-23T19:28:38.9799353Z Turn off this advice by setting config variable advice.detachedHead to false
+2025-05-23T19:28:38.9800356Z 
+2025-05-23T19:28:38.9801492Z HEAD is now at 00f88ae Merge 698906e1e76c1c79bf32dfdd669a5512afa73ab8 into ca055d82dd3de5677be1a703e57805ad65b4b67e
+2025-05-23T19:28:38.9804833Z ##[endgroup]
+2025-05-23T19:28:38.9825332Z [command]/usr/bin/git log -1 --format=%H
+2025-05-23T19:28:38.9848999Z 00f88ae236ce4d8d2064dc01439e326e7d50c027
+2025-05-23T19:28:39.0081769Z ##[group]Run azure/setup-helm@v4
+2025-05-23T19:28:39.0082638Z with:
+2025-05-23T19:28:39.0083271Z   version: v3.17.3
+2025-05-23T19:28:39.0084192Z   token: ***
+2025-05-23T19:28:39.0084923Z   downloadBaseURL: https://get.helm.sh
+2025-05-23T19:28:39.0085960Z env:
+2025-05-23T19:28:39.0086627Z   NODE_OPTIONS: --trace-warnings
+2025-05-23T19:28:39.0087457Z ##[endgroup]
+2025-05-23T19:28:39.0811246Z ##[group]Installing v3.17.3
+2025-05-23T19:28:39.0822441Z Downloading 'v3.17.3' from 'https://get.helm.sh'
+2025-05-23T19:28:39.3026032Z [command]/usr/bin/tar xz --warning=no-unknown-keyword --overwrite -C /home/runner/work/_temp/c407a32c-bc1d-49a7-94ef-679f487385ce -f /home/runner/work/_temp/ddd04747-bd41-41d8-b2c0-d2d6907cc61b
+2025-05-23T19:28:39.7217544Z ##[endgroup]
+2025-05-23T19:28:39.7220564Z Helm tool version 'v3.17.3' has been cached at /opt/hostedtoolcache/helm/3.17.3/x64/linux-amd64/helm
+2025-05-23T19:28:39.7395924Z ##[group]Run actions/setup-node@v4
+2025-05-23T19:28:39.7396278Z with:
+2025-05-23T19:28:39.7396495Z   node-version: 22
+2025-05-23T19:28:39.7396733Z   always-auth: false
+2025-05-23T19:28:39.7396971Z   check-latest: false
+2025-05-23T19:28:39.7397349Z   token: ***
+2025-05-23T19:28:39.7397572Z env:
+2025-05-23T19:28:39.7397799Z   NODE_OPTIONS: --trace-warnings
+2025-05-23T19:28:39.7398106Z ##[endgroup]
+2025-05-23T19:28:39.9132529Z Found in cache @ /opt/hostedtoolcache/node/22.15.0/x64
+2025-05-23T19:28:39.9138824Z ##[group]Environment details
+2025-05-23T19:28:40.3802224Z node: v22.15.0
+2025-05-23T19:28:40.3802644Z npm: 10.9.2
+2025-05-23T19:28:40.3802958Z yarn: 1.22.22
+2025-05-23T19:28:40.3804021Z ##[endgroup]
+2025-05-23T19:28:40.3906032Z ##[group]Run npm install glob handlebars js-yaml
+2025-05-23T19:28:40.3906466Z [36;1mnpm install glob handlebars js-yaml[0m
+2025-05-23T19:28:40.4104132Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2025-05-23T19:28:40.4104722Z env:
+2025-05-23T19:28:40.4105059Z   NODE_OPTIONS: --trace-warnings
+2025-05-23T19:28:40.4105470Z ##[endgroup]
+2025-05-23T19:28:43.0996770Z 
+2025-05-23T19:28:43.1001866Z added 48 packages in 3s
+2025-05-23T19:28:43.1002188Z 
+2025-05-23T19:28:43.1002419Z 14 packages are looking for funding
+2025-05-23T19:28:43.1002755Z   run `npm fund` for details
+2025-05-23T19:28:43.1512706Z ##[group]Run actions/github-script@v7
+2025-05-23T19:28:43.1513055Z with:
+2025-05-23T19:28:43.1513605Z   script: const { Workflow } = require('./.github/actions/handlers');
+await Workflow.configureRepository({ github, context, core, exec });
+
+2025-05-23T19:28:43.1514371Z   github-token: ***
+2025-05-23T19:28:43.1514615Z   debug: false
+2025-05-23T19:28:43.1514827Z   user-agent: actions/github-script
+2025-05-23T19:28:43.1515101Z   result-encoding: json
+2025-05-23T19:28:43.1515312Z   retries: 0
+2025-05-23T19:28:43.1515544Z   retry-exempt-status-codes: 400,401,403,404,422
+2025-05-23T19:28:43.1516172Z env:
+2025-05-23T19:28:43.1516370Z   NODE_OPTIONS: --trace-warnings
+2025-05-23T19:28:43.1516618Z ##[endgroup]
+2025-05-23T19:28:43.2965323Z [Workflow] [2025-05-23T19:28:43.290Z] Configuring repository for workflow operations...
+2025-05-23T19:28:43.2988552Z (node:2027) Warning: Accessing non-existent property 'File' of module exports inside circular dependency
+2025-05-23T19:28:43.2990234Z     at emitCircularRequireWarning (node:internal/modules/cjs/loader:935:11)
+2025-05-23T19:28:43.2991751Z     at Object.get (node:internal/modules/cjs/loader:951:5)
+2025-05-23T19:28:43.2993550Z     at Object.<anonymous> (/home/runner/work/charts/charts/.github/actions/services/chart/index.js:12:9)
+2025-05-23T19:28:43.2995292Z     at Module._compile (node:internal/modules/cjs/loader:1529:14)
+2025-05-23T19:28:43.2996895Z     at Module._extensions..js (node:internal/modules/cjs/loader:1613:10)
+2025-05-23T19:28:43.2998233Z     at Module.load (node:internal/modules/cjs/loader:1275:32)
+2025-05-23T19:28:43.2999591Z     at Module._load (node:internal/modules/cjs/loader:1096:12)
+2025-05-23T19:28:43.3000759Z     at Module.require (node:internal/modules/cjs/loader:1298:19)
+2025-05-23T19:28:43.3001544Z     at require (node:internal/modules/helpers:182:18)
+2025-05-23T19:28:43.3002610Z     at Object.<anonymous> (/home/runner/work/charts/charts/.github/actions/services/index.js:8:15)
+2025-05-23T19:28:43.3004137Z (node:2027) Warning: Accessing non-existent property 'Helm' of module exports inside circular dependency
+2025-05-23T19:28:43.3005102Z     at emitCircularRequireWarning (node:internal/modules/cjs/loader:935:11)
+2025-05-23T19:28:43.3006137Z     at Object.get (node:internal/modules/cjs/loader:951:5)
+2025-05-23T19:28:43.3007492Z     at Object.<anonymous> (/home/runner/work/charts/charts/.github/actions/services/chart/index.js:12:15)
+2025-05-23T19:28:43.3008470Z     at Module._compile (node:internal/modules/cjs/loader:1529:14)
+2025-05-23T19:28:43.3009265Z     at Module._extensions..js (node:internal/modules/cjs/loader:1613:10)
+2025-05-23T19:28:43.3009864Z     at Module.load (node:internal/modules/cjs/loader:1275:32)
+2025-05-23T19:28:43.3010377Z     at Module._load (node:internal/modules/cjs/loader:1096:12)
+2025-05-23T19:28:43.3010928Z     at Module.require (node:internal/modules/cjs/loader:1298:19)
+2025-05-23T19:28:43.3011370Z     at require (node:internal/modules/helpers:182:18)
+2025-05-23T19:28:43.3012091Z     at Object.<anonymous> (/home/runner/work/charts/charts/.github/actions/services/index.js:8:15)
+2025-05-23T19:28:43.3013033Z (node:2027) Warning: Accessing non-existent property 'File' of module exports inside circular dependency
+2025-05-23T19:28:43.3013731Z     at emitCircularRequireWarning (node:internal/modules/cjs/loader:935:11)
+2025-05-23T19:28:43.3014323Z     at Object.get (node:internal/modules/cjs/loader:951:5)
+2025-05-23T19:28:43.3014953Z     at Object.<anonymous> (/home/runner/work/charts/charts/.github/actions/services/release/index.js:11:9)
+2025-05-23T19:28:43.3015584Z     at Module._compile (node:internal/modules/cjs/loader:1529:14)
+2025-05-23T19:28:43.3016346Z     at Module._extensions..js (node:internal/modules/cjs/loader:1613:10)
+2025-05-23T19:28:43.3016914Z     at Module.load (node:internal/modules/cjs/loader:1275:32)
+2025-05-23T19:28:43.3017363Z     at Module._load (node:internal/modules/cjs/loader:1096:12)
+2025-05-23T19:28:43.3017824Z     at Module.require (node:internal/modules/cjs/loader:1298:19)
+2025-05-23T19:28:43.3018651Z     at require (node:internal/modules/helpers:182:18)
+2025-05-23T19:28:43.3019385Z     at Object.<anonymous> (/home/runner/work/charts/charts/.github/actions/services/index.js:16:17)
+2025-05-23T19:28:43.3020278Z (node:2027) Warning: Accessing non-existent property 'GitHub' of module exports inside circular dependency
+2025-05-23T19:28:43.3020960Z     at emitCircularRequireWarning (node:internal/modules/cjs/loader:935:11)
+2025-05-23T19:28:43.3021570Z     at Object.get (node:internal/modules/cjs/loader:951:5)
+2025-05-23T19:28:43.3022150Z     at Object.<anonymous> (/home/runner/work/charts/charts/.github/actions/services/release/index.js:11:15)
+2025-05-23T19:28:43.3023023Z     at Module._compile (node:internal/modules/cjs/loader:1529:14)
+2025-05-23T19:28:43.3023490Z     at Module._extensions..js (node:internal/modules/cjs/loader:1613:10)
+2025-05-23T19:28:43.3023918Z     at Module.load (node:internal/modules/cjs/loader:1275:32)
+2025-05-23T19:28:43.3024321Z     at Module._load (node:internal/modules/cjs/loader:1096:12)
+2025-05-23T19:28:43.3024726Z     at Module.require (node:internal/modules/cjs/loader:1298:19)
+2025-05-23T19:28:43.3025193Z     at require (node:internal/modules/helpers:182:18)
+2025-05-23T19:28:43.3025931Z     at Object.<anonymous> (/home/runner/work/charts/charts/.github/actions/services/index.js:16:17)
+2025-05-23T19:28:43.3026700Z (node:2027) Warning: Accessing non-existent property 'File' of module exports inside circular dependency
+2025-05-23T19:28:43.3027323Z     at emitCircularRequireWarning (node:internal/modules/cjs/loader:935:11)
+2025-05-23T19:28:43.3027775Z     at Object.get (node:internal/modules/cjs/loader:951:5)
+2025-05-23T19:28:43.3028362Z     at Object.<anonymous> (/home/runner/work/charts/charts/.github/actions/services/release/Package.js:11:9)
+2025-05-23T19:28:43.3028926Z     at Module._compile (node:internal/modules/cjs/loader:1529:14)
+2025-05-23T19:28:43.3029380Z     at Module._extensions..js (node:internal/modules/cjs/loader:1613:10)
+2025-05-23T19:28:43.3029813Z     at Module.load (node:internal/modules/cjs/loader:1275:32)
+2025-05-23T19:28:43.3030200Z     at Module._load (node:internal/modules/cjs/loader:1096:12)
+2025-05-23T19:28:43.3030602Z     at Module.require (node:internal/modules/cjs/loader:1298:19)
+2025-05-23T19:28:43.3030978Z     at require (node:internal/modules/helpers:182:18)
+2025-05-23T19:28:43.3031523Z     at Object.<anonymous> (/home/runner/work/charts/charts/.github/actions/services/release/index.js:135:19)
+2025-05-23T19:28:43.3032286Z (node:2027) Warning: Accessing non-existent property 'Helm' of module exports inside circular dependency
+2025-05-23T19:28:43.3032886Z     at emitCircularRequireWarning (node:internal/modules/cjs/loader:935:11)
+2025-05-23T19:28:43.3033319Z     at Object.get (node:internal/modules/cjs/loader:951:5)
+2025-05-23T19:28:43.3033877Z     at Object.<anonymous> (/home/runner/work/charts/charts/.github/actions/services/release/Package.js:11:15)
+2025-05-23T19:28:43.3034436Z     at Module._compile (node:internal/modules/cjs/loader:1529:14)
+2025-05-23T19:28:43.3034901Z     at Module._extensions..js (node:internal/modules/cjs/loader:1613:10)
+2025-05-23T19:28:43.3035321Z     at Module.load (node:internal/modules/cjs/loader:1275:32)
+2025-05-23T19:28:43.3035923Z     at Module._load (node:internal/modules/cjs/loader:1096:12)
+2025-05-23T19:28:43.3036331Z     at Module.require (node:internal/modules/cjs/loader:1298:19)
+2025-05-23T19:28:43.3036704Z     at require (node:internal/modules/helpers:182:18)
+2025-05-23T19:28:43.3037241Z     at Object.<anonymous> (/home/runner/work/charts/charts/.github/actions/services/release/index.js:135:19)
+2025-05-23T19:28:43.3037985Z (node:2027) Warning: Accessing non-existent property 'File' of module exports inside circular dependency
+2025-05-23T19:28:43.3038578Z     at emitCircularRequireWarning (node:internal/modules/cjs/loader:935:11)
+2025-05-23T19:28:43.3039021Z     at Object.get (node:internal/modules/cjs/loader:951:5)
+2025-05-23T19:28:43.3039743Z     at Object.<anonymous> (/home/runner/work/charts/charts/.github/actions/services/release/Publish.js:12:9)
+2025-05-23T19:28:43.3040325Z     at Module._compile (node:internal/modules/cjs/loader:1529:14)
+2025-05-23T19:28:43.3040771Z     at Module._extensions..js (node:internal/modules/cjs/loader:1613:10)
+2025-05-23T19:28:43.3041188Z     at Module.load (node:internal/modules/cjs/loader:1275:32)
+2025-05-23T19:28:43.3041577Z     at Module._load (node:internal/modules/cjs/loader:1096:12)
+2025-05-23T19:28:43.3041978Z     at Module.require (node:internal/modules/cjs/loader:1298:19)
+2025-05-23T19:28:43.3042348Z     at require (node:internal/modules/helpers:182:18)
+2025-05-23T19:28:43.3043053Z     at Object.<anonymous> (/home/runner/work/charts/charts/.github/actions/services/release/index.js:136:19)
+2025-05-23T19:28:43.3043815Z (node:2027) Warning: Accessing non-existent property 'Helm' of module exports inside circular dependency
+2025-05-23T19:28:43.3044402Z     at emitCircularRequireWarning (node:internal/modules/cjs/loader:935:11)
+2025-05-23T19:28:43.3044850Z     at Object.get (node:internal/modules/cjs/loader:951:5)
+2025-05-23T19:28:43.3045411Z     at Object.<anonymous> (/home/runner/work/charts/charts/.github/actions/services/release/Publish.js:12:15)
+2025-05-23T19:28:43.3046093Z     at Module._compile (node:internal/modules/cjs/loader:1529:14)
+2025-05-23T19:28:43.3046538Z     at Module._extensions..js (node:internal/modules/cjs/loader:1613:10)
+2025-05-23T19:28:43.3046958Z     at Module.load (node:internal/modules/cjs/loader:1275:32)
+2025-05-23T19:28:43.3047333Z     at Module._load (node:internal/modules/cjs/loader:1096:12)
+2025-05-23T19:28:43.3047726Z     at Module.require (node:internal/modules/cjs/loader:1298:19)
+2025-05-23T19:28:43.3048107Z     at require (node:internal/modules/helpers:182:18)
+2025-05-23T19:28:43.3048647Z     at Object.<anonymous> (/home/runner/work/charts/charts/.github/actions/services/release/index.js:136:19)
+2025-05-23T19:28:43.3072499Z (node:2027) Warning: Accessing non-existent property 'GitHub' of module exports inside circular dependency
+2025-05-23T19:28:43.3073654Z     at emitCircularRequireWarning (node:internal/modules/cjs/loader:935:11)
+2025-05-23T19:28:43.3074417Z     at Object.get (node:internal/modules/cjs/loader:951:5)
+2025-05-23T19:28:43.3075387Z     at Object.<anonymous> (/home/runner/work/charts/charts/.github/actions/services/release/Publish.js:12:21)
+2025-05-23T19:28:43.3076545Z     at Module._compile (node:internal/modules/cjs/loader:1529:14)
+2025-05-23T19:28:43.3077341Z     at Module._extensions..js (node:internal/modules/cjs/loader:1613:10)
+2025-05-23T19:28:43.3078624Z     at Module.load (node:internal/modules/cjs/loader:1275:32)
+2025-05-23T19:28:43.3079412Z     at Module._load (node:internal/modules/cjs/loader:1096:12)
+2025-05-23T19:28:43.3080217Z     at Module.require (node:internal/modules/cjs/loader:1298:19)
+2025-05-23T19:28:43.3080927Z     at require (node:internal/modules/helpers:182:18)
+2025-05-23T19:28:43.3081953Z     at Object.<anonymous> (/home/runner/work/charts/charts/.github/actions/services/release/index.js:136:19)
+2025-05-23T19:28:43.3083450Z (node:2027) Warning: Accessing non-existent property 'Template' of module exports inside circular dependency
+2025-05-23T19:28:43.3084652Z     at emitCircularRequireWarning (node:internal/modules/cjs/loader:935:11)
+2025-05-23T19:28:43.3085483Z     at Object.get (node:internal/modules/cjs/loader:951:5)
+2025-05-23T19:28:43.3086745Z     at Object.<anonymous> (/home/runner/work/charts/charts/.github/actions/services/release/Publish.js:12:29)
+2025-05-23T19:28:43.3087825Z     at Module._compile (node:internal/modules/cjs/loader:1529:14)
+2025-05-23T19:28:43.3088649Z     at Module._extensions..js (node:internal/modules/cjs/loader:1613:10)
+2025-05-23T19:28:43.3089461Z     at Module.load (node:internal/modules/cjs/loader:1275:32)
+2025-05-23T19:28:43.3089908Z     at Module._load (node:internal/modules/cjs/loader:1096:12)
+2025-05-23T19:28:43.3090331Z     at Module.require (node:internal/modules/cjs/loader:1298:19)
+2025-05-23T19:28:43.3090732Z     at require (node:internal/modules/helpers:182:18)
+2025-05-23T19:28:43.3091478Z     at Object.<anonymous> (/home/runner/work/charts/charts/.github/actions/services/release/index.js:136:19)
+2025-05-23T19:28:43.3136350Z [Git] [2025-05-23T19:28:43.313Z] Git repository configured successfully
+2025-05-23T19:28:43.3136957Z [Workflow] [2025-05-23T19:28:43.313Z] Repository configuration complete
+2025-05-23T19:28:43.3243608Z ##[group]Run actions/github-script@v7
+2025-05-23T19:28:43.3243920Z with:
+2025-05-23T19:28:43.3244425Z   script: const { Workflow } = require('./.github/actions/handlers');
+await Workflow.updateLabels({ github, context, core, exec });
+
+2025-05-23T19:28:43.3245299Z   github-token: ***
+2025-05-23T19:28:43.3245511Z   debug: false
+2025-05-23T19:28:43.3245997Z   user-agent: actions/github-script
+2025-05-23T19:28:43.3246282Z   result-encoding: json
+2025-05-23T19:28:43.3246503Z   retries: 0
+2025-05-23T19:28:43.3246728Z   retry-exempt-status-codes: 400,401,403,404,422
+2025-05-23T19:28:43.3247020Z env:
+2025-05-23T19:28:43.3247214Z   NODE_OPTIONS: --trace-warnings
+2025-05-23T19:28:43.3247488Z ##[endgroup]
+2025-05-23T19:28:43.4644933Z [Workflow] [2025-05-23T19:28:43.463Z] Updating repository issue labels...
+2025-05-23T19:28:43.4648924Z [Template] [2025-05-23T19:28:43.464Z] Registered isEqual helper
+2025-05-23T19:28:43.4651119Z [Label] [2025-05-23T19:28:43.464Z] Label creation is disabled in configuration, skipping label updates
+2025-05-23T19:28:43.4660305Z (node:2042) Warning: Accessing non-existent property 'File' of module exports inside circular dependency
+2025-05-23T19:28:43.4661272Z     at emitCircularRequireWarning (node:internal/modules/cjs/loader:935:11)
+2025-05-23T19:28:43.4661956Z     at Object.get (node:internal/modules/cjs/loader:951:5)
+2025-05-23T19:28:43.4662954Z     at Object.<anonymous> (/home/runner/work/charts/charts/.github/actions/services/chart/index.js:12:9)
+2025-05-23T19:28:43.4664123Z     at Module._compile (node:internal/modules/cjs/loader:1529:14)
+2025-05-23T19:28:43.4665138Z     at Module._extensions..js (node:internal/modules/cjs/loader:1613:10)
+2025-05-23T19:28:43.4666319Z     at Module.load (node:internal/modules/cjs/loader:1275:32)
+2025-05-23T19:28:43.4667229Z     at Module._load (node:internal/modules/cjs/loader:1096:12)
+2025-05-23T19:28:43.4667826Z     at Module.require (node:internal/modules/cjs/loader:1298:19)
+2025-05-23T19:28:43.4668723Z     at require (node:internal/modules/helpers:182:18)
+2025-05-23T19:28:43.4669952Z     at Object.<anonymous> (/home/runner/work/charts/charts/.github/actions/services/index.js:8:15)
+2025-05-23T19:28:43.4671370Z (node:2042) Warning: Accessing non-existent property 'Helm' of module exports inside circular dependency
+2025-05-23T19:28:43.4672741Z     at emitCircularRequireWarning (node:internal/modules/cjs/loader:935:11)
+2025-05-23T19:28:43.4673538Z     at Object.get (node:internal/modules/cjs/loader:951:5)
+2025-05-23T19:28:43.4674177Z     at Object.<anonymous> (/home/runner/work/charts/charts/.github/actions/services/chart/index.js:12:15)
+2025-05-23T19:28:43.4674805Z     at Module._compile (node:internal/modules/cjs/loader:1529:14)
+2025-05-23T19:28:43.4675312Z     at Module._extensions..js (node:internal/modules/cjs/loader:1613:10)
+2025-05-23T19:28:43.4675937Z     at Module.load (node:internal/modules/cjs/loader:1275:32)
+2025-05-23T19:28:43.4676383Z     at Module._load (node:internal/modules/cjs/loader:1096:12)
+2025-05-23T19:28:43.4676844Z     at Module.require (node:internal/modules/cjs/loader:1298:19)
+2025-05-23T19:28:43.4677272Z     at require (node:internal/modules/helpers:182:18)
+2025-05-23T19:28:43.4677854Z     at Object.<anonymous> (/home/runner/work/charts/charts/.github/actions/services/index.js:8:15)
+2025-05-23T19:28:43.4678757Z (node:2042) Warning: Accessing non-existent property 'File' of module exports inside circular dependency
+2025-05-23T19:28:43.4679447Z     at emitCircularRequireWarning (node:internal/modules/cjs/loader:935:11)
+2025-05-23T19:28:43.4679950Z     at Object.get (node:internal/modules/cjs/loader:951:5)
+2025-05-23T19:28:43.4680580Z     at Object.<anonymous> (/home/runner/work/charts/charts/.github/actions/services/release/index.js:11:9)
+2025-05-23T19:28:43.4681213Z     at Module._compile (node:internal/modules/cjs/loader:1529:14)
+2025-05-23T19:28:43.4681762Z     at Module._extensions..js (node:internal/modules/cjs/loader:1613:10)
+2025-05-23T19:28:43.4683039Z     at Module.load (node:internal/modules/cjs/loader:1275:32)
+2025-05-23T19:28:43.4683928Z     at Module._load (node:internal/modules/cjs/loader:1096:12)
+2025-05-23T19:28:43.4684667Z     at Module.require (node:internal/modules/cjs/loader:1298:19)
+2025-05-23T19:28:43.4685102Z     at require (node:internal/modules/helpers:182:18)
+2025-05-23T19:28:43.4686228Z     at Object.<anonymous> (/home/runner/work/charts/charts/.github/actions/services/index.js:16:17)
+2025-05-23T19:28:43.4687262Z (node:2042) Warning: Accessing non-existent property 'GitHub' of module exports inside circular dependency
+2025-05-23T19:28:43.4687949Z     at emitCircularRequireWarning (node:internal/modules/cjs/loader:935:11)
+2025-05-23T19:28:43.4688444Z     at Object.get (node:internal/modules/cjs/loader:951:5)
+2025-05-23T19:28:43.4689039Z     at Object.<anonymous> (/home/runner/work/charts/charts/.github/actions/services/release/index.js:11:15)
+2025-05-23T19:28:43.4689637Z     at Module._compile (node:internal/modules/cjs/loader:1529:14)
+2025-05-23T19:28:43.4690122Z     at Module._extensions..js (node:internal/modules/cjs/loader:1613:10)
+2025-05-23T19:28:43.4690577Z     at Module.load (node:internal/modules/cjs/loader:1275:32)
+2025-05-23T19:28:43.4690993Z     at Module._load (node:internal/modules/cjs/loader:1096:12)
+2025-05-23T19:28:43.4691425Z     at Module.require (node:internal/modules/cjs/loader:1298:19)
+2025-05-23T19:28:43.4691833Z     at require (node:internal/modules/helpers:182:18)
+2025-05-23T19:28:43.4692380Z     at Object.<anonymous> (/home/runner/work/charts/charts/.github/actions/services/index.js:16:17)
+2025-05-23T19:28:43.4693181Z (node:2042) Warning: Accessing non-existent property 'File' of module exports inside circular dependency
+2025-05-23T19:28:43.4693816Z     at emitCircularRequireWarning (node:internal/modules/cjs/loader:935:11)
+2025-05-23T19:28:43.4694283Z     at Object.get (node:internal/modules/cjs/loader:951:5)
+2025-05-23T19:28:43.4694868Z     at Object.<anonymous> (/home/runner/work/charts/charts/.github/actions/services/release/Package.js:11:9)
+2025-05-23T19:28:43.4695463Z     at Module._compile (node:internal/modules/cjs/loader:1529:14)
+2025-05-23T19:28:43.4696155Z     at Module._extensions..js (node:internal/modules/cjs/loader:1613:10)
+2025-05-23T19:28:43.4696600Z     at Module.load (node:internal/modules/cjs/loader:1275:32)
+2025-05-23T19:28:43.4697009Z     at Module._load (node:internal/modules/cjs/loader:1096:12)
+2025-05-23T19:28:43.4697423Z     at Module.require (node:internal/modules/cjs/loader:1298:19)
+2025-05-23T19:28:43.4697814Z     at require (node:internal/modules/helpers:182:18)
+2025-05-23T19:28:43.4698377Z     at Object.<anonymous> (/home/runner/work/charts/charts/.github/actions/services/release/index.js:135:19)
+2025-05-23T19:28:43.4699172Z (node:2042) Warning: Accessing non-existent property 'Helm' of module exports inside circular dependency
+2025-05-23T19:28:43.4699799Z     at emitCircularRequireWarning (node:internal/modules/cjs/loader:935:11)
+2025-05-23T19:28:43.4700253Z     at Object.get (node:internal/modules/cjs/loader:951:5)
+2025-05-23T19:28:43.4700838Z     at Object.<anonymous> (/home/runner/work/charts/charts/.github/actions/services/release/Package.js:11:15)
+2025-05-23T19:28:43.4701414Z     at Module._compile (node:internal/modules/cjs/loader:1529:14)
+2025-05-23T19:28:43.4701861Z     at Module._extensions..js (node:internal/modules/cjs/loader:1613:10)
+2025-05-23T19:28:43.4702297Z     at Module.load (node:internal/modules/cjs/loader:1275:32)
+2025-05-23T19:28:43.4702704Z     at Module._load (node:internal/modules/cjs/loader:1096:12)
+2025-05-23T19:28:43.4703111Z     at Module.require (node:internal/modules/cjs/loader:1298:19)
+2025-05-23T19:28:43.4703499Z     at require (node:internal/modules/helpers:182:18)
+2025-05-23T19:28:43.4704053Z     at Object.<anonymous> (/home/runner/work/charts/charts/.github/actions/services/release/index.js:135:19)
+2025-05-23T19:28:43.4704813Z (node:2042) Warning: Accessing non-existent property 'File' of module exports inside circular dependency
+2025-05-23T19:28:43.4705735Z     at emitCircularRequireWarning (node:internal/modules/cjs/loader:935:11)
+2025-05-23T19:28:43.4706241Z     at Object.get (node:internal/modules/cjs/loader:951:5)
+2025-05-23T19:28:43.4706801Z     at Object.<anonymous> (/home/runner/work/charts/charts/.github/actions/services/release/Publish.js:12:9)
+2025-05-23T19:28:43.4707360Z     at Module._compile (node:internal/modules/cjs/loader:1529:14)
+2025-05-23T19:28:43.4707938Z     at Module._extensions..js (node:internal/modules/cjs/loader:1613:10)
+2025-05-23T19:28:43.4708363Z     at Module.load (node:internal/modules/cjs/loader:1275:32)
+2025-05-23T19:28:43.4708758Z     at Module._load (node:internal/modules/cjs/loader:1096:12)
+2025-05-23T19:28:43.4709160Z     at Module.require (node:internal/modules/cjs/loader:1298:19)
+2025-05-23T19:28:43.4709553Z     at require (node:internal/modules/helpers:182:18)
+2025-05-23T19:28:43.4710114Z     at Object.<anonymous> (/home/runner/work/charts/charts/.github/actions/services/release/index.js:136:19)
+2025-05-23T19:28:43.4710909Z (node:2042) Warning: Accessing non-existent property 'Helm' of module exports inside circular dependency
+2025-05-23T19:28:43.4712012Z     at emitCircularRequireWarning (node:internal/modules/cjs/loader:935:11)
+2025-05-23T19:28:43.4712640Z     at Object.get (node:internal/modules/cjs/loader:951:5)
+2025-05-23T19:28:43.4713216Z     at Object.<anonymous> (/home/runner/work/charts/charts/.github/actions/services/release/Publish.js:12:15)
+2025-05-23T19:28:43.4713838Z     at Module._compile (node:internal/modules/cjs/loader:1529:14)
+2025-05-23T19:28:43.4714288Z     at Module._extensions..js (node:internal/modules/cjs/loader:1613:10)
+2025-05-23T19:28:43.4714719Z     at Module.load (node:internal/modules/cjs/loader:1275:32)
+2025-05-23T19:28:43.4715116Z     at Module._load (node:internal/modules/cjs/loader:1096:12)
+2025-05-23T19:28:43.4715526Z     at Module.require (node:internal/modules/cjs/loader:1298:19)
+2025-05-23T19:28:43.4716196Z     at require (node:internal/modules/helpers:182:18)
+2025-05-23T19:28:43.4716784Z     at Object.<anonymous> (/home/runner/work/charts/charts/.github/actions/services/release/index.js:136:19)
+2025-05-23T19:28:43.4717605Z (node:2042) Warning: Accessing non-existent property 'GitHub' of module exports inside circular dependency
+2025-05-23T19:28:43.4718680Z     at emitCircularRequireWarning (node:internal/modules/cjs/loader:935:11)
+2025-05-23T19:28:43.4719481Z     at Object.get (node:internal/modules/cjs/loader:951:5)
+2025-05-23T19:28:43.4720488Z     at Object.<anonymous> (/home/runner/work/charts/charts/.github/actions/services/release/Publish.js:12:21)
+2025-05-23T19:28:43.4721494Z     at Module._compile (node:internal/modules/cjs/loader:1529:14)
+2025-05-23T19:28:43.4722272Z     at Module._extensions..js (node:internal/modules/cjs/loader:1613:10)
+2025-05-23T19:28:43.4723026Z     at Module.load (node:internal/modules/cjs/loader:1275:32)
+2025-05-23T19:28:43.4723706Z     at Module._load (node:internal/modules/cjs/loader:1096:12)
+2025-05-23T19:28:43.4724421Z     at Module.require (node:internal/modules/cjs/loader:1298:19)
+2025-05-23T19:28:43.4725122Z     at require (node:internal/modules/helpers:182:18)
+2025-05-23T19:28:43.4726352Z     at Object.<anonymous> (/home/runner/work/charts/charts/.github/actions/services/release/index.js:136:19)
+2025-05-23T19:28:43.4727785Z (node:2042) Warning: Accessing non-existent property 'Template' of module exports inside circular dependency
+2025-05-23T19:28:43.4728874Z     at emitCircularRequireWarning (node:internal/modules/cjs/loader:935:11)
+2025-05-23T19:28:43.4729658Z     at Object.get (node:internal/modules/cjs/loader:951:5)
+2025-05-23T19:28:43.4730661Z     at Object.<anonymous> (/home/runner/work/charts/charts/.github/actions/services/release/Publish.js:12:29)
+2025-05-23T19:28:43.4731656Z     at Module._compile (node:internal/modules/cjs/loader:1529:14)
+2025-05-23T19:28:43.4732434Z     at Module._extensions..js (node:internal/modules/cjs/loader:1613:10)
+2025-05-23T19:28:43.4733176Z     at Module.load (node:internal/modules/cjs/loader:1275:32)
+2025-05-23T19:28:43.4734012Z     at Module._load (node:internal/modules/cjs/loader:1096:12)
+2025-05-23T19:28:43.4734769Z     at Module.require (node:internal/modules/cjs/loader:1298:19)
+2025-05-23T19:28:43.4735468Z     at require (node:internal/modules/helpers:182:18)
+2025-05-23T19:28:43.4736531Z     at Object.<anonymous> (/home/runner/work/charts/charts/.github/actions/services/release/index.js:136:19)
+2025-05-23T19:28:43.4737725Z [Workflow] [2025-05-23T19:28:43.467Z] Issue labels update complete
+2025-05-23T19:28:43.4792036Z ##[group]Run actions/github-script@v7
+2025-05-23T19:28:43.4792351Z with:
+2025-05-23T19:28:43.4792939Z   script: const { Workflow } = require('./.github/actions/handlers');
+await Workflow.installHelmDocs({ github, context, core, exec, version: '1.14.2' });
+
+2025-05-23T19:28:43.4793790Z   github-token: ***
+2025-05-23T19:28:43.4794019Z   debug: false
+2025-05-23T19:28:43.4794249Z   user-agent: actions/github-script
+2025-05-23T19:28:43.4794542Z   result-encoding: json
+2025-05-23T19:28:43.4794768Z   retries: 0
+2025-05-23T19:28:43.4795018Z   retry-exempt-status-codes: 400,401,403,404,422
+2025-05-23T19:28:43.4795325Z env:
+2025-05-23T19:28:43.4795574Z   NODE_OPTIONS: --trace-warnings
+2025-05-23T19:28:43.4795992Z ##[endgroup]
+2025-05-23T19:28:43.6294362Z [Workflow] [2025-05-23T19:28:43.628Z] Installing helm-docs...
+2025-05-23T19:28:43.6318715Z (node:2049) Warning: Accessing non-existent property 'File' of module exports inside circular dependency
+2025-05-23T19:28:43.6320078Z     at emitCircularRequireWarning (node:internal/modules/cjs/loader:935:11)
+2025-05-23T19:28:43.6320927Z     at Object.get (node:internal/modules/cjs/loader:951:5)
+2025-05-23T19:28:43.6322573Z     at Object.<anonymous> (/home/runner/work/charts/charts/.github/actions/services/chart/index.js:12:9)
+2025-05-23T19:28:43.6324339Z     at Module._compile (node:internal/modules/cjs/loader:1529:14)
+2025-05-23T19:28:43.6325907Z     at Module._extensions..js (node:internal/modules/cjs/loader:1613:10)
+2025-05-23T19:28:43.6327338Z     at Module.load (node:internal/modules/cjs/loader:1275:32)
+2025-05-23T19:28:43.6328603Z     at Module._load (node:internal/modules/cjs/loader:1096:12)
+2025-05-23T19:28:43.6329811Z     at Module.require (node:internal/modules/cjs/loader:1298:19)
+2025-05-23T19:28:43.6330767Z     at require (node:internal/modules/helpers:182:18)
+2025-05-23T19:28:43.6332198Z     at Object.<anonymous> (/home/runner/work/charts/charts/.github/actions/services/index.js:8:15)
+2025-05-23T19:28:43.6334381Z (node:2049) Warning: Accessing non-existent property 'Helm' of module exports inside circular dependency
+2025-05-23T19:28:43.6335513Z     at emitCircularRequireWarning (node:internal/modules/cjs/loader:935:11)
+2025-05-23T19:28:43.6336580Z     at Object.get (node:internal/modules/cjs/loader:951:5)
+2025-05-23T19:28:43.6337675Z     at Object.<anonymous> (/home/runner/work/charts/charts/.github/actions/services/chart/index.js:12:15)
+2025-05-23T19:28:43.6338660Z     at Module._compile (node:internal/modules/cjs/loader:1529:14)
+2025-05-23T19:28:43.6339255Z     at Module._extensions..js (node:internal/modules/cjs/loader:1613:10)
+2025-05-23T19:28:43.6339811Z     at Module.load (node:internal/modules/cjs/loader:1275:32)
+2025-05-23T19:28:43.6340312Z     at Module._load (node:internal/modules/cjs/loader:1096:12)
+2025-05-23T19:28:43.6340832Z     at Module.require (node:internal/modules/cjs/loader:1298:19)
+2025-05-23T19:28:43.6341329Z     at require (node:internal/modules/helpers:182:18)
+2025-05-23T19:28:43.6341992Z     at Object.<anonymous> (/home/runner/work/charts/charts/.github/actions/services/index.js:8:15)
+2025-05-23T19:28:43.6342954Z (node:2049) Warning: Accessing non-existent property 'File' of module exports inside circular dependency
+2025-05-23T19:28:43.6343743Z     at emitCircularRequireWarning (node:internal/modules/cjs/loader:935:11)
+2025-05-23T19:28:43.6344318Z     at Object.get (node:internal/modules/cjs/loader:951:5)
+2025-05-23T19:28:43.6345055Z     at Object.<anonymous> (/home/runner/work/charts/charts/.github/actions/services/release/index.js:11:9)
+2025-05-23T19:28:43.6345991Z     at Module._compile (node:internal/modules/cjs/loader:1529:14)
+2025-05-23T19:28:43.6346586Z     at Module._extensions..js (node:internal/modules/cjs/loader:1613:10)
+2025-05-23T19:28:43.6347184Z     at Module.load (node:internal/modules/cjs/loader:1275:32)
+2025-05-23T19:28:43.6347662Z     at Module._load (node:internal/modules/cjs/loader:1096:12)
+2025-05-23T19:28:43.6348431Z     at Module.require (node:internal/modules/cjs/loader:1298:19)
+2025-05-23T19:28:43.6349115Z     at require (node:internal/modules/helpers:182:18)
+2025-05-23T19:28:43.6349757Z     at Object.<anonymous> (/home/runner/work/charts/charts/.github/actions/services/index.js:16:17)
+2025-05-23T19:28:43.6350671Z (node:2049) Warning: Accessing non-existent property 'GitHub' of module exports inside circular dependency
+2025-05-23T19:28:43.6351425Z     at emitCircularRequireWarning (node:internal/modules/cjs/loader:935:11)
+2025-05-23T19:28:43.6352153Z     at Object.get (node:internal/modules/cjs/loader:951:5)
+2025-05-23T19:28:43.6352840Z     at Object.<anonymous> (/home/runner/work/charts/charts/.github/actions/services/release/index.js:11:15)
+2025-05-23T19:28:43.6353527Z     at Module._compile (node:internal/modules/cjs/loader:1529:14)
+2025-05-23T19:28:43.6354258Z     at Module._extensions..js (node:internal/modules/cjs/loader:1613:10)
+2025-05-23T19:28:43.6355094Z     at Module.load (node:internal/modules/cjs/loader:1275:32)
+2025-05-23T19:28:43.6356031Z     at Module._load (node:internal/modules/cjs/loader:1096:12)
+2025-05-23T19:28:43.6356839Z     at Module.require (node:internal/modules/cjs/loader:1298:19)
+2025-05-23T19:28:43.6357672Z     at require (node:internal/modules/helpers:182:18)
+2025-05-23T19:28:43.6358691Z     at Object.<anonymous> (/home/runner/work/charts/charts/.github/actions/services/index.js:16:17)
+2025-05-23T19:28:43.6359935Z (node:2049) Warning: Accessing non-existent property 'File' of module exports inside circular dependency
+2025-05-23T19:28:43.6360753Z     at emitCircularRequireWarning (node:internal/modules/cjs/loader:935:11)
+2025-05-23T19:28:43.6361261Z     at Object.get (node:internal/modules/cjs/loader:951:5)
+2025-05-23T19:28:43.6361878Z     at Object.<anonymous> (/home/runner/work/charts/charts/.github/actions/services/release/Package.js:11:9)
+2025-05-23T19:28:43.6362480Z     at Module._compile (node:internal/modules/cjs/loader:1529:14)
+2025-05-23T19:28:43.6362962Z     at Module._extensions..js (node:internal/modules/cjs/loader:1613:10)
+2025-05-23T19:28:43.6363613Z     at Module.load (node:internal/modules/cjs/loader:1275:32)
+2025-05-23T19:28:43.6364033Z     at Module._load (node:internal/modules/cjs/loader:1096:12)
+2025-05-23T19:28:43.6364592Z     at Module.require (node:internal/modules/cjs/loader:1298:19)
+2025-05-23T19:28:43.6364993Z     at require (node:internal/modules/helpers:182:18)
+2025-05-23T19:28:43.6365902Z     at Object.<anonymous> (/home/runner/work/charts/charts/.github/actions/services/release/index.js:135:19)
+2025-05-23T19:28:43.6366785Z (node:2049) Warning: Accessing non-existent property 'Helm' of module exports inside circular dependency
+2025-05-23T19:28:43.6367503Z     at emitCircularRequireWarning (node:internal/modules/cjs/loader:935:11)
+2025-05-23T19:28:43.6368074Z     at Object.get (node:internal/modules/cjs/loader:951:5)
+2025-05-23T19:28:43.6368740Z     at Object.<anonymous> (/home/runner/work/charts/charts/.github/actions/services/release/Package.js:11:15)
+2025-05-23T19:28:43.6369330Z     at Module._compile (node:internal/modules/cjs/loader:1529:14)
+2025-05-23T19:28:43.6369903Z     at Module._extensions..js (node:internal/modules/cjs/loader:1613:10)
+2025-05-23T19:28:43.6370328Z     at Module.load (node:internal/modules/cjs/loader:1275:32)
+2025-05-23T19:28:43.6370708Z     at Module._load (node:internal/modules/cjs/loader:1096:12)
+2025-05-23T19:28:43.6371099Z     at Module.require (node:internal/modules/cjs/loader:1298:19)
+2025-05-23T19:28:43.6371599Z     at require (node:internal/modules/helpers:182:18)
+2025-05-23T19:28:43.6372144Z     at Object.<anonymous> (/home/runner/work/charts/charts/.github/actions/services/release/index.js:135:19)
+2025-05-23T19:28:43.6373127Z (node:2049) Warning: Accessing non-existent property 'File' of module exports inside circular dependency
+2025-05-23T19:28:43.6373793Z     at emitCircularRequireWarning (node:internal/modules/cjs/loader:935:11)
+2025-05-23T19:28:43.6374336Z     at Object.get (node:internal/modules/cjs/loader:951:5)
+2025-05-23T19:28:43.6375231Z     at Object.<anonymous> (/home/runner/work/charts/charts/.github/actions/services/release/Publish.js:12:9)
+2025-05-23T19:28:43.6376040Z     at Module._compile (node:internal/modules/cjs/loader:1529:14)
+2025-05-23T19:28:43.6376502Z     at Module._extensions..js (node:internal/modules/cjs/loader:1613:10)
+2025-05-23T19:28:43.6376934Z     at Module.load (node:internal/modules/cjs/loader:1275:32)
+2025-05-23T19:28:43.6377328Z     at Module._load (node:internal/modules/cjs/loader:1096:12)
+2025-05-23T19:28:43.6377784Z     at Module.require (node:internal/modules/cjs/loader:1298:19)
+2025-05-23T19:28:43.6378320Z     at require (node:internal/modules/helpers:182:18)
+2025-05-23T19:28:43.6378961Z     at Object.<anonymous> (/home/runner/work/charts/charts/.github/actions/services/release/index.js:136:19)
+2025-05-23T19:28:43.6379962Z (node:2049) Warning: Accessing non-existent property 'Helm' of module exports inside circular dependency
+2025-05-23T19:28:43.6380584Z     at emitCircularRequireWarning (node:internal/modules/cjs/loader:935:11)
+2025-05-23T19:28:43.6381033Z     at Object.get (node:internal/modules/cjs/loader:951:5)
+2025-05-23T19:28:43.6381733Z     at Object.<anonymous> (/home/runner/work/charts/charts/.github/actions/services/release/Publish.js:12:15)
+2025-05-23T19:28:43.6382408Z     at Module._compile (node:internal/modules/cjs/loader:1529:14)
+2025-05-23T19:28:43.6382866Z     at Module._extensions..js (node:internal/modules/cjs/loader:1613:10)
+2025-05-23T19:28:43.6383279Z     at Module.load (node:internal/modules/cjs/loader:1275:32)
+2025-05-23T19:28:43.6383665Z     at Module._load (node:internal/modules/cjs/loader:1096:12)
+2025-05-23T19:28:43.6384059Z     at Module.require (node:internal/modules/cjs/loader:1298:19)
+2025-05-23T19:28:43.6384459Z     at require (node:internal/modules/helpers:182:18)
+2025-05-23T19:28:43.6384995Z     at Object.<anonymous> (/home/runner/work/charts/charts/.github/actions/services/release/index.js:136:19)
+2025-05-23T19:28:43.6385963Z (node:2049) Warning: Accessing non-existent property 'GitHub' of module exports inside circular dependency
+2025-05-23T19:28:43.6386596Z     at emitCircularRequireWarning (node:internal/modules/cjs/loader:935:11)
+2025-05-23T19:28:43.6387035Z     at Object.get (node:internal/modules/cjs/loader:951:5)
+2025-05-23T19:28:43.6387601Z     at Object.<anonymous> (/home/runner/work/charts/charts/.github/actions/services/release/Publish.js:12:21)
+2025-05-23T19:28:43.6388154Z     at Module._compile (node:internal/modules/cjs/loader:1529:14)
+2025-05-23T19:28:43.6388592Z     at Module._extensions..js (node:internal/modules/cjs/loader:1613:10)
+2025-05-23T19:28:43.6389014Z     at Module.load (node:internal/modules/cjs/loader:1275:32)
+2025-05-23T19:28:43.6389395Z     at Module._load (node:internal/modules/cjs/loader:1096:12)
+2025-05-23T19:28:43.6389792Z     at Module.require (node:internal/modules/cjs/loader:1298:19)
+2025-05-23T19:28:43.6390164Z     at require (node:internal/modules/helpers:182:18)
+2025-05-23T19:28:43.6390700Z     at Object.<anonymous> (/home/runner/work/charts/charts/.github/actions/services/release/index.js:136:19)
+2025-05-23T19:28:43.6391474Z (node:2049) Warning: Accessing non-existent property 'Template' of module exports inside circular dependency
+2025-05-23T19:28:43.6392076Z     at emitCircularRequireWarning (node:internal/modules/cjs/loader:935:11)
+2025-05-23T19:28:43.6392501Z     at Object.get (node:internal/modules/cjs/loader:951:5)
+2025-05-23T19:28:43.6393046Z     at Object.<anonymous> (/home/runner/work/charts/charts/.github/actions/services/release/Publish.js:12:29)
+2025-05-23T19:28:43.6393589Z     at Module._compile (node:internal/modules/cjs/loader:1529:14)
+2025-05-23T19:28:43.6394013Z     at Module._extensions..js (node:internal/modules/cjs/loader:1613:10)
+2025-05-23T19:28:43.6394429Z     at Module.load (node:internal/modules/cjs/loader:1275:32)
+2025-05-23T19:28:43.6394808Z     at Module._load (node:internal/modules/cjs/loader:1096:12)
+2025-05-23T19:28:43.6395189Z     at Module.require (node:internal/modules/cjs/loader:1298:19)
+2025-05-23T19:28:43.6395866Z     at require (node:internal/modules/helpers:182:18)
+2025-05-23T19:28:43.6396698Z     at Object.<anonymous> (/home/runner/work/charts/charts/.github/actions/services/release/index.js:136:19)
+2025-05-23T19:28:43.6397374Z [Docs] [2025-05-23T19:28:43.633Z] Installing helm-docs v1.14.2...
+2025-05-23T19:28:47.0349853Z [Docs] [2025-05-23T19:28:47.034Z] Successfully installed helm-docs
+2025-05-23T19:28:47.0351264Z [Workflow] [2025-05-23T19:28:47.034Z] Helm-docs installation complete
+2025-05-23T19:28:47.0470391Z ##[group]Run helm/chart-testing-action@v2
+2025-05-23T19:28:47.0470713Z with:
+2025-05-23T19:28:47.0470917Z   version: 3.12.0
+2025-05-23T19:28:47.0471140Z   yamllint_version: 1.33.0
+2025-05-23T19:28:47.0471391Z   yamale_version: 4.0.4
+2025-05-23T19:28:47.0471615Z env:
+2025-05-23T19:28:47.0471822Z   NODE_OPTIONS: --trace-warnings
+2025-05-23T19:28:47.0472095Z ##[endgroup]
+2025-05-23T19:28:47.0619679Z ##[group]Run sigstore/cosign-installer@dc72c7d5c4d10cd6bcb8cf6e3fd625a9e5e537da
+2025-05-23T19:28:47.0620061Z with:
+2025-05-23T19:28:47.0620231Z   cosign-release: v2.4.1
+2025-05-23T19:28:47.0620441Z   install-dir: $HOME/.cosign
+2025-05-23T19:28:47.0620652Z   use-sudo: false
+2025-05-23T19:28:47.0620828Z env:
+2025-05-23T19:28:47.0620995Z   NODE_OPTIONS: --trace-warnings
+2025-05-23T19:28:47.0621216Z ##[endgroup]
+2025-05-23T19:28:47.0660688Z ##[group]Run #!/bin/bash
+2025-05-23T19:28:47.0661598Z [36;1m#!/bin/bash[0m
+2025-05-23T19:28:47.0661976Z [36;1m# cosign install script[0m
+2025-05-23T19:28:47.0662413Z [36;1mshopt -s expand_aliases[0m
+2025-05-23T19:28:47.0662781Z [36;1mif [ -z "$NO_COLOR" ]; then[0m
+2025-05-23T19:28:47.0663168Z [36;1m  alias log_info="echo -e \"\033[1;32mINFO\033[0m:\""[0m
+2025-05-23T19:28:47.0663586Z [36;1m  alias log_error="echo -e \"\033[1;31mERROR\033[0m:\""[0m
+2025-05-23T19:28:47.0680108Z [36;1melse[0m
+2025-05-23T19:28:47.0680371Z [36;1m  alias log_info="echo \"INFO:\""[0m
+2025-05-23T19:28:47.0680673Z [36;1m  alias log_error="echo \"ERROR:\""[0m
+2025-05-23T19:28:47.0680973Z [36;1mfi[0m
+2025-05-23T19:28:47.0681170Z [36;1mset -e[0m
+2025-05-23T19:28:47.0681364Z [36;1m[0m
+2025-05-23T19:28:47.0681556Z [36;1mmkdir -p $HOME/.cosign[0m
+2025-05-23T19:28:47.0681803Z [36;1m[0m
+2025-05-23T19:28:47.0681991Z [36;1mif [[ v2.4.1 == "main" ]]; then[0m
+2025-05-23T19:28:47.0682375Z [36;1m  log_info "installing cosign via 'go install' from its main version"[0m
+2025-05-23T19:28:47.0682760Z [36;1m  GOBIN=$(go env GOPATH)/bin[0m
+2025-05-23T19:28:47.0683099Z [36;1m  go install github.com/sigstore/cosign/cmd/cosign@main[0m
+2025-05-23T19:28:47.0683466Z [36;1m  ln -s $GOBIN/cosign $HOME/.cosign/cosign[0m
+2025-05-23T19:28:47.0683746Z [36;1m  exit 0[0m
+2025-05-23T19:28:47.0683937Z [36;1mfi[0m
+2025-05-23T19:28:47.0684110Z [36;1m[0m
+2025-05-23T19:28:47.0684287Z [36;1mshaprog() {[0m
+2025-05-23T19:28:47.0684498Z [36;1m  case Linux in[0m
+2025-05-23T19:28:47.0684721Z [36;1m    Linux|linux)[0m
+2025-05-23T19:28:47.0684962Z [36;1m      sha256sum $1 | cut -d' ' -f1[0m
+2025-05-23T19:28:47.0685225Z [36;1m      ;;[0m
+2025-05-23T19:28:47.0685420Z [36;1m    macOS|macos)[0m
+2025-05-23T19:28:47.0685759Z [36;1m      shasum -a256 $1 | cut -d' ' -f1[0m
+2025-05-23T19:28:47.0686030Z [36;1m      ;;[0m
+2025-05-23T19:28:47.0686221Z [36;1m    Windows|windows)[0m
+2025-05-23T19:28:47.0686731Z [36;1m      powershell -command "(Get-FileHash $1 -Algorithm SHA256 | Select-Object -ExpandProperty Hash).ToLower()"[0m
+2025-05-23T19:28:47.0687236Z [36;1m      ;;[0m
+2025-05-23T19:28:47.0687430Z [36;1m    *)[0m
+2025-05-23T19:28:47.0687646Z [36;1m      log_error "unsupported OS Linux"[0m
+2025-05-23T19:28:47.0687926Z [36;1m      exit 1[0m
+2025-05-23T19:28:47.0688124Z [36;1m      ;;[0m
+2025-05-23T19:28:47.0688301Z [36;1m  esac[0m
+2025-05-23T19:28:47.0688491Z [36;1m}[0m
+2025-05-23T19:28:47.0688661Z [36;1m[0m
+2025-05-23T19:28:47.0688852Z [36;1mbootstrap_version='v2.4.1'[0m
+2025-05-23T19:28:47.0689334Z [36;1mbootstrap_linux_amd64_sha='8b24b946dd5809c6bd93de08033bcf6bc0ed7d336b7785787c080f574b89249b'[0m
+2025-05-23T19:28:47.0690256Z [36;1mbootstrap_linux_arm_sha='541fd175fae792a154fa2fa025146e3d4691e2dd97717fa9ace35677a88489e7'[0m
+2025-05-23T19:28:47.0690953Z [36;1mbootstrap_linux_arm64_sha='3b2e2e3854d0356c45fe6607047526ccd04742d20bd44afb5be91fa2a6e7cb4a'[0m
+2025-05-23T19:28:47.0691656Z [36;1mbootstrap_darwin_amd64_sha='666032ca283da92b6f7953965688fd51200fdc891a86c19e05c98b898ea0af4e'[0m
+2025-05-23T19:28:47.0692503Z [36;1mbootstrap_darwin_arm64_sha='13343856b69f70388c4fe0b986a31dde5958e444b41be22d785d3dc5e1a9cc62'[0m
+2025-05-23T19:28:47.0693214Z [36;1mbootstrap_windows_amd64_sha='8d57f8a42a981d27290c4227271fa9f0f62ca6630eb4a21d316bd6b01405b87c'[0m
+2025-05-23T19:28:47.0693729Z [36;1mcosign_executable_name=cosign[0m
+2025-05-23T19:28:47.0693988Z [36;1m[0m
+2025-05-23T19:28:47.0694179Z [36;1mtrap "popd >/dev/null" EXIT[0m
+2025-05-23T19:28:47.0694428Z [36;1m[0m
+2025-05-23T19:28:47.0694616Z [36;1mpushd $HOME/.cosign > /dev/null[0m
+2025-05-23T19:28:47.0694883Z [36;1m[0m
+2025-05-23T19:28:47.0695054Z [36;1mcase Linux in[0m
+2025-05-23T19:28:47.0695274Z [36;1m  Linux|linux)[0m
+2025-05-23T19:28:47.0695487Z [36;1m    case X64 in[0m
+2025-05-23T19:28:47.0695920Z [36;1m      X64|amd64)[0m
+2025-05-23T19:28:47.0696203Z [36;1m        bootstrap_filename='cosign-linux-amd64'[0m
+2025-05-23T19:28:47.0696546Z [36;1m        bootstrap_sha=${bootstrap_linux_amd64_sha}[0m
+2025-05-23T19:28:47.0696906Z [36;1m        desired_cosign_filename='cosign-linux-amd64'[0m
+2025-05-23T19:28:47.0697324Z [36;1m        # v0.6.0 had different filename structures from all other releases[0m
+2025-05-23T19:28:47.0697709Z [36;1m        if [[ v2.4.1 == 'v0.6.0' ]]; then[0m
+2025-05-23T19:28:47.0698076Z [36;1m          desired_cosign_filename='cosign_linux_amd64_0.6.0_linux_amd64'[0m
+2025-05-23T19:28:47.0698578Z [36;1m          desired_cosign_v060_signature='cosign_linux_amd64_0.6.0_linux_amd64.sig'[0m
+2025-05-23T19:28:47.0698973Z [36;1m        fi[0m
+2025-05-23T19:28:47.0699171Z [36;1m        ;;[0m
+2025-05-23T19:28:47.0699361Z [36;1m[0m
+2025-05-23T19:28:47.0699534Z [36;1m      ARM|arm)[0m
+2025-05-23T19:28:47.0699794Z [36;1m        bootstrap_filename='cosign-linux-arm'[0m
+2025-05-23T19:28:47.0700139Z [36;1m        bootstrap_sha=${bootstrap_linux_arm_sha}[0m
+2025-05-23T19:28:47.0700643Z [36;1m        desired_cosign_filename='cosign-linux-arm'[0m
+2025-05-23T19:28:47.0701014Z [36;1m        if [[ v2.4.1 == 'v0.6.0' ]]; then[0m
+2025-05-23T19:28:47.0701329Z [36;1m          log_error "linux-arm build not available at v0.6.0"[0m
+2025-05-23T19:28:47.0701632Z [36;1m          exit 1[0m
+2025-05-23T19:28:47.0701825Z [36;1m        fi[0m
+2025-05-23T19:28:47.0702003Z [36;1m        ;;[0m
+2025-05-23T19:28:47.0702174Z [36;1m[0m
+2025-05-23T19:28:47.0702344Z [36;1m      ARM64|arm64)[0m
+2025-05-23T19:28:47.0702603Z [36;1m        bootstrap_filename='cosign-linux-arm64'[0m
+2025-05-23T19:28:47.0702936Z [36;1m        bootstrap_sha=${bootstrap_linux_arm64_sha}[0m
+2025-05-23T19:28:47.0703280Z [36;1m        desired_cosign_filename='cosign-linux-arm64'[0m
+2025-05-23T19:28:47.0703578Z [36;1m        if [[ v2.4.1 == 'v0.6.0' ]]; then[0m
+2025-05-23T19:28:47.0703901Z [36;1m          log_error "linux-arm64 build not available at v0.6.0"[0m
+2025-05-23T19:28:47.0704208Z [36;1m          exit 1[0m
+2025-05-23T19:28:47.0704409Z [36;1m        fi[0m
+2025-05-23T19:28:47.0704584Z [36;1m        ;;[0m
+2025-05-23T19:28:47.0704765Z [36;1m[0m
+2025-05-23T19:28:47.0704932Z [36;1m      *)[0m
+2025-05-23T19:28:47.0705155Z [36;1m        log_error "unsupported architecture X64"[0m
+2025-05-23T19:28:47.0705434Z [36;1m        exit 1[0m
+2025-05-23T19:28:47.0705730Z [36;1m        ;;[0m
+2025-05-23T19:28:47.0705916Z [36;1m    esac[0m
+2025-05-23T19:28:47.0706087Z [36;1m    ;;[0m
+2025-05-23T19:28:47.0706257Z [36;1m[0m
+2025-05-23T19:28:47.0706416Z [36;1m  macOS|macos)[0m
+2025-05-23T19:28:47.0706615Z [36;1m    case X64 in[0m
+2025-05-23T19:28:47.0706812Z [36;1m      X64|amd64)[0m
+2025-05-23T19:28:47.0707201Z [36;1m        bootstrap_filename='cosign-darwin-amd64'[0m
+2025-05-23T19:28:47.0707523Z [36;1m        bootstrap_sha=${bootstrap_darwin_amd64_sha}[0m
+2025-05-23T19:28:47.0707855Z [36;1m        desired_cosign_filename='cosign-darwin-amd64'[0m
+2025-05-23T19:28:47.0708244Z [36;1m        # v0.6.0 had different filename structures from all other releases[0m
+2025-05-23T19:28:47.0708594Z [36;1m        if [[ v2.4.1 == 'v0.6.0' ]]; then[0m
+2025-05-23T19:28:47.0709058Z [36;1m          desired_cosign_filename='cosign_darwin_amd64_0.6.0_darwin_amd64'[0m
+2025-05-23T19:28:47.0709540Z [36;1m          desired_cosign_v060_signature='cosign_darwin_amd64_0.6.0_darwin_amd64.sig'[0m
+2025-05-23T19:28:47.0709908Z [36;1m        fi[0m
+2025-05-23T19:28:47.0710091Z [36;1m        ;;[0m
+2025-05-23T19:28:47.0710263Z [36;1m[0m
+2025-05-23T19:28:47.0710431Z [36;1m      ARM64|arm64)[0m
+2025-05-23T19:28:47.0710685Z [36;1m        bootstrap_filename='cosign-darwin-arm64'[0m
+2025-05-23T19:28:47.0711017Z [36;1m        bootstrap_sha=${bootstrap_darwin_arm64_sha}[0m
+2025-05-23T19:28:47.0711339Z [36;1m        desired_cosign_filename='cosign-darwin-arm64'[0m
+2025-05-23T19:28:47.0711700Z [36;1m        # v0.6.0 had different filename structures from all other releases[0m
+2025-05-23T19:28:47.0712037Z [36;1m        if [[ v2.4.1 == 'v0.6.0' ]]; then[0m
+2025-05-23T19:28:47.0712365Z [36;1m          desired_cosign_filename='cosign_darwin_arm64_0.6.0_darwin_arm64'[0m
+2025-05-23T19:28:47.0712832Z [36;1m          desired_cosign_v060_signature='cosign_darwin_arm64_0.6.0_darwin_arm64.sig'[0m
+2025-05-23T19:28:47.0713184Z [36;1m        fi[0m
+2025-05-23T19:28:47.0713367Z [36;1m        ;;[0m
+2025-05-23T19:28:47.0713541Z [36;1m[0m
+2025-05-23T19:28:47.0713692Z [36;1m      *)[0m
+2025-05-23T19:28:47.0713910Z [36;1m        log_error "unsupported architecture X64"[0m
+2025-05-23T19:28:47.0714173Z [36;1m        exit 1[0m
+2025-05-23T19:28:47.0714358Z [36;1m        ;;[0m
+2025-05-23T19:28:47.0714533Z [36;1m    esac[0m
+2025-05-23T19:28:47.0714700Z [36;1m    ;;[0m
+2025-05-23T19:28:47.0714861Z [36;1m[0m
+2025-05-23T19:28:47.0715033Z [36;1m  Windows|windows)[0m
+2025-05-23T19:28:47.0715236Z [36;1m    case X64 in[0m
+2025-05-23T19:28:47.0715434Z [36;1m      X64|amd64)[0m
+2025-05-23T19:28:47.0715827Z [36;1m        bootstrap_filename='cosign-windows-amd64.exe'[0m
+2025-05-23T19:28:47.0716149Z [36;1m        bootstrap_sha=${bootstrap_windows_amd64_sha}[0m
+2025-05-23T19:28:47.0716498Z [36;1m        desired_cosign_filename='cosign-windows-amd64.exe'[0m
+2025-05-23T19:28:47.0716815Z [36;1m        cosign_executable_name=cosign.exe[0m
+2025-05-23T19:28:47.0717153Z [36;1m        # v0.6.0 had different filename structures from all other releases[0m
+2025-05-23T19:28:47.0717486Z [36;1m        if [[ v2.4.1 == 'v0.6.0' ]]; then[0m
+2025-05-23T19:28:47.0717832Z [36;1m          desired_cosign_filename='cosign_windows_amd64_0.6.0_windows_amd64.exe'[0m
+2025-05-23T19:28:47.0718330Z [36;1m          desired_cosign_v060_signature='cosign_windows_amd64_0.6.0_windows_amd64.exe.sig'[0m
+2025-05-23T19:28:47.0718699Z [36;1m        fi[0m
+2025-05-23T19:28:47.0718870Z [36;1m        ;;[0m
+2025-05-23T19:28:47.0719035Z [36;1m      *)[0m
+2025-05-23T19:28:47.0719245Z [36;1m        log_error "unsupported architecture X64"[0m
+2025-05-23T19:28:47.0719507Z [36;1m        exit 1[0m
+2025-05-23T19:28:47.0719687Z [36;1m        ;;[0m
+2025-05-23T19:28:47.0719855Z [36;1m    esac[0m
+2025-05-23T19:28:47.0720014Z [36;1m    ;;[0m
+2025-05-23T19:28:47.0720184Z [36;1m  *)[0m
+2025-05-23T19:28:47.0720373Z [36;1m    log_error "unsupported os Linux"[0m
+2025-05-23T19:28:47.0720617Z [36;1m    exit 1[0m
+2025-05-23T19:28:47.0720784Z [36;1m    ;;[0m
+2025-05-23T19:28:47.0720951Z [36;1mesac[0m
+2025-05-23T19:28:47.0721102Z [36;1m[0m
+2025-05-23T19:28:47.0721256Z [36;1mSUDO=[0m
+2025-05-23T19:28:47.0721500Z [36;1mif [[ "false" == "true" ]] && command -v sudo >/dev/null; then[0m
+2025-05-23T19:28:47.0721799Z [36;1m  SUDO=sudo[0m
+2025-05-23T19:28:47.0722109Z [36;1mfi[0m
+2025-05-23T19:28:47.0722262Z [36;1m[0m
+2025-05-23T19:28:47.0722486Z [36;1mexpected_bootstrap_version_digest=${bootstrap_sha}[0m
+2025-05-23T19:28:47.0723341Z [36;1mlog_info "Downloading bootstrap version '${bootstrap_version}' of cosign to verify version to be installed...\n      https://github.com/sigstore/cosign/releases/download/${bootstrap_version}/${bootstrap_filename}"[0m
+2025-05-23T19:28:47.0724584Z [36;1m$SUDO curl -fsL https://github.com/sigstore/cosign/releases/download/${bootstrap_version}/${bootstrap_filename} -o ${cosign_executable_name}[0m
+2025-05-23T19:28:47.0725236Z [36;1mshaBootstrap=$(shaprog ${cosign_executable_name});[0m
+2025-05-23T19:28:47.0725720Z [36;1mif [[ $shaBootstrap != ${expected_bootstrap_version_digest} ]]; then[0m
+2025-05-23T19:28:47.0726129Z [36;1m  log_error "Unable to validate cosign version: 'v2.4.1'"[0m
+2025-05-23T19:28:47.0726413Z [36;1m  exit 1[0m
+2025-05-23T19:28:47.0726583Z [36;1mfi[0m
+2025-05-23T19:28:47.0726779Z [36;1m$SUDO chmod +x ${cosign_executable_name}[0m
+2025-05-23T19:28:47.0727020Z [36;1m[0m
+2025-05-23T19:28:47.0727303Z [36;1m# If the bootstrap and specified `cosign` releases are the same, we're done.[0m
+2025-05-23T19:28:47.0727692Z [36;1mif [[ v2.4.1 == ${bootstrap_version} ]]; then[0m
+2025-05-23T19:28:47.0728171Z [36;1m  log_info "bootstrap version successfully verified and matches requested version so nothing else to do"[0m
+2025-05-23T19:28:47.0728611Z [36;1m  exit 0[0m
+2025-05-23T19:28:47.0728778Z [36;1mfi[0m
+2025-05-23T19:28:47.0728941Z [36;1m[0m
+2025-05-23T19:28:47.0729150Z [36;1msemver='^v([0-9]+\.){0,2}(\*|[0-9]+)(-?r?c?)(\.[0-9]+)$'[0m
+2025-05-23T19:28:47.0729445Z [36;1mif [[ v2.4.1 =~ $semver ]]; then[0m
+2025-05-23T19:28:47.0729736Z [36;1m  log_info "Custom cosign version 'v2.4.1' requested"[0m
+2025-05-23T19:28:47.0730008Z [36;1melse[0m
+2025-05-23T19:28:47.0730275Z [36;1m  log_error "Unable to validate requested cosign version: 'v2.4.1'"[0m
+2025-05-23T19:28:47.0730595Z [36;1m  exit 1[0m
+2025-05-23T19:28:47.0730764Z [36;1mfi[0m
+2025-05-23T19:28:47.0730918Z [36;1m[0m
+2025-05-23T19:28:47.0731080Z [36;1m# Download custom cosign[0m
+2025-05-23T19:28:47.0731714Z [36;1mlog_info "Downloading platform-specific version 'v2.4.1' of cosign...\n      https://github.com/sigstore/cosign/releases/download/v2.4.1/${desired_cosign_filename}"[0m
+2025-05-23T19:28:47.0732616Z [36;1m$SUDO curl -fsL https://github.com/sigstore/cosign/releases/download/v2.4.1/${desired_cosign_filename} -o cosign_v2.4.1[0m
+2025-05-23T19:28:47.0733154Z [36;1mshaCustom=$(shaprog cosign_v2.4.1);[0m
+2025-05-23T19:28:47.0733390Z [36;1m[0m
+2025-05-23T19:28:47.0733571Z [36;1m# same hash means it is the same release[0m
+2025-05-23T19:28:47.0733858Z [36;1mif [[ $shaCustom != $shaBootstrap ]]; then[0m
+2025-05-23T19:28:47.0734153Z [36;1m  if [[ v2.4.1 == 'v0.6.0' && Linux == 'Linux' ]]; then[0m
+2025-05-23T19:28:47.0734491Z [36;1m    # v0.6.0's linux release has a dependency on `libpcsclite1`[0m
+2025-05-23T19:28:47.0734873Z [36;1m    log_info "Installing libpcsclite1 package if necessary..."[0m
+2025-05-23T19:28:47.0735182Z [36;1m    set +e[0m
+2025-05-23T19:28:47.0735384Z [36;1m    sudo dpkg -s libpcsclite1[0m
+2025-05-23T19:28:47.0735766Z [36;1m    if [ $? -eq 0 ]; then[0m
+2025-05-23T19:28:47.0736108Z [36;1m        log_info "libpcsclite1 package is already installed"[0m
+2025-05-23T19:28:47.0736403Z [36;1m    else[0m
+2025-05-23T19:28:47.0736710Z [36;1m         log_info "libpcsclite1 package is not installed, installing it now."[0m
+2025-05-23T19:28:47.0737079Z [36;1m         sudo apt-get update -q -q[0m
+2025-05-23T19:28:47.0737368Z [36;1m         sudo apt-get install -yq libpcsclite1[0m
+2025-05-23T19:28:47.0737625Z [36;1m    fi[0m
+2025-05-23T19:28:47.0737788Z [36;1m    set -e[0m
+2025-05-23T19:28:47.0737961Z [36;1m  fi[0m
+2025-05-23T19:28:47.0738116Z [36;1m[0m
+2025-05-23T19:28:47.0738287Z [36;1m  if [[ v2.4.1 == 'v0.6.0' ]]; then[0m
+2025-05-23T19:28:47.0738988Z [36;1m    log_info "Downloading detached signature for platform-specific 'v2.4.1' of cosign...\n      https://github.com/sigstore/cosign/releases/download/v2.4.1/${desired_cosign_v060_signature}"[0m
+2025-05-23T19:28:47.0740160Z [36;1m    $SUDO curl -fsL https://github.com/sigstore/cosign/releases/download/v2.4.1/${desired_cosign_v060_signature} -o ${desired_cosign_filename}.sig[0m
+2025-05-23T19:28:47.0740730Z [36;1m  else[0m
+2025-05-23T19:28:47.0741478Z [36;1m    log_info "Downloading detached signature for platform-specific 'v2.4.1' of cosign...\n      https://github.com/sigstore/cosign/releases/download/v2.4.1/${desired_cosign_filename}.sig"[0m
+2025-05-23T19:28:47.0742399Z [36;1m    $SUDO curl -fsLO https://github.com/sigstore/cosign/releases/download/v2.4.1/${desired_cosign_filename}.sig[0m
+2025-05-23T19:28:47.0742860Z [36;1m  fi[0m
+2025-05-23T19:28:47.0743047Z [36;1m[0m
+2025-05-23T19:28:47.0743216Z [36;1m  if [[ v2.4.1 < 'v0.6.0' ]]; then[0m
+2025-05-23T19:28:47.0743798Z [36;1m    log_info "Downloading cosign public key 'v2.4.1' of cosign...\n    https://raw.githubusercontent.com/sigstore/cosign/v2.4.1/.github/workflows/cosign.pub"[0m
+2025-05-23T19:28:47.0744630Z [36;1m    RELEASE_COSIGN_PUB_KEY=https://raw.githubusercontent.com/sigstore/cosign/v2.4.1/.github/workflows/cosign.pub[0m
+2025-05-23T19:28:47.0745309Z [36;1m    RELEASE_COSIGN_PUB_KEY_SHA='4aa4bd19530a4929d758a9896255aef2c82f1a3a9f4b000034c6df4307c14f9e'[0m
+2025-05-23T19:28:47.0745819Z [36;1m  else[0m
+2025-05-23T19:28:47.0746337Z [36;1m    log_info "Downloading cosign public key 'v2.4.1' of cosign...\n    https://raw.githubusercontent.com/sigstore/cosign/v2.4.1/release/release-cosign.pub"[0m
+2025-05-23T19:28:47.0747141Z [36;1m    RELEASE_COSIGN_PUB_KEY=https://raw.githubusercontent.com/sigstore/cosign/v2.4.1/release/release-cosign.pub[0m
+2025-05-23T19:28:47.0747802Z [36;1m    RELEASE_COSIGN_PUB_KEY_SHA='f4cea466e5e887a45da5031757fa1d32655d83420639dc1758749b744179f126'[0m
+2025-05-23T19:28:47.0748214Z [36;1m  fi[0m
+2025-05-23T19:28:47.0748372Z [36;1m[0m
+2025-05-23T19:28:47.0748604Z [36;1m  log_info "Verifying public key matches expected value"[0m
+2025-05-23T19:28:47.0748963Z [36;1m  $SUDO curl -fsL $RELEASE_COSIGN_PUB_KEY -o public.key[0m
+2025-05-23T19:28:47.0749280Z [36;1m  sha_fetched_key=$(shaprog public.key)[0m
+2025-05-23T19:28:47.0749606Z [36;1m  if [[ $sha_fetched_key != $RELEASE_COSIGN_PUB_KEY_SHA ]]; then[0m
+2025-05-23T19:28:47.0750014Z [36;1m    log_error "Fetched public key does not match expected digest, exiting"[0m
+2025-05-23T19:28:47.0750362Z [36;1m    exit 1[0m
+2025-05-23T19:28:47.0750532Z [36;1m  fi[0m
+2025-05-23T19:28:47.0750694Z [36;1m[0m
+2025-05-23T19:28:47.0750987Z [36;1m  log_info "Using bootstrap cosign to verify signature of desired cosign version"[0m
+2025-05-23T19:28:47.0751622Z [36;1m  ./cosign verify-blob --insecure-ignore-tlog --key public.key --signature ${desired_cosign_filename}.sig cosign_v2.4.1[0m
+2025-05-23T19:28:47.0752103Z [36;1m[0m
+2025-05-23T19:28:47.0752258Z [36;1m  $SUDO rm cosign[0m
+2025-05-23T19:28:47.0752518Z [36;1m  $SUDO mv cosign_v2.4.1 ${cosign_executable_name}[0m
+2025-05-23T19:28:47.0752815Z [36;1m  $SUDO chmod +x ${cosign_executable_name}[0m
+2025-05-23T19:28:47.0753092Z [36;1m  log_info "Installation complete!"[0m
+2025-05-23T19:28:47.0753322Z [36;1mfi[0m
+2025-05-23T19:28:47.0805132Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2025-05-23T19:28:47.0805472Z env:
+2025-05-23T19:28:47.0805772Z   NODE_OPTIONS: --trace-warnings
+2025-05-23T19:28:47.0806068Z ##[endgroup]
+2025-05-23T19:28:47.0898381Z [1;32mINFO[0m: Downloading bootstrap version 'v2.4.1' of cosign to verify version to be installed...
+2025-05-23T19:28:47.0899492Z       https://github.com/sigstore/cosign/releases/download/v2.4.1/cosign-linux-amd64
+2025-05-23T19:28:47.6695271Z [1;32mINFO[0m: bootstrap version successfully verified and matches requested version so nothing else to do
+2025-05-23T19:28:47.6736144Z ##[group]Run echo "$HOME/.cosign" >> $GITHUB_PATH
+2025-05-23T19:28:47.6736554Z [36;1mecho "$HOME/.cosign" >> $GITHUB_PATH[0m
+2025-05-23T19:28:47.6787962Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2025-05-23T19:28:47.6788404Z env:
+2025-05-23T19:28:47.6788656Z   NODE_OPTIONS: --trace-warnings
+2025-05-23T19:28:47.6788977Z ##[endgroup]
+2025-05-23T19:28:47.6898663Z ##[group]Run cd $GITHUB_ACTION_PATH \
+2025-05-23T19:28:47.6898989Z [36;1mcd $GITHUB_ACTION_PATH \[0m
+2025-05-23T19:28:47.6899257Z [36;1m&& ./ct.sh \[0m
+2025-05-23T19:28:47.6899497Z [36;1m    --version 3.12.0 \[0m
+2025-05-23T19:28:47.6899951Z [36;1m    --yamllint-version 1.33.0 \[0m
+2025-05-23T19:28:47.6900261Z [36;1m    --yamale-version 4.0.4[0m
+2025-05-23T19:28:47.6948121Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2025-05-23T19:28:47.6948520Z env:
+2025-05-23T19:28:47.6948748Z   NODE_OPTIONS: --trace-warnings
+2025-05-23T19:28:47.6949040Z ##[endgroup]
+2025-05-23T19:28:47.7072481Z Installing chart-testing v3.12.0...
+2025-05-23T19:28:48.7995939Z Verified OK
+2025-05-23T19:28:48.8973792Z Creating virtual Python environment...
+2025-05-23T19:28:52.3264364Z Activating virtual environment...
+2025-05-23T19:28:52.3268518Z Installing yamllint...
+2025-05-23T19:28:52.7190411Z Collecting yamllint==1.33.0
+2025-05-23T19:28:52.7658913Z   Downloading yamllint-1.33.0-py3-none-any.whl.metadata (4.2 kB)
+2025-05-23T19:28:52.8039419Z Collecting pathspec>=0.5.3 (from yamllint==1.33.0)
+2025-05-23T19:28:52.8070903Z   Downloading pathspec-0.12.1-py3-none-any.whl.metadata (21 kB)
+2025-05-23T19:28:52.8598785Z Collecting pyyaml (from yamllint==1.33.0)
+2025-05-23T19:28:52.8633150Z   Downloading PyYAML-6.0.2-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (2.1 kB)
+2025-05-23T19:28:52.8736570Z Downloading yamllint-1.33.0-py3-none-any.whl (65 kB)
+2025-05-23T19:28:52.8830519Z    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 65.4/65.4 kB 7.7 MB/s eta 0:00:00
+2025-05-23T19:28:52.8866695Z Downloading pathspec-0.12.1-py3-none-any.whl (31 kB)
+2025-05-23T19:28:52.8946271Z Downloading PyYAML-6.0.2-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (767 kB)
+2025-05-23T19:28:52.9070924Z    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 767.5/767.5 kB 70.6 MB/s eta 0:00:00
+2025-05-23T19:28:52.9214622Z Installing collected packages: pyyaml, pathspec, yamllint
+2025-05-23T19:28:53.0232970Z Successfully installed pathspec-0.12.1 pyyaml-6.0.2 yamllint-1.33.0
+2025-05-23T19:28:53.0719729Z Installing Yamale...
+2025-05-23T19:28:53.4837181Z Collecting yamale==4.0.4
+2025-05-23T19:28:53.5189781Z   Downloading yamale-4.0.4-py3-none-any.whl.metadata (20 kB)
+2025-05-23T19:28:53.5285317Z Requirement already satisfied: pyyaml in /opt/hostedtoolcache/ct/3.12.0/amd64/venv/lib/python3.12/site-packages (from yamale==4.0.4) (6.0.2)
+2025-05-23T19:28:53.5486824Z Downloading yamale-4.0.4-py3-none-any.whl (55 kB)
+2025-05-23T19:28:53.5642103Z    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 55.0/55.0 kB 3.5 MB/s eta 0:00:00
+2025-05-23T19:28:53.5891188Z Installing collected packages: yamale
+2025-05-23T19:28:53.6331241Z Successfully installed yamale-4.0.4
+2025-05-23T19:28:53.6817980Z Adding ct directory to PATH...
+2025-05-23T19:28:53.6818560Z Setting CT_CONFIG_DIR...
+2025-05-23T19:28:53.6819551Z Configuring environment variables for virtual environment for subsequent workflow steps...
+2025-05-23T19:28:53.6843230Z Version:	 v3.12.0
+2025-05-23T19:28:53.6844678Z Git commit:	 d6991035017d7ac0e3dec3d1b5ad2e5f18674b32
+2025-05-23T19:28:53.6845777Z Date:		 2025-01-13T12:22:07Z
+2025-05-23T19:28:53.6846463Z License:	 Apache 2.0
+2025-05-23T19:28:53.6903480Z ##[group]Run actions/github-script@v7
+2025-05-23T19:28:53.6903799Z with:
+2025-05-23T19:28:53.6904308Z   script: const { Workflow } = require('./.github/actions/handlers');
+await Workflow.updateCharts({ github, context, core, exec });
+
+2025-05-23T19:28:53.6905021Z   github-token: ***
+2025-05-23T19:28:53.6905229Z   debug: false
+2025-05-23T19:28:53.6905445Z   user-agent: actions/github-script
+2025-05-23T19:28:53.6905968Z   result-encoding: json
+2025-05-23T19:28:53.6906179Z   retries: 0
+2025-05-23T19:28:53.6906405Z   retry-exempt-status-codes: 400,401,403,404,422
+2025-05-23T19:28:53.6906885Z env:
+2025-05-23T19:28:53.6907088Z   NODE_OPTIONS: --trace-warnings
+2025-05-23T19:28:53.6907393Z   CT_CONFIG_DIR: /opt/hostedtoolcache/ct/3.12.0/amd64/etc
+2025-05-23T19:28:53.6907758Z   VIRTUAL_ENV: /opt/hostedtoolcache/ct/3.12.0/amd64/venv
+2025-05-23T19:28:53.6908052Z ##[endgroup]
+2025-05-23T19:28:53.8292262Z [Workflow] [2025-05-23T19:28:53.828Z] Starting chart update process...
+2025-05-23T19:28:53.8311256Z (node:2267) Warning: Accessing non-existent property 'File' of module exports inside circular dependency
+2025-05-23T19:28:53.8312151Z     at emitCircularRequireWarning (node:internal/modules/cjs/loader:935:11)
+2025-05-23T19:28:53.8312784Z     at Object.get (node:internal/modules/cjs/loader:951:5)
+2025-05-23T19:28:53.8313962Z     at Object.<anonymous> (/home/runner/work/charts/charts/.github/actions/services/chart/index.js:12:9)
+2025-05-23T19:28:53.8315118Z     at Module._compile (node:internal/modules/cjs/loader:1529:14)
+2025-05-23T19:28:53.8316304Z     at Module._extensions..js (node:internal/modules/cjs/loader:1613:10)
+2025-05-23T19:28:53.8317223Z     at Module.load (node:internal/modules/cjs/loader:1275:32)
+2025-05-23T19:28:53.8317923Z     at Module._load (node:internal/modules/cjs/loader:1096:12)
+2025-05-23T19:28:53.8318571Z     at Module.require (node:internal/modules/cjs/loader:1298:19)
+2025-05-23T19:28:53.8319261Z     at require (node:internal/modules/helpers:182:18)
+2025-05-23T19:28:53.8320107Z     at Object.<anonymous> (/home/runner/work/charts/charts/.github/actions/services/index.js:8:15)
+2025-05-23T19:28:53.8321432Z (node:2267) Warning: Accessing non-existent property 'Helm' of module exports inside circular dependency
+2025-05-23T19:28:53.8322575Z     at emitCircularRequireWarning (node:internal/modules/cjs/loader:935:11)
+2025-05-23T19:28:53.8323138Z     at Object.get (node:internal/modules/cjs/loader:951:5)
+2025-05-23T19:28:53.8323787Z     at Object.<anonymous> (/home/runner/work/charts/charts/.github/actions/services/chart/index.js:12:15)
+2025-05-23T19:28:53.8324454Z     at Module._compile (node:internal/modules/cjs/loader:1529:14)
+2025-05-23T19:28:53.8324984Z     at Module._extensions..js (node:internal/modules/cjs/loader:1613:10)
+2025-05-23T19:28:53.8325482Z     at Module.load (node:internal/modules/cjs/loader:1275:32)
+2025-05-23T19:28:53.8326167Z     at Module._load (node:internal/modules/cjs/loader:1096:12)
+2025-05-23T19:28:53.8326642Z     at Module.require (node:internal/modules/cjs/loader:1298:19)
+2025-05-23T19:28:53.8327081Z     at require (node:internal/modules/helpers:182:18)
+2025-05-23T19:28:53.8327682Z     at Object.<anonymous> (/home/runner/work/charts/charts/.github/actions/services/index.js:8:15)
+2025-05-23T19:28:53.8328479Z (node:2267) Warning: Accessing non-existent property 'File' of module exports inside circular dependency
+2025-05-23T19:28:53.8329068Z     at emitCircularRequireWarning (node:internal/modules/cjs/loader:935:11)
+2025-05-23T19:28:53.8329508Z     at Object.get (node:internal/modules/cjs/loader:951:5)
+2025-05-23T19:28:53.8330059Z     at Object.<anonymous> (/home/runner/work/charts/charts/.github/actions/services/release/index.js:11:9)
+2025-05-23T19:28:53.8330595Z     at Module._compile (node:internal/modules/cjs/loader:1529:14)
+2025-05-23T19:28:53.8331022Z     at Module._extensions..js (node:internal/modules/cjs/loader:1613:10)
+2025-05-23T19:28:53.8331432Z     at Module.load (node:internal/modules/cjs/loader:1275:32)
+2025-05-23T19:28:53.8332174Z     at Module._load (node:internal/modules/cjs/loader:1096:12)
+2025-05-23T19:28:53.8332580Z     at Module.require (node:internal/modules/cjs/loader:1298:19)
+2025-05-23T19:28:53.8332949Z     at require (node:internal/modules/helpers:182:18)
+2025-05-23T19:28:53.8333439Z     at Object.<anonymous> (/home/runner/work/charts/charts/.github/actions/services/index.js:16:17)
+2025-05-23T19:28:53.8334175Z (node:2267) Warning: Accessing non-existent property 'GitHub' of module exports inside circular dependency
+2025-05-23T19:28:53.8334773Z     at emitCircularRequireWarning (node:internal/modules/cjs/loader:935:11)
+2025-05-23T19:28:53.8335355Z     at Object.get (node:internal/modules/cjs/loader:951:5)
+2025-05-23T19:28:53.8336016Z     at Object.<anonymous> (/home/runner/work/charts/charts/.github/actions/services/release/index.js:11:15)
+2025-05-23T19:28:53.8336565Z     at Module._compile (node:internal/modules/cjs/loader:1529:14)
+2025-05-23T19:28:53.8336988Z     at Module._extensions..js (node:internal/modules/cjs/loader:1613:10)
+2025-05-23T19:28:53.8337405Z     at Module.load (node:internal/modules/cjs/loader:1275:32)
+2025-05-23T19:28:53.8337789Z     at Module._load (node:internal/modules/cjs/loader:1096:12)
+2025-05-23T19:28:53.8338170Z     at Module.require (node:internal/modules/cjs/loader:1298:19)
+2025-05-23T19:28:53.8338535Z     at require (node:internal/modules/helpers:182:18)
+2025-05-23T19:28:53.8339028Z     at Object.<anonymous> (/home/runner/work/charts/charts/.github/actions/services/index.js:16:17)
+2025-05-23T19:28:53.8339739Z (node:2267) Warning: Accessing non-existent property 'File' of module exports inside circular dependency
+2025-05-23T19:28:53.8340331Z     at emitCircularRequireWarning (node:internal/modules/cjs/loader:935:11)
+2025-05-23T19:28:53.8340761Z     at Object.get (node:internal/modules/cjs/loader:951:5)
+2025-05-23T19:28:53.8341304Z     at Object.<anonymous> (/home/runner/work/charts/charts/.github/actions/services/release/Package.js:11:9)
+2025-05-23T19:28:53.8341856Z     at Module._compile (node:internal/modules/cjs/loader:1529:14)
+2025-05-23T19:28:53.8342285Z     at Module._extensions..js (node:internal/modules/cjs/loader:1613:10)
+2025-05-23T19:28:53.8342691Z     at Module.load (node:internal/modules/cjs/loader:1275:32)
+2025-05-23T19:28:53.8343066Z     at Module._load (node:internal/modules/cjs/loader:1096:12)
+2025-05-23T19:28:53.8343445Z     at Module.require (node:internal/modules/cjs/loader:1298:19)
+2025-05-23T19:28:53.8343811Z     at require (node:internal/modules/helpers:182:18)
+2025-05-23T19:28:53.8344340Z     at Object.<anonymous> (/home/runner/work/charts/charts/.github/actions/services/release/index.js:135:19)
+2025-05-23T19:28:53.8345081Z (node:2267) Warning: Accessing non-existent property 'Helm' of module exports inside circular dependency
+2025-05-23T19:28:53.8345773Z     at emitCircularRequireWarning (node:internal/modules/cjs/loader:935:11)
+2025-05-23T19:28:53.8346213Z     at Object.get (node:internal/modules/cjs/loader:951:5)
+2025-05-23T19:28:53.8346765Z     at Object.<anonymous> (/home/runner/work/charts/charts/.github/actions/services/release/Package.js:11:15)
+2025-05-23T19:28:53.8347319Z     at Module._compile (node:internal/modules/cjs/loader:1529:14)
+2025-05-23T19:28:53.8347745Z     at Module._extensions..js (node:internal/modules/cjs/loader:1613:10)
+2025-05-23T19:28:53.8348146Z     at Module.load (node:internal/modules/cjs/loader:1275:32)
+2025-05-23T19:28:53.8348515Z     at Module._load (node:internal/modules/cjs/loader:1096:12)
+2025-05-23T19:28:53.8348888Z     at Module.require (node:internal/modules/cjs/loader:1298:19)
+2025-05-23T19:28:53.8349241Z     at require (node:internal/modules/helpers:182:18)
+2025-05-23T19:28:53.8349756Z     at Object.<anonymous> (/home/runner/work/charts/charts/.github/actions/services/release/index.js:135:19)
+2025-05-23T19:28:53.8350479Z (node:2267) Warning: Accessing non-existent property 'File' of module exports inside circular dependency
+2025-05-23T19:28:53.8351049Z     at emitCircularRequireWarning (node:internal/modules/cjs/loader:935:11)
+2025-05-23T19:28:53.8351635Z     at Object.get (node:internal/modules/cjs/loader:951:5)
+2025-05-23T19:28:53.8352183Z     at Object.<anonymous> (/home/runner/work/charts/charts/.github/actions/services/release/Publish.js:12:9)
+2025-05-23T19:28:53.8352708Z     at Module._compile (node:internal/modules/cjs/loader:1529:14)
+2025-05-23T19:28:53.8353119Z     at Module._extensions..js (node:internal/modules/cjs/loader:1613:10)
+2025-05-23T19:28:53.8353515Z     at Module.load (node:internal/modules/cjs/loader:1275:32)
+2025-05-23T19:28:53.8353874Z     at Module._load (node:internal/modules/cjs/loader:1096:12)
+2025-05-23T19:28:53.8354366Z     at Module.require (node:internal/modules/cjs/loader:1298:19)
+2025-05-23T19:28:53.8354721Z     at require (node:internal/modules/helpers:182:18)
+2025-05-23T19:28:53.8355227Z     at Object.<anonymous> (/home/runner/work/charts/charts/.github/actions/services/release/index.js:136:19)
+2025-05-23T19:28:53.8356051Z (node:2267) Warning: Accessing non-existent property 'Helm' of module exports inside circular dependency
+2025-05-23T19:28:53.8356628Z     at emitCircularRequireWarning (node:internal/modules/cjs/loader:935:11)
+2025-05-23T19:28:53.8357043Z     at Object.get (node:internal/modules/cjs/loader:951:5)
+2025-05-23T19:28:53.8357574Z     at Object.<anonymous> (/home/runner/work/charts/charts/.github/actions/services/release/Publish.js:12:15)
+2025-05-23T19:28:53.8358116Z     at Module._compile (node:internal/modules/cjs/loader:1529:14)
+2025-05-23T19:28:53.8358524Z     at Module._extensions..js (node:internal/modules/cjs/loader:1613:10)
+2025-05-23T19:28:53.8358931Z     at Module.load (node:internal/modules/cjs/loader:1275:32)
+2025-05-23T19:28:53.8359299Z     at Module._load (node:internal/modules/cjs/loader:1096:12)
+2025-05-23T19:28:53.8359669Z     at Module.require (node:internal/modules/cjs/loader:1298:19)
+2025-05-23T19:28:53.8360025Z     at require (node:internal/modules/helpers:182:18)
+2025-05-23T19:28:53.8360548Z     at Object.<anonymous> (/home/runner/work/charts/charts/.github/actions/services/release/index.js:136:19)
+2025-05-23T19:28:53.8361274Z (node:2267) Warning: Accessing non-existent property 'GitHub' of module exports inside circular dependency
+2025-05-23T19:28:53.8361858Z     at emitCircularRequireWarning (node:internal/modules/cjs/loader:935:11)
+2025-05-23T19:28:53.8362277Z     at Object.get (node:internal/modules/cjs/loader:951:5)
+2025-05-23T19:28:53.8362801Z     at Object.<anonymous> (/home/runner/work/charts/charts/.github/actions/services/release/Publish.js:12:21)
+2025-05-23T19:28:53.8363331Z     at Module._compile (node:internal/modules/cjs/loader:1529:14)
+2025-05-23T19:28:53.8363752Z     at Module._extensions..js (node:internal/modules/cjs/loader:1613:10)
+2025-05-23T19:28:53.8364139Z     at Module.load (node:internal/modules/cjs/loader:1275:32)
+2025-05-23T19:28:53.8364506Z     at Module._load (node:internal/modules/cjs/loader:1096:12)
+2025-05-23T19:28:53.8364879Z     at Module.require (node:internal/modules/cjs/loader:1298:19)
+2025-05-23T19:28:53.8365227Z     at require (node:internal/modules/helpers:182:18)
+2025-05-23T19:28:53.8365938Z     at Object.<anonymous> (/home/runner/work/charts/charts/.github/actions/services/release/index.js:136:19)
+2025-05-23T19:28:53.8366701Z (node:2267) Warning: Accessing non-existent property 'Template' of module exports inside circular dependency
+2025-05-23T19:28:53.8367278Z     at emitCircularRequireWarning (node:internal/modules/cjs/loader:935:11)
+2025-05-23T19:28:53.8367696Z     at Object.get (node:internal/modules/cjs/loader:951:5)
+2025-05-23T19:28:53.8368228Z     at Object.<anonymous> (/home/runner/work/charts/charts/.github/actions/services/release/Publish.js:12:29)
+2025-05-23T19:28:53.8368755Z     at Module._compile (node:internal/modules/cjs/loader:1529:14)
+2025-05-23T19:28:53.8369169Z     at Module._extensions..js (node:internal/modules/cjs/loader:1613:10)
+2025-05-23T19:28:53.8369567Z     at Module.load (node:internal/modules/cjs/loader:1275:32)
+2025-05-23T19:28:53.8369926Z     at Module._load (node:internal/modules/cjs/loader:1096:12)
+2025-05-23T19:28:53.8370428Z     at Module.require (node:internal/modules/cjs/loader:1298:19)
+2025-05-23T19:28:53.8370796Z     at require (node:internal/modules/helpers:182:18)
+2025-05-23T19:28:53.8371306Z     at Object.<anonymous> (/home/runner/work/charts/charts/.github/actions/services/release/index.js:136:19)
+2025-05-23T19:28:54.0953229Z ##[warning]Failed to find modified charts: File is not a constructor
+2025-05-23T19:28:54.0960141Z [Chart] [2025-05-23T19:28:54.093Z] No charts found
+2025-05-23T19:28:54.0960642Z [Workflow] [2025-05-23T19:28:54.093Z] Chart update process complete
+2025-05-23T19:28:54.1606683Z ##[group]Run actions/github-script@v7
+2025-05-23T19:28:54.1606973Z with:
+2025-05-23T19:28:54.1607471Z   script: const { Workflow } = require('./.github/actions/handlers');
+await Workflow.reportIssue({ github, context, core, exec });
+
+2025-05-23T19:28:54.1608201Z   github-token: ***
+2025-05-23T19:28:54.1608415Z   debug: false
+2025-05-23T19:28:54.1608629Z   user-agent: actions/github-script
+2025-05-23T19:28:54.1608898Z   result-encoding: json
+2025-05-23T19:28:54.1609110Z   retries: 0
+2025-05-23T19:28:54.1609329Z   retry-exempt-status-codes: 400,401,403,404,422
+2025-05-23T19:28:54.1609622Z env:
+2025-05-23T19:28:54.1609809Z   NODE_OPTIONS: --trace-warnings
+2025-05-23T19:28:54.1610112Z   CT_CONFIG_DIR: /opt/hostedtoolcache/ct/3.12.0/amd64/etc
+2025-05-23T19:28:54.1610466Z   VIRTUAL_ENV: /opt/hostedtoolcache/ct/3.12.0/amd64/venv
+2025-05-23T19:28:54.1610769Z ##[endgroup]
+2025-05-23T19:28:54.3040040Z [Workflow] [2025-05-23T19:28:54.303Z] Checking for workflow issues...
+2025-05-23T19:28:54.3044468Z [Template] [2025-05-23T19:28:54.304Z] Registered isEqual helper
+2025-05-23T19:28:54.3058623Z (node:2278) Warning: Accessing non-existent property 'File' of module exports inside circular dependency
+2025-05-23T19:28:54.3059940Z     at emitCircularRequireWarning (node:internal/modules/cjs/loader:935:11)
+2025-05-23T19:28:54.3060879Z     at Object.get (node:internal/modules/cjs/loader:951:5)
+2025-05-23T19:28:54.3061991Z     at Object.<anonymous> (/home/runner/work/charts/charts/.github/actions/services/chart/index.js:12:9)
+2025-05-23T19:28:54.3063164Z     at Module._compile (node:internal/modules/cjs/loader:1529:14)
+2025-05-23T19:28:54.3064082Z     at Module._extensions..js (node:internal/modules/cjs/loader:1613:10)
+2025-05-23T19:28:54.3064980Z     at Module.load (node:internal/modules/cjs/loader:1275:32)
+2025-05-23T19:28:54.3065999Z     at Module._load (node:internal/modules/cjs/loader:1096:12)
+2025-05-23T19:28:54.3066862Z     at Module.require (node:internal/modules/cjs/loader:1298:19)
+2025-05-23T19:28:54.3067679Z     at require (node:internal/modules/helpers:182:18)
+2025-05-23T19:28:54.3068731Z     at Object.<anonymous> (/home/runner/work/charts/charts/.github/actions/services/index.js:8:15)
+2025-05-23T19:28:54.3070187Z (node:2278) Warning: Accessing non-existent property 'Helm' of module exports inside circular dependency
+2025-05-23T19:28:54.3071365Z     at emitCircularRequireWarning (node:internal/modules/cjs/loader:935:11)
+2025-05-23T19:28:54.3072229Z     at Object.get (node:internal/modules/cjs/loader:951:5)
+2025-05-23T19:28:54.3073277Z     at Object.<anonymous> (/home/runner/work/charts/charts/.github/actions/services/chart/index.js:12:15)
+2025-05-23T19:28:54.3074334Z     at Module._compile (node:internal/modules/cjs/loader:1529:14)
+2025-05-23T19:28:54.3075151Z     at Module._extensions..js (node:internal/modules/cjs/loader:1613:10)
+2025-05-23T19:28:54.3076273Z     at Module.load (node:internal/modules/cjs/loader:1275:32)
+2025-05-23T19:28:54.3077051Z     at Module._load (node:internal/modules/cjs/loader:1096:12)
+2025-05-23T19:28:54.3077829Z     at Module.require (node:internal/modules/cjs/loader:1298:19)
+2025-05-23T19:28:54.3078573Z     at require (node:internal/modules/helpers:182:18)
+2025-05-23T19:28:54.3079544Z     at Object.<anonymous> (/home/runner/work/charts/charts/.github/actions/services/index.js:8:15)
+2025-05-23T19:28:54.3080977Z (node:2278) Warning: Accessing non-existent property 'File' of module exports inside circular dependency
+2025-05-23T19:28:54.3082138Z     at emitCircularRequireWarning (node:internal/modules/cjs/loader:935:11)
+2025-05-23T19:28:54.3082988Z     at Object.get (node:internal/modules/cjs/loader:951:5)
+2025-05-23T19:28:54.3084060Z     at Object.<anonymous> (/home/runner/work/charts/charts/.github/actions/services/release/index.js:11:9)
+2025-05-23T19:28:54.3085130Z     at Module._compile (node:internal/modules/cjs/loader:1529:14)
+2025-05-23T19:28:54.3086173Z     at Module._extensions..js (node:internal/modules/cjs/loader:1613:10)
+2025-05-23T19:28:54.3087437Z     at Module.load (node:internal/modules/cjs/loader:1275:32)
+2025-05-23T19:28:54.3088461Z     at Module._load (node:internal/modules/cjs/loader:1096:12)
+2025-05-23T19:28:54.3089245Z     at Module.require (node:internal/modules/cjs/loader:1298:19)
+2025-05-23T19:28:54.3089969Z     at require (node:internal/modules/helpers:182:18)
+2025-05-23T19:28:54.3090926Z     at Object.<anonymous> (/home/runner/work/charts/charts/.github/actions/services/index.js:16:17)
+2025-05-23T19:28:54.3092342Z (node:2278) Warning: Accessing non-existent property 'GitHub' of module exports inside circular dependency
+2025-05-23T19:28:54.3093504Z     at emitCircularRequireWarning (node:internal/modules/cjs/loader:935:11)
+2025-05-23T19:28:54.3094349Z     at Object.get (node:internal/modules/cjs/loader:951:5)
+2025-05-23T19:28:54.3095404Z     at Object.<anonymous> (/home/runner/work/charts/charts/.github/actions/services/release/index.js:11:15)
+2025-05-23T19:28:54.3096659Z     at Module._compile (node:internal/modules/cjs/loader:1529:14)
+2025-05-23T19:28:54.3097531Z     at Module._extensions..js (node:internal/modules/cjs/loader:1613:10)
+2025-05-23T19:28:54.3098313Z     at Module.load (node:internal/modules/cjs/loader:1275:32)
+2025-05-23T19:28:54.3099011Z     at Module._load (node:internal/modules/cjs/loader:1096:12)
+2025-05-23T19:28:54.3099739Z     at Module.require (node:internal/modules/cjs/loader:1298:19)
+2025-05-23T19:28:54.3100434Z     at require (node:internal/modules/helpers:182:18)
+2025-05-23T19:28:54.3101369Z     at Object.<anonymous> (/home/runner/work/charts/charts/.github/actions/services/index.js:16:17)
+2025-05-23T19:28:54.3102764Z (node:2278) Warning: Accessing non-existent property 'File' of module exports inside circular dependency
+2025-05-23T19:28:54.3103917Z     at emitCircularRequireWarning (node:internal/modules/cjs/loader:935:11)
+2025-05-23T19:28:54.3104757Z     at Object.get (node:internal/modules/cjs/loader:951:5)
+2025-05-23T19:28:54.3106302Z     at Object.<anonymous> (/home/runner/work/charts/charts/.github/actions/services/release/Package.js:11:9)
+2025-05-23T19:28:54.3107369Z     at Module._compile (node:internal/modules/cjs/loader:1529:14)
+2025-05-23T19:28:54.3108105Z     at Module._extensions..js (node:internal/modules/cjs/loader:1613:10)
+2025-05-23T19:28:54.3108800Z     at Module.load (node:internal/modules/cjs/loader:1275:32)
+2025-05-23T19:28:54.3109435Z     at Module._load (node:internal/modules/cjs/loader:1096:12)
+2025-05-23T19:28:54.3110088Z     at Module.require (node:internal/modules/cjs/loader:1298:19)
+2025-05-23T19:28:54.3110702Z     at require (node:internal/modules/helpers:182:18)
+2025-05-23T19:28:54.3111600Z     at Object.<anonymous> (/home/runner/work/charts/charts/.github/actions/services/release/index.js:135:19)
+2025-05-23T19:28:54.3112864Z (node:2278) Warning: Accessing non-existent property 'Helm' of module exports inside circular dependency
+2025-05-23T19:28:54.3113867Z     at emitCircularRequireWarning (node:internal/modules/cjs/loader:935:11)
+2025-05-23T19:28:54.3114592Z     at Object.get (node:internal/modules/cjs/loader:951:5)
+2025-05-23T19:28:54.3115521Z     at Object.<anonymous> (/home/runner/work/charts/charts/.github/actions/services/release/Package.js:11:15)
+2025-05-23T19:28:54.3116902Z     at Module._compile (node:internal/modules/cjs/loader:1529:14)
+2025-05-23T19:28:54.3117697Z     at Module._extensions..js (node:internal/modules/cjs/loader:1613:10)
+2025-05-23T19:28:54.3118447Z     at Module.load (node:internal/modules/cjs/loader:1275:32)
+2025-05-23T19:28:54.3119137Z     at Module._load (node:internal/modules/cjs/loader:1096:12)
+2025-05-23T19:28:54.3119839Z     at Module.require (node:internal/modules/cjs/loader:1298:19)
+2025-05-23T19:28:54.3120504Z     at require (node:internal/modules/helpers:182:18)
+2025-05-23T19:28:54.3121478Z     at Object.<anonymous> (/home/runner/work/charts/charts/.github/actions/services/release/index.js:135:19)
+2025-05-23T19:28:54.3122852Z (node:2278) Warning: Accessing non-existent property 'File' of module exports inside circular dependency
+2025-05-23T19:28:54.3124149Z     at emitCircularRequireWarning (node:internal/modules/cjs/loader:935:11)
+2025-05-23T19:28:54.3125183Z     at Object.get (node:internal/modules/cjs/loader:951:5)
+2025-05-23T19:28:54.3126388Z     at Object.<anonymous> (/home/runner/work/charts/charts/.github/actions/services/release/Publish.js:12:9)
+2025-05-23T19:28:54.3127314Z     at Module._compile (node:internal/modules/cjs/loader:1529:14)
+2025-05-23T19:28:54.3127885Z     at Module._extensions..js (node:internal/modules/cjs/loader:1613:10)
+2025-05-23T19:28:54.3128416Z     at Module.load (node:internal/modules/cjs/loader:1275:32)
+2025-05-23T19:28:54.3128909Z     at Module._load (node:internal/modules/cjs/loader:1096:12)
+2025-05-23T19:28:54.3129541Z     at Module.require (node:internal/modules/cjs/loader:1298:19)
+2025-05-23T19:28:54.3130038Z     at require (node:internal/modules/helpers:182:18)
+2025-05-23T19:28:54.3130807Z     at Object.<anonymous> (/home/runner/work/charts/charts/.github/actions/services/release/index.js:136:19)
+2025-05-23T19:28:54.3131970Z (node:2278) Warning: Accessing non-existent property 'Helm' of module exports inside circular dependency
+2025-05-23T19:28:54.3132837Z     at emitCircularRequireWarning (node:internal/modules/cjs/loader:935:11)
+2025-05-23T19:28:54.3133490Z     at Object.get (node:internal/modules/cjs/loader:951:5)
+2025-05-23T19:28:54.3134334Z     at Object.<anonymous> (/home/runner/work/charts/charts/.github/actions/services/release/Publish.js:12:15)
+2025-05-23T19:28:54.3135132Z     at Module._compile (node:internal/modules/cjs/loader:1529:14)
+2025-05-23T19:28:54.3135883Z     at Module._extensions..js (node:internal/modules/cjs/loader:1613:10)
+2025-05-23T19:28:54.3136531Z     at Module.load (node:internal/modules/cjs/loader:1275:32)
+2025-05-23T19:28:54.3137103Z     at Module._load (node:internal/modules/cjs/loader:1096:12)
+2025-05-23T19:28:54.3137676Z     at Module.require (node:internal/modules/cjs/loader:1298:19)
+2025-05-23T19:28:54.3138233Z     at require (node:internal/modules/helpers:182:18)
+2025-05-23T19:28:54.3139062Z     at Object.<anonymous> (/home/runner/work/charts/charts/.github/actions/services/release/index.js:136:19)
+2025-05-23T19:28:54.3140324Z (node:2278) Warning: Accessing non-existent property 'GitHub' of module exports inside circular dependency
+2025-05-23T19:28:54.3141245Z     at emitCircularRequireWarning (node:internal/modules/cjs/loader:935:11)
+2025-05-23T19:28:54.3141850Z     at Object.get (node:internal/modules/cjs/loader:951:5)
+2025-05-23T19:28:54.3142604Z     at Object.<anonymous> (/home/runner/work/charts/charts/.github/actions/services/release/Publish.js:12:21)
+2025-05-23T19:28:54.3143331Z     at Module._compile (node:internal/modules/cjs/loader:1529:14)
+2025-05-23T19:28:54.3143870Z     at Module._extensions..js (node:internal/modules/cjs/loader:1613:10)
+2025-05-23T19:28:54.3144457Z     at Module.load (node:internal/modules/cjs/loader:1275:32)
+2025-05-23T19:28:54.3144988Z     at Module._load (node:internal/modules/cjs/loader:1096:12)
+2025-05-23T19:28:54.3145461Z     at Module.require (node:internal/modules/cjs/loader:1298:19)
+2025-05-23T19:28:54.3146160Z     at require (node:internal/modules/helpers:182:18)
+2025-05-23T19:28:54.3146913Z     at Object.<anonymous> (/home/runner/work/charts/charts/.github/actions/services/release/index.js:136:19)
+2025-05-23T19:28:54.3147847Z (node:2278) Warning: Accessing non-existent property 'Template' of module exports inside circular dependency
+2025-05-23T19:28:54.3148563Z     at emitCircularRequireWarning (node:internal/modules/cjs/loader:935:11)
+2025-05-23T19:28:54.3149077Z     at Object.get (node:internal/modules/cjs/loader:951:5)
+2025-05-23T19:28:54.3149662Z     at Object.<anonymous> (/home/runner/work/charts/charts/.github/actions/services/release/Publish.js:12:29)
+2025-05-23T19:28:54.3150330Z     at Module._compile (node:internal/modules/cjs/loader:1529:14)
+2025-05-23T19:28:54.3150861Z     at Module._extensions..js (node:internal/modules/cjs/loader:1613:10)
+2025-05-23T19:28:54.3151277Z     at Module.load (node:internal/modules/cjs/loader:1275:32)
+2025-05-23T19:28:54.3151919Z     at Module._load (node:internal/modules/cjs/loader:1096:12)
+2025-05-23T19:28:54.3152543Z     at Module.require (node:internal/modules/cjs/loader:1298:19)
+2025-05-23T19:28:54.3152915Z     at require (node:internal/modules/helpers:182:18)
+2025-05-23T19:28:54.3153569Z     at Object.<anonymous> (/home/runner/work/charts/charts/.github/actions/services/release/index.js:136:19)
+2025-05-23T19:28:54.4626838Z [Rest] [2025-05-23T19:28:54.462Z] Workflow run status: in_progress, conclusion: null
+2025-05-23T19:28:54.4627841Z [Issue] [2025-05-23T19:28:54.462Z] Workflow run status: in_progress, conclusion: null, hasIssues: true
+2025-05-23T19:28:54.4628613Z [Issue] [2025-05-23T19:28:54.462Z] Creating workflow issue...
+2025-05-23T19:28:54.4641012Z [Template] [2025-05-23T19:28:54.463Z] Rendering template
+2025-05-23T19:28:54.4641923Z [Template] [2025-05-23T19:28:54.463Z] Registered repository raw URL helper
+2025-05-23T19:28:54.4711277Z [Template] [2025-05-23T19:28:54.470Z] Template rendered successfully
+2025-05-23T19:28:54.4713964Z [Issue] [2025-05-23T19:28:54.471Z] Creating issue: workflow: Issues Detected
+2025-05-23T19:28:54.8172183Z [Issue] [2025-05-23T19:28:54.816Z] Created issue #212: workflow: Issues Detected
+2025-05-23T19:28:54.8173441Z [Workflow] [2025-05-23T19:28:54.817Z] Workflow issue reported successfully
+2025-05-23T19:28:54.8290565Z Post job cleanup.
+2025-05-23T19:28:54.9920285Z Post job cleanup.
+2025-05-23T19:28:55.0850933Z [command]/usr/bin/git version
+2025-05-23T19:28:55.0896082Z git version 2.49.0
+2025-05-23T19:28:55.0946726Z Temporarily overriding HOME='/home/runner/work/_temp/2d238b1e-fd22-4e69-b5eb-22d517e93754' before making global git config changes
+2025-05-23T19:28:55.0948783Z Adding repository directory to the temporary git global config as a safe directory
+2025-05-23T19:28:55.0953634Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/charts/charts
+2025-05-23T19:28:55.0998577Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2025-05-23T19:28:55.1038765Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2025-05-23T19:28:55.1281298Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2025-05-23T19:28:55.1304435Z http.https://github.com/.extraheader
+2025-05-23T19:28:55.1317114Z [command]/usr/bin/git config --local --unset-all http.https://github.com/.extraheader
+2025-05-23T19:28:55.1350925Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2025-05-23T19:28:55.1685352Z Cleaning up orphan processes

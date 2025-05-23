@@ -8,8 +8,9 @@
  */
 const path = require('path');
 const Action = require('../../core/Action');
-const { File, Helm } = require('../');
 const { ReleaseError } = require('../../utils/errors');
+const File = require('../File');
+const Helm = require('../helm');
 
 class Package extends Action {
   /**

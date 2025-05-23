@@ -7,7 +7,6 @@
  * @license BSD-3-Clause
  */
 const Action = require('../../core/Action');
-const { GitHubApiError } = require('../../utils/errors');
 
 class Api extends Action {
   /**
