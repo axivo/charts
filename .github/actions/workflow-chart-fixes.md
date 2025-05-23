@@ -21,7 +21,7 @@ This document details the issues found in the GitHub Actions workflow for chart 
 ---
 
 ### 2. Helm.Docs Constructor Error
-**Status**: ❌ Needs Fix  
+**Status**: ✅ Fixed  
 **Severity**: Critical - Blocks workflow execution  
 **Error**: `Failed to install helm-docs: Helm.Docs is not a constructor`
 
@@ -50,7 +50,30 @@ const docsService = new Docs({
 
 ---
 
-### 3. Circular Dependency Warnings
+### 3. File Constructor Error
+**Status**: ❌ Needs Fix  
+**Severity**: Critical - Blocks workflow execution  
+**Error**: `Failed to update charts: File is not a constructor`
+**Location**: "Update repository charts" step at `services/chart/Update.js:21:24`
+
+**Root Cause**: Same issue as Helm.Docs - circular dependency causes `File` to be undefined when the constructor is called. The `services/chart/Update.js` imports `{ File, Helm }` from `../` which creates a circular reference.
+
+**Recommended Fix**:
+```javascript
+// In services/chart/Update.js, line 11
+// CURRENT (causes circular dependency):
+const { File, Helm } = require('../');
+
+// FIXED (direct imports):
+const File = require('../File');
+const Helm = require('../helm');
+```
+
+**Pattern Validation**: This follows the same fix pattern as the Helm.Docs issue and matches direct import patterns used elsewhere in the codebase.
+
+---
+
+### 4. Circular Dependency Warnings
 **Status**: ⚠️ Non-blocking but needs attention  
 **Severity**: Medium - Code quality issue  
 **Warning**: Multiple "Accessing non-existent property of module exports inside circular dependency"
@@ -116,22 +139,42 @@ const GitHub = require('../github');
 
 ## Implementation Order
 
-1. **First Priority** (Blocking Issue):
-   - Fix the `Helm.Docs` constructor error in `handlers/Workflow.js`
-   - This is preventing the workflow from proceeding past the `Install helm-docs` step
+1. **First Priority** (Blocking Issue) - ✅ COMPLETED:
+   - Fixed the `Helm.Docs` constructor error in `handlers/Workflow.js`
+   - Workflow now proceeds past the `Install helm-docs` step
 
-2. **Second Priority** (Code Quality):
-   - Fix circular dependencies in service modules
-   - While not blocking execution, these warnings indicate poor module structure
+2. **Second Priority** (New Blocking Issue):
+   - Fix the `File` constructor error in `services/chart/Update.js`
+   - This is now preventing the workflow from completing the `Update repository charts` step
+
+3. **Third Priority** (Code Quality):
+   - Fix remaining circular dependencies in service modules
+   - These are causing the constructor errors and need systematic fixing
 
 ---
 
-## Testing Recommendations
+## Testing Progress
 
-After applying fixes:
-1. Remove `NODE_OPTIONS: '--trace-warnings'` from workflow once issues are resolved
-2. Run the workflow to verify all steps complete successfully
-3. Check that no new warnings are introduced
+### Round 1 Testing Results:
+- ✅ `Helm.Docs` fix applied and verified working
+- ✅ Workflow progressed to "Update repository charts" step
+- ❌ New error discovered: `File is not a constructor`
+
+### Next Testing Steps:
+1. Apply the `File` constructor fix in `services/chart/Update.js`
+2. Re-run workflow to check for additional constructor errors
+3. Continue fixing circular dependencies until workflow completes
+4. Remove `NODE_OPTIONS: '--trace-warnings'` once all issues are resolved
+
+## Pattern Analysis
+
+The circular dependency issue is causing a systematic problem:
+1. Service files import from `../` (the index)
+2. The index requires all services
+3. During circular resolution, some exports are undefined
+4. Constructor calls fail with "X is not a constructor"
+
+This pattern will likely affect other files that import from the service index.
 
 ---
 
