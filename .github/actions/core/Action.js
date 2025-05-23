@@ -19,12 +19,14 @@ class Action {
    * @param {Object} params - Action parameters
    * @param {Object} params.core - GitHub Actions Core API
    * @param {Object} params.github - GitHub API client
+   * @param {Object} params.context - GitHub Actions context
    * @param {Object} params.exec - GitHub Actions exec helper
    * @param {Object} params.config - Configuration instance
    */
-  constructor({ core, github, exec, config }) {
+  constructor({ core, github, context, exec, config }) {
     this.core = core;
     this.github = github;
+    this.context = context;
     this.exec = exec;
     this.config = config;
     this.errorHandler = createErrorHandler(core);

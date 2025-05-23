@@ -6,9 +6,8 @@
  * @author AXIVO
  * @license BSD-3-Clause
  */
-const fs = require('fs').promises;
 const Action = require('../core/Action');
-const { File, GitHub, Issue, Label, Template } = require('../services');
+const { File, GitHub, Issue: IssueService, Label, Template } = require('../services');
 const { IssueError } = require('../utils/errors');
 
 class Issue extends Action {
@@ -21,7 +20,7 @@ class Issue extends Action {
     super(params);
     this.fileService = new File(params);
     this.githubService = new GitHub.Rest(params);
-    this.issueService = new Issue(params);
+    this.issueService = new IssueService(params);
     this.labelService = new Label(params);
     this.templateService = new Template(params);
   }
@@ -93,7 +92,7 @@ class Issue extends Action {
    */
   async process() {
     return this.execute('process issues', async () => {
-      const action = this.github.context.payload.action;
+      const action = this.context.payload.action;
       switch (action) {
         case 'labeled':
           this.logger.info('Processing labeled action');
@@ -117,7 +116,7 @@ class Issue extends Action {
     try {
       const githubRest = this.github.rest || this.github;
       const hasIssues = await this.validate();
-      if (this.config.get('issue.createLabels') && this.github.context.workflow === 'Chart') {
+      if (this.config.get('issue.createLabels') && this.context.workflow === 'Chart') {
         this.logger.warning('Set "createLabels: false" in config.js after initial setup, to optimize workflow performance.');
       }
       if (!hasIssues) {
@@ -128,7 +127,7 @@ class Issue extends Action {
       const templatePath = this.config.get('workflow.template');
       const templateContent = await this.fileService.read(templatePath);
       const issue = await this.issueService.report({
-        context: this.github.context,
+        context: this.context,
         templateContent,
         templateService: this.templateService,
         labelService: this.labelService
@@ -175,10 +174,10 @@ class Issue extends Action {
    */
   async validate() {
     try {
-      const runId = this.github.context.runId;
+      const runId = this.context.runId;
       const result = await this.githubService.getWorkflowRun({
-        owner: this.github.context.repo.owner,
-        repo: this.github.context.repo.repo,
+        owner: this.context.repo.owner,
+        repo: this.context.repo.repo,
         runId
       });
       const hasIssues = result.conclusion !== 'success' ||

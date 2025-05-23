@@ -7,7 +7,7 @@
  * @license BSD-3-Clause
  */
 const Action = require('../core/Action');
-const { Chart, Docs, File, Git, GitHub, Helm } = require('../services');
+const { Chart: ChartService, Docs, File, Git, GitHub } = require('../services');
 
 class Chart extends Action {
   /**
@@ -17,13 +17,12 @@ class Chart extends Action {
    */
   constructor(params) {
     super(params);
-    this.chartService = new Chart(params);
+    this.chartService = new ChartService(params);
     this.docsService = new Docs(params);
     this.fileService = new File(params);
     this.gitService = new Git(params);
-    this.helmService = new Helm(params);
     this.githubService = new GitHub.Rest(params);
-    this.chartUpdate = new Chart.Update(params);
+    this.chartUpdate = new ChartService.Update(params);
   }
 
   /**
@@ -33,8 +32,8 @@ class Chart extends Action {
    */
   async process() {
     try {
-      const files = Object.keys(await this.githubService.getUpdatedFiles({ context: this.github.context }));
-      const charts = await this.chartService.find({ core: this.core, files });
+      const files = Object.keys(await this.githubService.getUpdatedFiles({ context: this.context }));
+      const charts = await this.chartService.find(files);
       if (charts.total === 0) {
         this.logger.info('No charts found');
         return { charts: 0, updated: 0 };

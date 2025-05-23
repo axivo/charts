@@ -49,22 +49,22 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            const { Workflow } = require('./.github/actions/handlers');
-            await Workflow.configureRepository({ github, context, core, exec });
+            const { configureGitRepository } = require('./.github/scripts/utils.js');
+            await configureGitRepository({ core, exec });
 
       - name: Update repository issue labels
         uses: actions/github-script@v7
         with:
           script: |
-            const { Workflow } = require('./.github/actions/handlers');
-            await Workflow.updateLabels({ github, context, core, exec });
+            const { updateIssueLabels } = require('./.github/scripts/utils.js');
+            await updateIssueLabels({ github, context, core });
 
       - name: Install helm-docs
         uses: actions/github-script@v7
         with:
           script: |
-            const { Workflow } = require('./.github/actions/handlers');
-            await Workflow.installHelmDocs({ github, context, core, exec, version: '1.14.2' });
+            const { installHelmDocs } = require('./.github/scripts/documentation.js');
+            await installHelmDocs({ core, exec, version: '1.14.2' });
 
       - name: Setup repository charts linter
         uses: helm/chart-testing-action@v2
@@ -73,13 +73,13 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            const { Workflow } = require('./.github/actions/handlers');
-            await Workflow.updateCharts({ github, context, core, exec });
+            const { updateCharts } = require('./.github/scripts/chart.js');
+            await updateCharts({ github, context, core, exec });
 
       - name: Report workflow issue
         uses: actions/github-script@v7
         if: always()
         with:
           script: |
-            const { Workflow } = require('./.github/actions/handlers');
-            await Workflow.reportIssue({ github, context, core, exec });
+            const { reportWorkflowIssue } = require('./.github/scripts/utils.js');
+            await reportWorkflowIssue({ github, context, core });

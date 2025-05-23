@@ -8,9 +8,11 @@
 const Chart = require('./Chart');
 const Issue = require('./Issue');
 const Release = require('./release');
+const Workflow = require('./Workflow');
 
 module.exports = {
   Chart,
   Issue,
-  Release
+  Release,
+  Workflow
 };

@@ -32,8 +32,8 @@ class Issue extends Action {
     return this.execute('create issue', async () => {
       this.logger.info(`Creating issue: ${params.title}`);
       const response = await this.github.rest.issues.create({
-        owner: this.github.context.repo.owner,
-        repo: this.github.context.repo.repo,
+        owner: this.context.repo.owner,
+        repo: this.context.repo.repo,
         title: params.title,
         body: params.body,
         labels: params.labels || []
@@ -75,7 +75,7 @@ class Issue extends Action {
    */
   async report(params) {
     try {
-      const context = params.context || this.github.context;
+      const context = params.context || this.context;
       const repoUrl = context.payload.repository.html_url;
       const isPullRequest = Boolean(context.payload.pull_request);
       const branchName = isPullRequest

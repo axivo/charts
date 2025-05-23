@@ -56,23 +56,23 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            const { Workflow } = require('./.github/actions/handlers');
-            await Workflow.configureRepository({ github, context, core, exec });
+            const { configureGitRepository } = require('./.github/scripts/utils.js');
+            await configureGitRepository({ core, exec });
 
       - name: Process chart releases
         uses: actions/github-script@v7
         with:
           script: |
-            const { Workflow } = require('./.github/actions/handlers');
-            await Workflow.processReleases({ github, context, core, exec });
+            const { processReleases } = require('./.github/scripts/release.js');
+            await processReleases({ github, context, core, exec });
 
-      - name: Setup frontpage
+      - name: Setup pages build environment
         id: setup
         uses: actions/github-script@v7
         with:
           script: |
-            const { Workflow } = require('./.github/actions/handlers');
-            await Workflow.setFrontpage({ github, context, core, exec });
+            const { setupBuildEnvironment } = require('./.github/scripts/release.js');
+            await setupBuildEnvironment({ context, core });
 
       - name: Build pages
         uses: actions/jekyll-build-pages@v1
@@ -99,5 +99,5 @@ jobs:
         if: always()
         with:
           script: |
-            const { Workflow } = require('./.github/actions/handlers');
-            await Workflow.reportIssue({ github, context, core, exec });
+            const { reportWorkflowIssue } = require('./.github/scripts/utils.js');
+            await reportWorkflowIssue({ github, context, core });
