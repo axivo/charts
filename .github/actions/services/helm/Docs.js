@@ -12,7 +12,6 @@ const path = require('path');
 const Action = require('../../core/Action');
 const { HelmError } = require('../../utils/errors');
 const Git = require('../Git');
-const GitHub = require('../github');
 const Shell = require('../Shell');
 
 class Docs extends Action {
@@ -28,45 +27,6 @@ class Docs extends Action {
   }
 
   /**
-   * Commits documentation changes
-   * 
-   * @param {string} headRef - Git branch reference
-   * @param {Array<string>} files - Modified files to commit
-   * @returns {Promise<Object>} - Commit operation result
-   */
-  async commit(headRef, files) {
-    try {
-      const currentHead = await this.gitService.getRevision('HEAD');
-      const graphqlService = new GitHub.GraphQL({
-        github: this.github,
-        context: this.context,
-        core: this.core,
-        exec: this.exec,
-        config: this.config
-      });
-      const stagedChanges = await this.gitService.getStagedChanges();
-      const { additions, deletions } = stagedChanges;
-      if (additions.length + deletions.length) {
-        await graphqlService.createSignedCommit({
-          owner: this.context.repo.owner,
-          repo: this.context.repo.repo,
-          branchName: headRef,
-          expectedHeadOid: currentHead,
-          additions,
-          deletions,
-          commitMessage: 'chore(github-action): update documentation'
-        });
-        this.logger.info(`Successfully updated ${files.length} documentation files`);
-        return { updated: files.length };
-      }
-      this.logger.info('No documentation changes to commit');
-      return { updated: 0 };
-    } catch (error) {
-      throw new HelmError('commit documentation changes', error);
-    }
-  }
-
-  /**
    * Generates documentation for charts
    * 
    * @param {Array<string>} dirs - Chart directories to generate documentation for
@@ -79,24 +39,20 @@ class Docs extends Action {
       await this.gitService.fetch('origin', headRef);
       await this.gitService.switch(headRef);
       this.logger.info('Generating documentation with helm-docs...');
-
       if (!dirs || !dirs.length) {
         await this.shellService.execute('helm-docs', ['-l', this.config.get('workflow.docs.logLevel')]);
       } else {
         const dirsList = dirs.join(',');
         await this.shellService.execute('helm-docs', ['-g', dirsList, '-l', this.config.get('workflow.docs.logLevel')]);
       }
-
       await this.gitService.execute(['add', '.']);
-      const filesOutput = await this.gitService.execute(['diff', '--staged', '--name-only'], { output: true });
+      const filesOutput = await this.gitService.execute(['diff', '--staged', '--name-only']);
       const files = filesOutput.split('\n').filter(Boolean);
-
       if (!files.length) {
         this.logger.info('No file changes detected, documentation is up to date');
         return { updated: 0, total: dirs ? dirs.length : 0 };
       }
-
-      const result = await this.commit(headRef, files);
+      const result = await this.gitService.signedCommit(headRef, files, 'chore(github-action): update documentation');
       return { updated: result.updated, total: dirs ? dirs.length : 0 };
     } catch (error) {
       throw new HelmError('generate documentation', error);
@@ -116,7 +72,6 @@ class Docs extends Action {
       const packageBaseUrl = 'https://github.com/norwoodj/helm-docs/releases/download';
       const packageUrl = [packageBaseUrl, `v${version}`, packageFile].join('/');
       const packagePath = [tempDir, packageFile].join('/');
-
       this.logger.info(`Installing helm-docs v${version}...`);
       await this.shellService.execute('sudo', ['wget', '-qP', tempDir, '-t', '10', '-T', '60', packageUrl]);
       await this.shellService.execute('sudo', ['apt-get', '-y', 'install', packagePath]);

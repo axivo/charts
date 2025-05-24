@@ -216,6 +216,51 @@ class Git extends Action {
   }
 
   /**
+   * Creates a signed commit using GitHub GraphQL API
+   * 
+   * @param {string} branch - Git branch reference
+   * @param {Array<string>} files - Modified files to commit
+   * @param {string} message - Commit message
+   * @returns {Promise<Object>} - Commit operation result
+   */
+  async signedCommit(branch, files, message) {
+    try {
+      const headRef = branch || process.env.GITHUB_HEAD_REF;
+      const currentHead = await this.getRevision('HEAD');
+      await this.fetch('origin', headRef);
+      await this.switch(headRef);
+      await this.add(files);
+      const stagedChanges = await this.getStagedChanges();
+      const { additions, deletions } = stagedChanges;
+      if (additions.length + deletions.length === 0) {
+        this.logger.info('No changes to commit');
+        return { updated: 0 };
+      }
+      const GitHub = require('./github');
+      const graphqlService = new GitHub.GraphQL({
+        github: this.github,
+        context: this.context,
+        core: this.core,
+        exec: this.exec,
+        config: this.config
+      });
+      await graphqlService.createSignedCommit({
+        owner: this.context.repo.owner,
+        repo: this.context.repo.repo,
+        branchName: headRef,
+        expectedHeadOid: currentHead,
+        additions,
+        deletions,
+        commitMessage: message
+      });
+      this.logger.info(`Successfully committed ${files.length} files`);
+      return { updated: files.length };
+    } catch (error) {
+      throw new GitError('create signed commit', error);
+    }
+  }
+
+  /**
    * Switches to a different branch
    * 
    * @param {string} branch - Branch name

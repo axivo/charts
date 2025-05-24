@@ -1,0 +1,622 @@
+﻿2025-05-23T20:17:06.7009744Z Current runner version: '2.324.0'
+2025-05-23T20:17:06.7044102Z ##[group]Operating System
+2025-05-23T20:17:06.7045507Z Ubuntu
+2025-05-23T20:17:06.7046244Z 24.04.2
+2025-05-23T20:17:06.7047026Z LTS
+2025-05-23T20:17:06.7047693Z ##[endgroup]
+2025-05-23T20:17:06.7048572Z ##[group]Runner Image
+2025-05-23T20:17:06.7049442Z Image: ubuntu-24.04
+2025-05-23T20:17:06.7050428Z Version: 20250511.1.0
+2025-05-23T20:17:06.7052377Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20250511.1/images/ubuntu/Ubuntu2404-Readme.md
+2025-05-23T20:17:06.7054744Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20250511.1
+2025-05-23T20:17:06.7056334Z ##[endgroup]
+2025-05-23T20:17:06.7057215Z ##[group]Runner Image Provisioner
+2025-05-23T20:17:06.7058158Z 2.0.437.1
+2025-05-23T20:17:06.7058816Z ##[endgroup]
+2025-05-23T20:17:06.7060957Z ##[group]GITHUB_TOKEN Permissions
+2025-05-23T20:17:06.7063720Z Checks: write
+2025-05-23T20:17:06.7064648Z Contents: write
+2025-05-23T20:17:06.7065585Z Issues: write
+2025-05-23T20:17:06.7066573Z Metadata: read
+2025-05-23T20:17:06.7067345Z ##[endgroup]
+2025-05-23T20:17:06.7070294Z Secret source: Actions
+2025-05-23T20:17:06.7071550Z Prepare workflow directory
+2025-05-23T20:17:06.7652442Z Prepare all required actions
+2025-05-23T20:17:06.7707091Z Getting action download info
+2025-05-23T20:17:07.0908677Z ##[group]Download immutable action package 'actions/checkout@v4'
+2025-05-23T20:17:07.0909854Z Version: 4.2.2
+2025-05-23T20:17:07.0911232Z Digest: sha256:ccb2698953eaebd21c7bf6268a94f9c26518a7e38e27e0b83c1fe1ad049819b1
+2025-05-23T20:17:07.0912530Z Source commit SHA: 11bd71901bbe5b1630ceea73d27597364c9af683
+2025-05-23T20:17:07.0913372Z ##[endgroup]
+2025-05-23T20:17:07.1576384Z Download action repository 'azure/setup-helm@v4' (SHA:b9e51907a09c216f16ebe8536097933489208112)
+2025-05-23T20:17:07.3193234Z ##[group]Download immutable action package 'actions/setup-node@v4'
+2025-05-23T20:17:07.3194159Z Version: 4.4.0
+2025-05-23T20:17:07.3194967Z Digest: sha256:9427cefe82346e992fb5b949e3569b39d537ae41aa3086483b14eceebfc16bc1
+2025-05-23T20:17:07.3195991Z Source commit SHA: 49933ea5288caeca8642d1e84afbd3f7d6820020
+2025-05-23T20:17:07.3196772Z ##[endgroup]
+2025-05-23T20:17:07.4166954Z ##[group]Download immutable action package 'actions/github-script@v7'
+2025-05-23T20:17:07.4167716Z Version: 7.0.1
+2025-05-23T20:17:07.4168380Z Digest: sha256:bce02966afe3a75123f766b765abe432fac5464b74976015dc06b811ac9054c7
+2025-05-23T20:17:07.4169280Z Source commit SHA: 60a0d83039c74a4aee543508d2ffcb1c3799cdea
+2025-05-23T20:17:07.4169926Z ##[endgroup]
+2025-05-23T20:17:07.5919049Z Download action repository 'helm/chart-testing-action@v2' (SHA:0d28d3144d3a25ea2cc349d6e59901c4ff469b3b)
+2025-05-23T20:17:07.9415660Z Getting action download info
+2025-05-23T20:17:08.0337396Z Download action repository 'sigstore/cosign-installer@dc72c7d5c4d10cd6bcb8cf6e3fd625a9e5e537da' (SHA:dc72c7d5c4d10cd6bcb8cf6e3fd625a9e5e537da)
+2025-05-23T20:17:08.2741468Z Complete job name: Updates
+2025-05-23T20:17:08.3583046Z ##[group]Run actions/checkout@v4
+2025-05-23T20:17:08.3584305Z with:
+2025-05-23T20:17:08.3584994Z   repository: axivo/charts
+2025-05-23T20:17:08.3586068Z   token: ***
+2025-05-23T20:17:08.3586761Z   ssh-strict: true
+2025-05-23T20:17:08.3587469Z   ssh-user: git
+2025-05-23T20:17:08.3588203Z   persist-credentials: true
+2025-05-23T20:17:08.3589021Z   clean: true
+2025-05-23T20:17:08.3589763Z   sparse-checkout-cone-mode: true
+2025-05-23T20:17:08.3590875Z   fetch-depth: 1
+2025-05-23T20:17:08.3591630Z   fetch-tags: false
+2025-05-23T20:17:08.3592362Z   show-progress: true
+2025-05-23T20:17:08.3593108Z   lfs: false
+2025-05-23T20:17:08.3593784Z   submodules: false
+2025-05-23T20:17:08.3594534Z   set-safe-directory: true
+2025-05-23T20:17:08.3595580Z env:
+2025-05-23T20:17:08.3596251Z   ACTIONS_STEP_DEBUG: true
+2025-05-23T20:17:08.3597100Z   NODE_OPTIONS: --trace-warnings
+2025-05-23T20:17:08.3597953Z ##[endgroup]
+2025-05-23T20:17:08.5341577Z Syncing repository: axivo/charts
+2025-05-23T20:17:08.5344524Z ##[group]Getting Git version info
+2025-05-23T20:17:08.5346363Z Working directory is '/home/runner/work/charts/charts'
+2025-05-23T20:17:08.5348460Z [command]/usr/bin/git version
+2025-05-23T20:17:08.5371214Z git version 2.49.0
+2025-05-23T20:17:08.5398758Z ##[endgroup]
+2025-05-23T20:17:08.5412676Z Temporarily overriding HOME='/home/runner/work/_temp/e05e7a39-5988-4fc0-a848-d70e155d8e2f' before making global git config changes
+2025-05-23T20:17:08.5415434Z Adding repository directory to the temporary git global config as a safe directory
+2025-05-23T20:17:08.5417886Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/charts/charts
+2025-05-23T20:17:08.5450779Z Deleting the contents of '/home/runner/work/charts/charts'
+2025-05-23T20:17:08.5454515Z ##[group]Initializing the repository
+2025-05-23T20:17:08.5458217Z [command]/usr/bin/git init /home/runner/work/charts/charts
+2025-05-23T20:17:08.5519135Z hint: Using 'master' as the name for the initial branch. This default branch name
+2025-05-23T20:17:08.5521356Z hint: is subject to change. To configure the initial branch name to use in all
+2025-05-23T20:17:08.5523361Z hint: of your new repositories, which will suppress this warning, call:
+2025-05-23T20:17:08.5524870Z hint:
+2025-05-23T20:17:08.5525690Z hint: 	git config --global init.defaultBranch <name>
+2025-05-23T20:17:08.5526702Z hint:
+2025-05-23T20:17:08.5527673Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+2025-05-23T20:17:08.5529484Z hint: 'development'. The just-created branch can be renamed via this command:
+2025-05-23T20:17:08.5531328Z hint:
+2025-05-23T20:17:08.5532116Z hint: 	git branch -m <name>
+2025-05-23T20:17:08.5533344Z Initialized empty Git repository in /home/runner/work/charts/charts/.git/
+2025-05-23T20:17:08.5536449Z [command]/usr/bin/git remote add origin https://github.com/axivo/charts
+2025-05-23T20:17:08.5567294Z ##[endgroup]
+2025-05-23T20:17:08.5571840Z ##[group]Disabling automatic garbage collection
+2025-05-23T20:17:08.5573055Z [command]/usr/bin/git config --local gc.auto 0
+2025-05-23T20:17:08.5599063Z ##[endgroup]
+2025-05-23T20:17:08.5600254Z ##[group]Setting up auth
+2025-05-23T20:17:08.5605996Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2025-05-23T20:17:08.5639794Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2025-05-23T20:17:08.5920461Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2025-05-23T20:17:08.5954466Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2025-05-23T20:17:08.6177016Z [command]/usr/bin/git config --local http.https://github.com/.extraheader AUTHORIZATION: basic ***
+2025-05-23T20:17:08.6213937Z ##[endgroup]
+2025-05-23T20:17:08.6215469Z ##[group]Fetching the repository
+2025-05-23T20:17:08.6222160Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +3c62eb2a0f7c22d05d42c6ff7842512496c64d3d:refs/remotes/pull/209/merge
+2025-05-23T20:17:09.0217110Z From https://github.com/axivo/charts
+2025-05-23T20:17:09.0219687Z  * [new ref]         3c62eb2a0f7c22d05d42c6ff7842512496c64d3d -> pull/209/merge
+2025-05-23T20:17:09.0245866Z ##[endgroup]
+2025-05-23T20:17:09.0269788Z ##[group]Determining the checkout info
+2025-05-23T20:17:09.0272540Z ##[endgroup]
+2025-05-23T20:17:09.0274112Z [command]/usr/bin/git sparse-checkout disable
+2025-05-23T20:17:09.0308698Z [command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
+2025-05-23T20:17:09.0348083Z ##[group]Checking out the ref
+2025-05-23T20:17:09.0353575Z [command]/usr/bin/git checkout --progress --force refs/remotes/pull/209/merge
+2025-05-23T20:17:09.0465531Z Note: switching to 'refs/remotes/pull/209/merge'.
+2025-05-23T20:17:09.0467191Z 
+2025-05-23T20:17:09.0468384Z You are in 'detached HEAD' state. You can look around, make experimental
+2025-05-23T20:17:09.0471781Z changes and commit them, and you can discard any commits you make in this
+2025-05-23T20:17:09.0473978Z state without impacting any branches by switching back to a branch.
+2025-05-23T20:17:09.0475631Z 
+2025-05-23T20:17:09.0476263Z If you want to create a new branch to retain commits you create, you may
+2025-05-23T20:17:09.0477664Z do so (now or later) by using -c with the switch command. Example:
+2025-05-23T20:17:09.0478461Z 
+2025-05-23T20:17:09.0478811Z   git switch -c <new-branch-name>
+2025-05-23T20:17:09.0479383Z 
+2025-05-23T20:17:09.0479845Z Or undo this operation with:
+2025-05-23T20:17:09.0480409Z 
+2025-05-23T20:17:09.0480987Z   git switch -
+2025-05-23T20:17:09.0481408Z 
+2025-05-23T20:17:09.0482078Z Turn off this advice by setting config variable advice.detachedHead to false
+2025-05-23T20:17:09.0483054Z 
+2025-05-23T20:17:09.0484172Z HEAD is now at 3c62eb2 Merge 8c36cab6223de5e75c7c7f4c3f84c26479a5cad6 into ca055d82dd3de5677be1a703e57805ad65b4b67e
+2025-05-23T20:17:09.0487599Z ##[endgroup]
+2025-05-23T20:17:09.0516764Z [command]/usr/bin/git log -1 --format=%H
+2025-05-23T20:17:09.0541435Z 3c62eb2a0f7c22d05d42c6ff7842512496c64d3d
+2025-05-23T20:17:09.0764425Z ##[group]Run azure/setup-helm@v4
+2025-05-23T20:17:09.0765294Z with:
+2025-05-23T20:17:09.0765923Z   version: v3.17.3
+2025-05-23T20:17:09.0766827Z   token: ***
+2025-05-23T20:17:09.0767547Z   downloadBaseURL: https://get.helm.sh
+2025-05-23T20:17:09.0768428Z env:
+2025-05-23T20:17:09.0769052Z   ACTIONS_STEP_DEBUG: true
+2025-05-23T20:17:09.0769876Z   NODE_OPTIONS: --trace-warnings
+2025-05-23T20:17:09.0770929Z ##[endgroup]
+2025-05-23T20:17:09.1484093Z ##[group]Installing v3.17.3
+2025-05-23T20:17:09.1495360Z Downloading 'v3.17.3' from 'https://get.helm.sh'
+2025-05-23T20:17:09.3511886Z [command]/usr/bin/tar xz --warning=no-unknown-keyword --overwrite -C /home/runner/work/_temp/1c337d1d-77c8-4cc6-b622-097f7d65da75 -f /home/runner/work/_temp/929267e7-db27-46c9-adef-cce492976a14
+2025-05-23T20:17:09.7722677Z ##[endgroup]
+2025-05-23T20:17:09.7725944Z Helm tool version 'v3.17.3' has been cached at /opt/hostedtoolcache/helm/3.17.3/x64/linux-amd64/helm
+2025-05-23T20:17:09.7948441Z ##[group]Run actions/setup-node@v4
+2025-05-23T20:17:09.7949355Z with:
+2025-05-23T20:17:09.7950088Z   node-version: 22
+2025-05-23T20:17:09.7951024Z   always-auth: false
+2025-05-23T20:17:09.7951775Z   check-latest: false
+2025-05-23T20:17:09.7952723Z   token: ***
+2025-05-23T20:17:09.7953374Z env:
+2025-05-23T20:17:09.7954013Z   ACTIONS_STEP_DEBUG: true
+2025-05-23T20:17:09.7954868Z   NODE_OPTIONS: --trace-warnings
+2025-05-23T20:17:09.7955702Z ##[endgroup]
+2025-05-23T20:17:09.9770066Z Found in cache @ /opt/hostedtoolcache/node/22.15.0/x64
+2025-05-23T20:17:09.9777903Z ##[group]Environment details
+2025-05-23T20:17:10.3261127Z node: v22.15.0
+2025-05-23T20:17:10.3261721Z npm: 10.9.2
+2025-05-23T20:17:10.3262139Z yarn: 1.22.22
+2025-05-23T20:17:10.3263112Z ##[endgroup]
+2025-05-23T20:17:10.3373989Z ##[group]Run npm install glob handlebars js-yaml
+2025-05-23T20:17:10.3374495Z [36;1mnpm install glob handlebars js-yaml[0m
+2025-05-23T20:17:10.3529330Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2025-05-23T20:17:10.3529752Z env:
+2025-05-23T20:17:10.3530001Z   ACTIONS_STEP_DEBUG: true
+2025-05-23T20:17:10.3530306Z   NODE_OPTIONS: --trace-warnings
+2025-05-23T20:17:10.3530865Z ##[endgroup]
+2025-05-23T20:17:12.1162799Z 
+2025-05-23T20:17:12.1177508Z added 48 packages in 2s
+2025-05-23T20:17:12.1177899Z 
+2025-05-23T20:17:12.1178154Z 14 packages are looking for funding
+2025-05-23T20:17:12.1178488Z   run `npm fund` for details
+2025-05-23T20:17:12.1682477Z ##[group]Run actions/github-script@v7
+2025-05-23T20:17:12.1682773Z with:
+2025-05-23T20:17:12.1683256Z   script: const { Workflow } = require('./.github/actions/handlers');
+await Workflow.configureRepository({ github, context, core, exec });
+
+2025-05-23T20:17:12.1683966Z   github-token: ***
+2025-05-23T20:17:12.1684165Z   debug: false
+2025-05-23T20:17:12.1684355Z   user-agent: actions/github-script
+2025-05-23T20:17:12.1684812Z   result-encoding: json
+2025-05-23T20:17:12.1685001Z   retries: 0
+2025-05-23T20:17:12.1685209Z   retry-exempt-status-codes: 400,401,403,404,422
+2025-05-23T20:17:12.1685468Z env:
+2025-05-23T20:17:12.1685637Z   ACTIONS_STEP_DEBUG: true
+2025-05-23T20:17:12.1685856Z   NODE_OPTIONS: --trace-warnings
+2025-05-23T20:17:12.1686084Z ##[endgroup]
+2025-05-23T20:17:12.3107215Z [Workflow] [2025-05-23T20:17:12.307Z] Configuring repository for workflow operations...
+2025-05-23T20:17:12.3264454Z [Git] [2025-05-23T20:17:12.326Z] Git repository configured successfully
+2025-05-23T20:17:12.3265611Z [Workflow] [2025-05-23T20:17:12.326Z] Repository configuration complete
+2025-05-23T20:17:12.3381081Z ##[group]Run actions/github-script@v7
+2025-05-23T20:17:12.3381374Z with:
+2025-05-23T20:17:12.3381848Z   script: const { Workflow } = require('./.github/actions/handlers');
+await Workflow.updateLabels({ github, context, core, exec });
+
+2025-05-23T20:17:12.3382501Z   github-token: ***
+2025-05-23T20:17:12.3382713Z   debug: false
+2025-05-23T20:17:12.3382914Z   user-agent: actions/github-script
+2025-05-23T20:17:12.3383159Z   result-encoding: json
+2025-05-23T20:17:12.3383357Z   retries: 0
+2025-05-23T20:17:12.3383591Z   retry-exempt-status-codes: 400,401,403,404,422
+2025-05-23T20:17:12.3383867Z env:
+2025-05-23T20:17:12.3384042Z   ACTIONS_STEP_DEBUG: true
+2025-05-23T20:17:12.3384288Z   NODE_OPTIONS: --trace-warnings
+2025-05-23T20:17:12.3384519Z ##[endgroup]
+2025-05-23T20:17:12.4809051Z [Workflow] [2025-05-23T20:17:12.480Z] Updating repository issue labels...
+2025-05-23T20:17:12.4813976Z [Template] [2025-05-23T20:17:12.481Z] Registered isEqual helper
+2025-05-23T20:17:12.4816242Z [Label] [2025-05-23T20:17:12.481Z] Label creation is disabled in configuration, skipping label updates
+2025-05-23T20:17:12.4817407Z [Workflow] [2025-05-23T20:17:12.481Z] Issue labels update complete
+2025-05-23T20:17:12.4934265Z ##[group]Run actions/github-script@v7
+2025-05-23T20:17:12.4934552Z with:
+2025-05-23T20:17:12.4935091Z   script: const { Workflow } = require('./.github/actions/handlers');
+await Workflow.installHelmDocs({ github, context, core, exec, version: '1.14.2' });
+
+2025-05-23T20:17:12.4935787Z   github-token: ***
+2025-05-23T20:17:12.4935985Z   debug: false
+2025-05-23T20:17:12.4936178Z   user-agent: actions/github-script
+2025-05-23T20:17:12.4936427Z   result-encoding: json
+2025-05-23T20:17:12.4936620Z   retries: 0
+2025-05-23T20:17:12.4936834Z   retry-exempt-status-codes: 400,401,403,404,422
+2025-05-23T20:17:12.4937097Z env:
+2025-05-23T20:17:12.4937262Z   ACTIONS_STEP_DEBUG: true
+2025-05-23T20:17:12.4937490Z   NODE_OPTIONS: --trace-warnings
+2025-05-23T20:17:12.4937707Z ##[endgroup]
+2025-05-23T20:17:12.6339009Z [Workflow] [2025-05-23T20:17:12.633Z] Installing helm-docs...
+2025-05-23T20:17:12.6350024Z [Docs] [2025-05-23T20:17:12.634Z] Installing helm-docs v1.14.2...
+2025-05-23T20:17:15.6290239Z [Docs] [2025-05-23T20:17:15.628Z] Successfully installed helm-docs
+2025-05-23T20:17:15.6291409Z [Workflow] [2025-05-23T20:17:15.628Z] Helm-docs installation complete
+2025-05-23T20:17:15.6428391Z ##[group]Run helm/chart-testing-action@v2
+2025-05-23T20:17:15.6428674Z with:
+2025-05-23T20:17:15.6428847Z   version: 3.12.0
+2025-05-23T20:17:15.6429036Z   yamllint_version: 1.33.0
+2025-05-23T20:17:15.6429243Z   yamale_version: 4.0.4
+2025-05-23T20:17:15.6429427Z env:
+2025-05-23T20:17:15.6429585Z   ACTIONS_STEP_DEBUG: true
+2025-05-23T20:17:15.6429808Z   NODE_OPTIONS: --trace-warnings
+2025-05-23T20:17:15.6430030Z ##[endgroup]
+2025-05-23T20:17:15.6573621Z ##[group]Run sigstore/cosign-installer@dc72c7d5c4d10cd6bcb8cf6e3fd625a9e5e537da
+2025-05-23T20:17:15.6573990Z with:
+2025-05-23T20:17:15.6574158Z   cosign-release: v2.4.1
+2025-05-23T20:17:15.6574366Z   install-dir: $HOME/.cosign
+2025-05-23T20:17:15.6574567Z   use-sudo: false
+2025-05-23T20:17:15.6574739Z env:
+2025-05-23T20:17:15.6574898Z   ACTIONS_STEP_DEBUG: true
+2025-05-23T20:17:15.6575115Z   NODE_OPTIONS: --trace-warnings
+2025-05-23T20:17:15.6575336Z ##[endgroup]
+2025-05-23T20:17:15.6614263Z ##[group]Run #!/bin/bash
+2025-05-23T20:17:15.6614866Z [36;1m#!/bin/bash[0m
+2025-05-23T20:17:15.6615066Z [36;1m# cosign install script[0m
+2025-05-23T20:17:15.6615310Z [36;1mshopt -s expand_aliases[0m
+2025-05-23T20:17:15.6615552Z [36;1mif [ -z "$NO_COLOR" ]; then[0m
+2025-05-23T20:17:15.6615866Z [36;1m  alias log_info="echo -e \"\033[1;32mINFO\033[0m:\""[0m
+2025-05-23T20:17:15.6616216Z [36;1m  alias log_error="echo -e \"\033[1;31mERROR\033[0m:\""[0m
+2025-05-23T20:17:15.6616491Z [36;1melse[0m
+2025-05-23T20:17:15.6616688Z [36;1m  alias log_info="echo \"INFO:\""[0m
+2025-05-23T20:17:15.6616943Z [36;1m  alias log_error="echo \"ERROR:\""[0m
+2025-05-23T20:17:15.6617180Z [36;1mfi[0m
+2025-05-23T20:17:15.6617335Z [36;1mset -e[0m
+2025-05-23T20:17:15.6617507Z [36;1m[0m
+2025-05-23T20:17:15.6617679Z [36;1mmkdir -p $HOME/.cosign[0m
+2025-05-23T20:17:15.6617891Z [36;1m[0m
+2025-05-23T20:17:15.6618062Z [36;1mif [[ v2.4.1 == "main" ]]; then[0m
+2025-05-23T20:17:15.6618396Z [36;1m  log_info "installing cosign via 'go install' from its main version"[0m
+2025-05-23T20:17:15.6618760Z [36;1m  GOBIN=$(go env GOPATH)/bin[0m
+2025-05-23T20:17:15.6619057Z [36;1m  go install github.com/sigstore/cosign/cmd/cosign@main[0m
+2025-05-23T20:17:15.6619379Z [36;1m  ln -s $GOBIN/cosign $HOME/.cosign/cosign[0m
+2025-05-23T20:17:15.6619625Z [36;1m  exit 0[0m
+2025-05-23T20:17:15.6619794Z [36;1mfi[0m
+2025-05-23T20:17:15.6619945Z [36;1m[0m
+2025-05-23T20:17:15.6620106Z [36;1mshaprog() {[0m
+2025-05-23T20:17:15.6620293Z [36;1m  case Linux in[0m
+2025-05-23T20:17:15.6620484Z [36;1m    Linux|linux)[0m
+2025-05-23T20:17:15.6620899Z [36;1m      sha256sum $1 | cut -d' ' -f1[0m
+2025-05-23T20:17:15.6621133Z [36;1m      ;;[0m
+2025-05-23T20:17:15.6621310Z [36;1m    macOS|macos)[0m
+2025-05-23T20:17:15.6621519Z [36;1m      shasum -a256 $1 | cut -d' ' -f1[0m
+2025-05-23T20:17:15.6621753Z [36;1m      ;;[0m
+2025-05-23T20:17:15.6621925Z [36;1m    Windows|windows)[0m
+2025-05-23T20:17:15.6622371Z [36;1m      powershell -command "(Get-FileHash $1 -Algorithm SHA256 | Select-Object -ExpandProperty Hash).ToLower()"[0m
+2025-05-23T20:17:15.6622820Z [36;1m      ;;[0m
+2025-05-23T20:17:15.6622981Z [36;1m    *)[0m
+2025-05-23T20:17:15.6623178Z [36;1m      log_error "unsupported OS Linux"[0m
+2025-05-23T20:17:15.6623420Z [36;1m      exit 1[0m
+2025-05-23T20:17:15.6623600Z [36;1m      ;;[0m
+2025-05-23T20:17:15.6623756Z [36;1m  esac[0m
+2025-05-23T20:17:15.6623916Z [36;1m}[0m
+2025-05-23T20:17:15.6624067Z [36;1m[0m
+2025-05-23T20:17:15.6624237Z [36;1mbootstrap_version='v2.4.1'[0m
+2025-05-23T20:17:15.6624668Z [36;1mbootstrap_linux_amd64_sha='8b24b946dd5809c6bd93de08033bcf6bc0ed7d336b7785787c080f574b89249b'[0m
+2025-05-23T20:17:15.6625269Z [36;1mbootstrap_linux_arm_sha='541fd175fae792a154fa2fa025146e3d4691e2dd97717fa9ace35677a88489e7'[0m
+2025-05-23T20:17:15.6625870Z [36;1mbootstrap_linux_arm64_sha='3b2e2e3854d0356c45fe6607047526ccd04742d20bd44afb5be91fa2a6e7cb4a'[0m
+2025-05-23T20:17:15.6626753Z [36;1mbootstrap_darwin_amd64_sha='666032ca283da92b6f7953965688fd51200fdc891a86c19e05c98b898ea0af4e'[0m
+2025-05-23T20:17:15.6627390Z [36;1mbootstrap_darwin_arm64_sha='13343856b69f70388c4fe0b986a31dde5958e444b41be22d785d3dc5e1a9cc62'[0m
+2025-05-23T20:17:15.6628006Z [36;1mbootstrap_windows_amd64_sha='8d57f8a42a981d27290c4227271fa9f0f62ca6630eb4a21d316bd6b01405b87c'[0m
+2025-05-23T20:17:15.6628449Z [36;1mcosign_executable_name=cosign[0m
+2025-05-23T20:17:15.6628671Z [36;1m[0m
+2025-05-23T20:17:15.6628852Z [36;1mtrap "popd >/dev/null" EXIT[0m
+2025-05-23T20:17:15.6629071Z [36;1m[0m
+2025-05-23T20:17:15.6629246Z [36;1mpushd $HOME/.cosign > /dev/null[0m
+2025-05-23T20:17:15.6629471Z [36;1m[0m
+2025-05-23T20:17:15.6629630Z [36;1mcase Linux in[0m
+2025-05-23T20:17:15.6629825Z [36;1m  Linux|linux)[0m
+2025-05-23T20:17:15.6630019Z [36;1m    case X64 in[0m
+2025-05-23T20:17:15.6630206Z [36;1m      X64|amd64)[0m
+2025-05-23T20:17:15.6630445Z [36;1m        bootstrap_filename='cosign-linux-amd64'[0m
+2025-05-23T20:17:15.6630884Z [36;1m        bootstrap_sha=${bootstrap_linux_amd64_sha}[0m
+2025-05-23T20:17:15.6631346Z [36;1m        desired_cosign_filename='cosign-linux-amd64'[0m
+2025-05-23T20:17:15.6631719Z [36;1m        # v0.6.0 had different filename structures from all other releases[0m
+2025-05-23T20:17:15.6632053Z [36;1m        if [[ v2.4.1 == 'v0.6.0' ]]; then[0m
+2025-05-23T20:17:15.6632379Z [36;1m          desired_cosign_filename='cosign_linux_amd64_0.6.0_linux_amd64'[0m
+2025-05-23T20:17:15.6632817Z [36;1m          desired_cosign_v060_signature='cosign_linux_amd64_0.6.0_linux_amd64.sig'[0m
+2025-05-23T20:17:15.6633151Z [36;1m        fi[0m
+2025-05-23T20:17:15.6633326Z [36;1m        ;;[0m
+2025-05-23T20:17:15.6633488Z [36;1m[0m
+2025-05-23T20:17:15.6633648Z [36;1m      ARM|arm)[0m
+2025-05-23T20:17:15.6633868Z [36;1m        bootstrap_filename='cosign-linux-arm'[0m
+2025-05-23T20:17:15.6634163Z [36;1m        bootstrap_sha=${bootstrap_linux_arm_sha}[0m
+2025-05-23T20:17:15.6634466Z [36;1m        desired_cosign_filename='cosign-linux-arm'[0m
+2025-05-23T20:17:15.6634751Z [36;1m        if [[ v2.4.1 == 'v0.6.0' ]]; then[0m
+2025-05-23T20:17:15.6635046Z [36;1m          log_error "linux-arm build not available at v0.6.0"[0m
+2025-05-23T20:17:15.6635320Z [36;1m          exit 1[0m
+2025-05-23T20:17:15.6635506Z [36;1m        fi[0m
+2025-05-23T20:17:15.6635670Z [36;1m        ;;[0m
+2025-05-23T20:17:15.6635839Z [36;1m[0m
+2025-05-23T20:17:15.6635993Z [36;1m      ARM64|arm64)[0m
+2025-05-23T20:17:15.6636235Z [36;1m        bootstrap_filename='cosign-linux-arm64'[0m
+2025-05-23T20:17:15.6636539Z [36;1m        bootstrap_sha=${bootstrap_linux_arm64_sha}[0m
+2025-05-23T20:17:15.6636848Z [36;1m        desired_cosign_filename='cosign-linux-arm64'[0m
+2025-05-23T20:17:15.6637137Z [36;1m        if [[ v2.4.1 == 'v0.6.0' ]]; then[0m
+2025-05-23T20:17:15.6637436Z [36;1m          log_error "linux-arm64 build not available at v0.6.0"[0m
+2025-05-23T20:17:15.6637729Z [36;1m          exit 1[0m
+2025-05-23T20:17:15.6637916Z [36;1m        fi[0m
+2025-05-23T20:17:15.6638097Z [36;1m        ;;[0m
+2025-05-23T20:17:15.6638270Z [36;1m[0m
+2025-05-23T20:17:15.6638421Z [36;1m      *)[0m
+2025-05-23T20:17:15.6638635Z [36;1m        log_error "unsupported architecture X64"[0m
+2025-05-23T20:17:15.6638893Z [36;1m        exit 1[0m
+2025-05-23T20:17:15.6639078Z [36;1m        ;;[0m
+2025-05-23T20:17:15.6639243Z [36;1m    esac[0m
+2025-05-23T20:17:15.6639411Z [36;1m    ;;[0m
+2025-05-23T20:17:15.6639568Z [36;1m[0m
+2025-05-23T20:17:15.6639728Z [36;1m  macOS|macos)[0m
+2025-05-23T20:17:15.6639917Z [36;1m    case X64 in[0m
+2025-05-23T20:17:15.6640113Z [36;1m      X64|amd64)[0m
+2025-05-23T20:17:15.6640379Z [36;1m        bootstrap_filename='cosign-darwin-amd64'[0m
+2025-05-23T20:17:15.6640786Z [36;1m        bootstrap_sha=${bootstrap_darwin_amd64_sha}[0m
+2025-05-23T20:17:15.6641110Z [36;1m        desired_cosign_filename='cosign-darwin-amd64'[0m
+2025-05-23T20:17:15.6641476Z [36;1m        # v0.6.0 had different filename structures from all other releases[0m
+2025-05-23T20:17:15.6641960Z [36;1m        if [[ v2.4.1 == 'v0.6.0' ]]; then[0m
+2025-05-23T20:17:15.6642295Z [36;1m          desired_cosign_filename='cosign_darwin_amd64_0.6.0_darwin_amd64'[0m
+2025-05-23T20:17:15.6642742Z [36;1m          desired_cosign_v060_signature='cosign_darwin_amd64_0.6.0_darwin_amd64.sig'[0m
+2025-05-23T20:17:15.6643091Z [36;1m        fi[0m
+2025-05-23T20:17:15.6643260Z [36;1m        ;;[0m
+2025-05-23T20:17:15.6643431Z [36;1m[0m
+2025-05-23T20:17:15.6643588Z [36;1m      ARM64|arm64)[0m
+2025-05-23T20:17:15.6643834Z [36;1m        bootstrap_filename='cosign-darwin-arm64'[0m
+2025-05-23T20:17:15.6644137Z [36;1m        bootstrap_sha=${bootstrap_darwin_arm64_sha}[0m
+2025-05-23T20:17:15.6644452Z [36;1m        desired_cosign_filename='cosign-darwin-arm64'[0m
+2025-05-23T20:17:15.6644812Z [36;1m        # v0.6.0 had different filename structures from all other releases[0m
+2025-05-23T20:17:15.6645137Z [36;1m        if [[ v2.4.1 == 'v0.6.0' ]]; then[0m
+2025-05-23T20:17:15.6645571Z [36;1m          desired_cosign_filename='cosign_darwin_arm64_0.6.0_darwin_arm64'[0m
+2025-05-23T20:17:15.6646005Z [36;1m          desired_cosign_v060_signature='cosign_darwin_arm64_0.6.0_darwin_arm64.sig'[0m
+2025-05-23T20:17:15.6646347Z [36;1m        fi[0m
+2025-05-23T20:17:15.6646517Z [36;1m        ;;[0m
+2025-05-23T20:17:15.6646678Z [36;1m[0m
+2025-05-23T20:17:15.6646829Z [36;1m      *)[0m
+2025-05-23T20:17:15.6647039Z [36;1m        log_error "unsupported architecture X64"[0m
+2025-05-23T20:17:15.6647302Z [36;1m        exit 1[0m
+2025-05-23T20:17:15.6647482Z [36;1m        ;;[0m
+2025-05-23T20:17:15.6647652Z [36;1m    esac[0m
+2025-05-23T20:17:15.6647812Z [36;1m    ;;[0m
+2025-05-23T20:17:15.6647972Z [36;1m[0m
+2025-05-23T20:17:15.6648128Z [36;1m  Windows|windows)[0m
+2025-05-23T20:17:15.6648330Z [36;1m    case X64 in[0m
+2025-05-23T20:17:15.6648524Z [36;1m      X64|amd64)[0m
+2025-05-23T20:17:15.6648766Z [36;1m        bootstrap_filename='cosign-windows-amd64.exe'[0m
+2025-05-23T20:17:15.6649099Z [36;1m        bootstrap_sha=${bootstrap_windows_amd64_sha}[0m
+2025-05-23T20:17:15.6649431Z [36;1m        desired_cosign_filename='cosign-windows-amd64.exe'[0m
+2025-05-23T20:17:15.6649745Z [36;1m        cosign_executable_name=cosign.exe[0m
+2025-05-23T20:17:15.6650079Z [36;1m        # v0.6.0 had different filename structures from all other releases[0m
+2025-05-23T20:17:15.6650419Z [36;1m        if [[ v2.4.1 == 'v0.6.0' ]]; then[0m
+2025-05-23T20:17:15.6650877Z [36;1m          desired_cosign_filename='cosign_windows_amd64_0.6.0_windows_amd64.exe'[0m
+2025-05-23T20:17:15.6651353Z [36;1m          desired_cosign_v060_signature='cosign_windows_amd64_0.6.0_windows_amd64.exe.sig'[0m
+2025-05-23T20:17:15.6651724Z [36;1m        fi[0m
+2025-05-23T20:17:15.6651898Z [36;1m        ;;[0m
+2025-05-23T20:17:15.6652081Z [36;1m      *)[0m
+2025-05-23T20:17:15.6652295Z [36;1m        log_error "unsupported architecture X64"[0m
+2025-05-23T20:17:15.6652563Z [36;1m        exit 1[0m
+2025-05-23T20:17:15.6652750Z [36;1m        ;;[0m
+2025-05-23T20:17:15.6652923Z [36;1m    esac[0m
+2025-05-23T20:17:15.6653090Z [36;1m    ;;[0m
+2025-05-23T20:17:15.6653253Z [36;1m  *)[0m
+2025-05-23T20:17:15.6653444Z [36;1m    log_error "unsupported os Linux"[0m
+2025-05-23T20:17:15.6653683Z [36;1m    exit 1[0m
+2025-05-23T20:17:15.6653854Z [36;1m    ;;[0m
+2025-05-23T20:17:15.6654038Z [36;1mesac[0m
+2025-05-23T20:17:15.6654201Z [36;1m[0m
+2025-05-23T20:17:15.6654349Z [36;1mSUDO=[0m
+2025-05-23T20:17:15.6654594Z [36;1mif [[ "false" == "true" ]] && command -v sudo >/dev/null; then[0m
+2025-05-23T20:17:15.6654898Z [36;1m  SUDO=sudo[0m
+2025-05-23T20:17:15.6655071Z [36;1mfi[0m
+2025-05-23T20:17:15.6655229Z [36;1m[0m
+2025-05-23T20:17:15.6655450Z [36;1mexpected_bootstrap_version_digest=${bootstrap_sha}[0m
+2025-05-23T20:17:15.6656286Z [36;1mlog_info "Downloading bootstrap version '${bootstrap_version}' of cosign to verify version to be installed...\n      https://github.com/sigstore/cosign/releases/download/${bootstrap_version}/${bootstrap_filename}"[0m
+2025-05-23T20:17:15.6657521Z [36;1m$SUDO curl -fsL https://github.com/sigstore/cosign/releases/download/${bootstrap_version}/${bootstrap_filename} -o ${cosign_executable_name}[0m
+2025-05-23T20:17:15.6658151Z [36;1mshaBootstrap=$(shaprog ${cosign_executable_name});[0m
+2025-05-23T20:17:15.6658539Z [36;1mif [[ $shaBootstrap != ${expected_bootstrap_version_digest} ]]; then[0m
+2025-05-23T20:17:15.6658932Z [36;1m  log_error "Unable to validate cosign version: 'v2.4.1'"[0m
+2025-05-23T20:17:15.6659225Z [36;1m  exit 1[0m
+2025-05-23T20:17:15.6659388Z [36;1mfi[0m
+2025-05-23T20:17:15.6659581Z [36;1m$SUDO chmod +x ${cosign_executable_name}[0m
+2025-05-23T20:17:15.6659825Z [36;1m[0m
+2025-05-23T20:17:15.6660101Z [36;1m# If the bootstrap and specified `cosign` releases are the same, we're done.[0m
+2025-05-23T20:17:15.6660488Z [36;1mif [[ v2.4.1 == ${bootstrap_version} ]]; then[0m
+2025-05-23T20:17:15.6661104Z [36;1m  log_info "bootstrap version successfully verified and matches requested version so nothing else to do"[0m
+2025-05-23T20:17:15.6661653Z [36;1m  exit 0[0m
+2025-05-23T20:17:15.6661810Z [36;1mfi[0m
+2025-05-23T20:17:15.6661963Z [36;1m[0m
+2025-05-23T20:17:15.6662179Z [36;1msemver='^v([0-9]+\.){0,2}(\*|[0-9]+)(-?r?c?)(\.[0-9]+)$'[0m
+2025-05-23T20:17:15.6662480Z [36;1mif [[ v2.4.1 =~ $semver ]]; then[0m
+2025-05-23T20:17:15.6662761Z [36;1m  log_info "Custom cosign version 'v2.4.1' requested"[0m
+2025-05-23T20:17:15.6663033Z [36;1melse[0m
+2025-05-23T20:17:15.6663289Z [36;1m  log_error "Unable to validate requested cosign version: 'v2.4.1'"[0m
+2025-05-23T20:17:15.6663608Z [36;1m  exit 1[0m
+2025-05-23T20:17:15.6663770Z [36;1mfi[0m
+2025-05-23T20:17:15.6663929Z [36;1m[0m
+2025-05-23T20:17:15.6664099Z [36;1m# Download custom cosign[0m
+2025-05-23T20:17:15.6664709Z [36;1mlog_info "Downloading platform-specific version 'v2.4.1' of cosign...\n      https://github.com/sigstore/cosign/releases/download/v2.4.1/${desired_cosign_filename}"[0m
+2025-05-23T20:17:15.6665607Z [36;1m$SUDO curl -fsL https://github.com/sigstore/cosign/releases/download/v2.4.1/${desired_cosign_filename} -o cosign_v2.4.1[0m
+2025-05-23T20:17:15.6666124Z [36;1mshaCustom=$(shaprog cosign_v2.4.1);[0m
+2025-05-23T20:17:15.6666366Z [36;1m[0m
+2025-05-23T20:17:15.6666556Z [36;1m# same hash means it is the same release[0m
+2025-05-23T20:17:15.6666837Z [36;1mif [[ $shaCustom != $shaBootstrap ]]; then[0m
+2025-05-23T20:17:15.6667133Z [36;1m  if [[ v2.4.1 == 'v0.6.0' && Linux == 'Linux' ]]; then[0m
+2025-05-23T20:17:15.6667464Z [36;1m    # v0.6.0's linux release has a dependency on `libpcsclite1`[0m
+2025-05-23T20:17:15.6667849Z [36;1m    log_info "Installing libpcsclite1 package if necessary..."[0m
+2025-05-23T20:17:15.6668149Z [36;1m    set +e[0m
+2025-05-23T20:17:15.6668351Z [36;1m    sudo dpkg -s libpcsclite1[0m
+2025-05-23T20:17:15.6668590Z [36;1m    if [ $? -eq 0 ]; then[0m
+2025-05-23T20:17:15.6668871Z [36;1m        log_info "libpcsclite1 package is already installed"[0m
+2025-05-23T20:17:15.6669165Z [36;1m    else[0m
+2025-05-23T20:17:15.6669447Z [36;1m         log_info "libpcsclite1 package is not installed, installing it now."[0m
+2025-05-23T20:17:15.6669812Z [36;1m         sudo apt-get update -q -q[0m
+2025-05-23T20:17:15.6670084Z [36;1m         sudo apt-get install -yq libpcsclite1[0m
+2025-05-23T20:17:15.6670338Z [36;1m    fi[0m
+2025-05-23T20:17:15.6670614Z [36;1m    set -e[0m
+2025-05-23T20:17:15.6670792Z [36;1m  fi[0m
+2025-05-23T20:17:15.6670956Z [36;1m[0m
+2025-05-23T20:17:15.6671123Z [36;1m  if [[ v2.4.1 == 'v0.6.0' ]]; then[0m
+2025-05-23T20:17:15.6671798Z [36;1m    log_info "Downloading detached signature for platform-specific 'v2.4.1' of cosign...\n      https://github.com/sigstore/cosign/releases/download/v2.4.1/${desired_cosign_v060_signature}"[0m
+2025-05-23T20:17:15.6672802Z [36;1m    $SUDO curl -fsL https://github.com/sigstore/cosign/releases/download/v2.4.1/${desired_cosign_v060_signature} -o ${desired_cosign_filename}.sig[0m
+2025-05-23T20:17:15.6673352Z [36;1m  else[0m
+2025-05-23T20:17:15.6674077Z [36;1m    log_info "Downloading detached signature for platform-specific 'v2.4.1' of cosign...\n      https://github.com/sigstore/cosign/releases/download/v2.4.1/${desired_cosign_filename}.sig"[0m
+2025-05-23T20:17:15.6674959Z [36;1m    $SUDO curl -fsLO https://github.com/sigstore/cosign/releases/download/v2.4.1/${desired_cosign_filename}.sig[0m
+2025-05-23T20:17:15.6675411Z [36;1m  fi[0m
+2025-05-23T20:17:15.6675568Z [36;1m[0m
+2025-05-23T20:17:15.6675732Z [36;1m  if [[ v2.4.1 < 'v0.6.0' ]]; then[0m
+2025-05-23T20:17:15.6676307Z [36;1m    log_info "Downloading cosign public key 'v2.4.1' of cosign...\n    https://raw.githubusercontent.com/sigstore/cosign/v2.4.1/.github/workflows/cosign.pub"[0m
+2025-05-23T20:17:15.6677102Z [36;1m    RELEASE_COSIGN_PUB_KEY=https://raw.githubusercontent.com/sigstore/cosign/v2.4.1/.github/workflows/cosign.pub[0m
+2025-05-23T20:17:15.6677757Z [36;1m    RELEASE_COSIGN_PUB_KEY_SHA='4aa4bd19530a4929d758a9896255aef2c82f1a3a9f4b000034c6df4307c14f9e'[0m
+2025-05-23T20:17:15.6678273Z [36;1m  else[0m
+2025-05-23T20:17:15.6678767Z [36;1m    log_info "Downloading cosign public key 'v2.4.1' of cosign...\n    https://raw.githubusercontent.com/sigstore/cosign/v2.4.1/release/release-cosign.pub"[0m
+2025-05-23T20:17:15.6679550Z [36;1m    RELEASE_COSIGN_PUB_KEY=https://raw.githubusercontent.com/sigstore/cosign/v2.4.1/release/release-cosign.pub[0m
+2025-05-23T20:17:15.6680191Z [36;1m    RELEASE_COSIGN_PUB_KEY_SHA='f4cea466e5e887a45da5031757fa1d32655d83420639dc1758749b744179f126'[0m
+2025-05-23T20:17:15.6680684Z [36;1m  fi[0m
+2025-05-23T20:17:15.6680846Z [36;1m[0m
+2025-05-23T20:17:15.6681071Z [36;1m  log_info "Verifying public key matches expected value"[0m
+2025-05-23T20:17:15.6681429Z [36;1m  $SUDO curl -fsL $RELEASE_COSIGN_PUB_KEY -o public.key[0m
+2025-05-23T20:17:15.6681743Z [36;1m  sha_fetched_key=$(shaprog public.key)[0m
+2025-05-23T20:17:15.6682067Z [36;1m  if [[ $sha_fetched_key != $RELEASE_COSIGN_PUB_KEY_SHA ]]; then[0m
+2025-05-23T20:17:15.6682482Z [36;1m    log_error "Fetched public key does not match expected digest, exiting"[0m
+2025-05-23T20:17:15.6682811Z [36;1m    exit 1[0m
+2025-05-23T20:17:15.6682986Z [36;1m  fi[0m
+2025-05-23T20:17:15.6683140Z [36;1m[0m
+2025-05-23T20:17:15.6683434Z [36;1m  log_info "Using bootstrap cosign to verify signature of desired cosign version"[0m
+2025-05-23T20:17:15.6684053Z [36;1m  ./cosign verify-blob --insecure-ignore-tlog --key public.key --signature ${desired_cosign_filename}.sig cosign_v2.4.1[0m
+2025-05-23T20:17:15.6684526Z [36;1m[0m
+2025-05-23T20:17:15.6684692Z [36;1m  $SUDO rm cosign[0m
+2025-05-23T20:17:15.6684944Z [36;1m  $SUDO mv cosign_v2.4.1 ${cosign_executable_name}[0m
+2025-05-23T20:17:15.6685244Z [36;1m  $SUDO chmod +x ${cosign_executable_name}[0m
+2025-05-23T20:17:15.6685519Z [36;1m  log_info "Installation complete!"[0m
+2025-05-23T20:17:15.6685754Z [36;1mfi[0m
+2025-05-23T20:17:15.6738076Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2025-05-23T20:17:15.6738396Z env:
+2025-05-23T20:17:15.6738587Z   ACTIONS_STEP_DEBUG: true
+2025-05-23T20:17:15.6738811Z   NODE_OPTIONS: --trace-warnings
+2025-05-23T20:17:15.6739033Z ##[endgroup]
+2025-05-23T20:17:15.6832037Z [1;32mINFO[0m: Downloading bootstrap version 'v2.4.1' of cosign to verify version to be installed...
+2025-05-23T20:17:15.6833212Z       https://github.com/sigstore/cosign/releases/download/v2.4.1/cosign-linux-amd64
+2025-05-23T20:17:16.2395324Z [1;32mINFO[0m: bootstrap version successfully verified and matches requested version so nothing else to do
+2025-05-23T20:17:16.2427363Z ##[group]Run echo "$HOME/.cosign" >> $GITHUB_PATH
+2025-05-23T20:17:16.2427738Z [36;1mecho "$HOME/.cosign" >> $GITHUB_PATH[0m
+2025-05-23T20:17:16.2478823Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2025-05-23T20:17:16.2479235Z env:
+2025-05-23T20:17:16.2479585Z   ACTIONS_STEP_DEBUG: true
+2025-05-23T20:17:16.2479871Z   NODE_OPTIONS: --trace-warnings
+2025-05-23T20:17:16.2480183Z ##[endgroup]
+2025-05-23T20:17:16.2598122Z ##[group]Run cd $GITHUB_ACTION_PATH \
+2025-05-23T20:17:16.2598417Z [36;1mcd $GITHUB_ACTION_PATH \[0m
+2025-05-23T20:17:16.2598643Z [36;1m&& ./ct.sh \[0m
+2025-05-23T20:17:16.2598849Z [36;1m    --version 3.12.0 \[0m
+2025-05-23T20:17:16.2599099Z [36;1m    --yamllint-version 1.33.0 \[0m
+2025-05-23T20:17:16.2599348Z [36;1m    --yamale-version 4.0.4[0m
+2025-05-23T20:17:16.2645078Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2025-05-23T20:17:16.2645399Z env:
+2025-05-23T20:17:16.2645572Z   ACTIONS_STEP_DEBUG: true
+2025-05-23T20:17:16.2645807Z   NODE_OPTIONS: --trace-warnings
+2025-05-23T20:17:16.2646024Z ##[endgroup]
+2025-05-23T20:17:16.2764489Z Installing chart-testing v3.12.0...
+2025-05-23T20:17:17.1322189Z Verified OK
+2025-05-23T20:17:17.2296603Z Creating virtual Python environment...
+2025-05-23T20:17:19.9733860Z Activating virtual environment...
+2025-05-23T20:17:19.9736329Z Installing yamllint...
+2025-05-23T20:17:20.3809215Z Collecting yamllint==1.33.0
+2025-05-23T20:17:20.4288926Z   Downloading yamllint-1.33.0-py3-none-any.whl.metadata (4.2 kB)
+2025-05-23T20:17:20.4693452Z Collecting pathspec>=0.5.3 (from yamllint==1.33.0)
+2025-05-23T20:17:20.4766451Z   Downloading pathspec-0.12.1-py3-none-any.whl.metadata (21 kB)
+2025-05-23T20:17:20.5342911Z Collecting pyyaml (from yamllint==1.33.0)
+2025-05-23T20:17:20.5417041Z   Downloading PyYAML-6.0.2-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (2.1 kB)
+2025-05-23T20:17:20.5561728Z Downloading yamllint-1.33.0-py3-none-any.whl (65 kB)
+2025-05-23T20:17:20.5674032Z    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 65.4/65.4 kB 6.7 MB/s eta 0:00:00
+2025-05-23T20:17:20.5746219Z Downloading pathspec-0.12.1-py3-none-any.whl (31 kB)
+2025-05-23T20:17:20.5843644Z Downloading PyYAML-6.0.2-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (767 kB)
+2025-05-23T20:17:20.6065403Z    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 767.5/767.5 kB 37.8 MB/s eta 0:00:00
+2025-05-23T20:17:20.6218990Z Installing collected packages: pyyaml, pathspec, yamllint
+2025-05-23T20:17:20.7220859Z Successfully installed pathspec-0.12.1 pyyaml-6.0.2 yamllint-1.33.0
+2025-05-23T20:17:20.7791552Z Installing Yamale...
+2025-05-23T20:17:21.1782830Z Collecting yamale==4.0.4
+2025-05-23T20:17:21.2228808Z   Downloading yamale-4.0.4-py3-none-any.whl.metadata (20 kB)
+2025-05-23T20:17:21.2318554Z Requirement already satisfied: pyyaml in /opt/hostedtoolcache/ct/3.12.0/amd64/venv/lib/python3.12/site-packages (from yamale==4.0.4) (6.0.2)
+2025-05-23T20:17:21.2404254Z Downloading yamale-4.0.4-py3-none-any.whl (55 kB)
+2025-05-23T20:17:21.2504401Z    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 55.0/55.0 kB 5.9 MB/s eta 0:00:00
+2025-05-23T20:17:21.2788036Z Installing collected packages: yamale
+2025-05-23T20:17:21.3225103Z Successfully installed yamale-4.0.4
+2025-05-23T20:17:21.3769299Z Adding ct directory to PATH...
+2025-05-23T20:17:21.3769929Z Setting CT_CONFIG_DIR...
+2025-05-23T20:17:21.3771540Z Configuring environment variables for virtual environment for subsequent workflow steps...
+2025-05-23T20:17:21.3796798Z Version:	 v3.12.0
+2025-05-23T20:17:21.3797174Z Git commit:	 d6991035017d7ac0e3dec3d1b5ad2e5f18674b32
+2025-05-23T20:17:21.3797613Z Date:		 2025-01-13T12:22:07Z
+2025-05-23T20:17:21.3797865Z License:	 Apache 2.0
+2025-05-23T20:17:21.3852955Z ##[group]Run actions/github-script@v7
+2025-05-23T20:17:21.3853244Z with:
+2025-05-23T20:17:21.3853689Z   script: const { Workflow } = require('./.github/actions/handlers');
+await Workflow.updateCharts({ github, context, core, exec });
+
+2025-05-23T20:17:21.3854393Z   github-token: ***
+2025-05-23T20:17:21.3854590Z   debug: false
+2025-05-23T20:17:21.3854779Z   user-agent: actions/github-script
+2025-05-23T20:17:21.3855029Z   result-encoding: json
+2025-05-23T20:17:21.3855219Z   retries: 0
+2025-05-23T20:17:21.3855430Z   retry-exempt-status-codes: 400,401,403,404,422
+2025-05-23T20:17:21.3855685Z env:
+2025-05-23T20:17:21.3855854Z   ACTIONS_STEP_DEBUG: true
+2025-05-23T20:17:21.3856070Z   NODE_OPTIONS: --trace-warnings
+2025-05-23T20:17:21.3856346Z   CT_CONFIG_DIR: /opt/hostedtoolcache/ct/3.12.0/amd64/etc
+2025-05-23T20:17:21.3856688Z   VIRTUAL_ENV: /opt/hostedtoolcache/ct/3.12.0/amd64/venv
+2025-05-23T20:17:21.3856958Z ##[endgroup]
+2025-05-23T20:17:21.5290073Z [Workflow] [2025-05-23T20:17:21.528Z] Starting chart update process...
+2025-05-23T20:17:21.8100017Z [Chart] [2025-05-23T20:17:21.809Z] Found 1 modified chart
+2025-05-23T20:17:21.8101228Z [Chart] [2025-05-23T20:17:21.809Z] Found 1 charts
+2025-05-23T20:17:21.8102110Z [Update] [2025-05-23T20:17:21.809Z] Updating application files for 1 charts
+2025-05-23T20:17:21.8165387Z [File] [2025-05-23T20:17:21.816Z] Wrote file: application/ubuntu/application.yaml
+2025-05-23T20:17:21.8166509Z [Update] [2025-05-23T20:17:21.816Z] Updated application file for application/ubuntu
+2025-05-23T20:17:21.8167663Z [Update] [2025-05-23T20:17:21.816Z] Updating lock files for 1 charts
+2025-05-23T20:17:21.8169857Z [Helm] [2025-05-23T20:17:21.816Z] Updating dependencies for application/ubuntu
+2025-05-23T20:17:22.0812517Z [Helm] [2025-05-23T20:17:22.080Z] Dependencies updated for application/ubuntu
+2025-05-23T20:17:22.0813908Z [Update] [2025-05-23T20:17:22.081Z] Updating metadata files for 1 charts
+2025-05-23T20:17:22.0851093Z [File] [2025-05-23T20:17:22.084Z] Wrote file: application/ubuntu/metadata.yaml
+2025-05-23T20:17:22.0852180Z [Update] [2025-05-23T20:17:22.084Z] Updated metadata file for application/ubuntu
+2025-05-23T20:17:22.0853037Z [Chart] [2025-05-23T20:17:22.085Z] Linting 1 charts
+2025-05-23T20:17:22.0854163Z [Helm] [2025-05-23T20:17:22.085Z] Linting chart: application/ubuntu
+2025-05-23T20:17:22.1285891Z [Helm] [2025-05-23T20:17:22.128Z] Lint passed for application/ubuntu
+2025-05-23T20:17:22.1287689Z [Docs] [2025-05-23T20:17:22.128Z] Getting the latest changes for 'feature/chart-release' branch...
+2025-05-23T20:17:22.5703641Z [Docs] [2025-05-23T20:17:22.570Z] Generating documentation with helm-docs...
+2025-05-23T20:17:22.6120718Z [Docs] [2025-05-23T20:17:22.611Z] No documentation changes to commit
+2025-05-23T20:17:22.6254278Z [Chart] [2025-05-23T20:17:22.625Z] Committed 5 modified files
+2025-05-23T20:17:22.6255141Z [Chart] [2025-05-23T20:17:22.625Z] Chart update complete
+2025-05-23T20:17:22.6255973Z [Workflow] [2025-05-23T20:17:22.625Z] Chart update process complete
+2025-05-23T20:17:22.6372504Z ##[group]Run actions/github-script@v7
+2025-05-23T20:17:22.6372778Z with:
+2025-05-23T20:17:22.6373223Z   script: const { Workflow } = require('./.github/actions/handlers');
+await Workflow.reportIssue({ github, context, core, exec });
+
+2025-05-23T20:17:22.6373845Z   github-token: ***
+2025-05-23T20:17:22.6374039Z   debug: false
+2025-05-23T20:17:22.6374226Z   user-agent: actions/github-script
+2025-05-23T20:17:22.6374468Z   result-encoding: json
+2025-05-23T20:17:22.6374652Z   retries: 0
+2025-05-23T20:17:22.6374860Z   retry-exempt-status-codes: 400,401,403,404,422
+2025-05-23T20:17:22.6375107Z env:
+2025-05-23T20:17:22.6375273Z   ACTIONS_STEP_DEBUG: true
+2025-05-23T20:17:22.6375487Z   NODE_OPTIONS: --trace-warnings
+2025-05-23T20:17:22.6375758Z   CT_CONFIG_DIR: /opt/hostedtoolcache/ct/3.12.0/amd64/etc
+2025-05-23T20:17:22.6376098Z   VIRTUAL_ENV: /opt/hostedtoolcache/ct/3.12.0/amd64/venv
+2025-05-23T20:17:22.6376360Z ##[endgroup]
+2025-05-23T20:17:22.7802093Z [Workflow] [2025-05-23T20:17:22.779Z] Checking for workflow issues...
+2025-05-23T20:17:22.7806667Z [Template] [2025-05-23T20:17:22.780Z] Registered isEqual helper
+2025-05-23T20:17:22.9703482Z [Rest] [2025-05-23T20:17:22.970Z] Workflow run status: in_progress, conclusion: null
+2025-05-23T20:17:22.9704772Z [Issue] [2025-05-23T20:17:22.970Z] Workflow run status: in_progress, conclusion: null, hasIssues: true
+2025-05-23T20:17:22.9705711Z [Issue] [2025-05-23T20:17:22.970Z] Creating workflow issue...
+2025-05-23T20:17:22.9720891Z [Template] [2025-05-23T20:17:22.971Z] Rendering template
+2025-05-23T20:17:22.9721746Z [Template] [2025-05-23T20:17:22.972Z] Registered repository raw URL helper
+2025-05-23T20:17:22.9829678Z [Template] [2025-05-23T20:17:22.982Z] Template rendered successfully
+2025-05-23T20:17:22.9832833Z [Issue] [2025-05-23T20:17:22.983Z] Creating issue: workflow: Issues Detected
+2025-05-23T20:17:23.2885583Z [Issue] [2025-05-23T20:17:23.288Z] Created issue #214: workflow: Issues Detected
+2025-05-23T20:17:23.2886749Z [Workflow] [2025-05-23T20:17:23.288Z] Workflow issue reported successfully
+2025-05-23T20:17:23.3015523Z Post job cleanup.
+2025-05-23T20:17:23.4664585Z Post job cleanup.
+2025-05-23T20:17:23.5608128Z [command]/usr/bin/git version
+2025-05-23T20:17:23.5648115Z git version 2.49.0
+2025-05-23T20:17:23.5700685Z Temporarily overriding HOME='/home/runner/work/_temp/e2365b85-60dd-4233-9abe-8ef2b3ce23f2' before making global git config changes
+2025-05-23T20:17:23.5702164Z Adding repository directory to the temporary git global config as a safe directory
+2025-05-23T20:17:23.5706974Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/charts/charts
+2025-05-23T20:17:23.5743317Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2025-05-23T20:17:23.5776575Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2025-05-23T20:17:23.6009841Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2025-05-23T20:17:23.6035381Z http.https://github.com/.extraheader
+2025-05-23T20:17:23.6052136Z [command]/usr/bin/git config --local --unset-all http.https://github.com/.extraheader
+2025-05-23T20:17:23.6088759Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2025-05-23T20:17:23.6464525Z Cleaning up orphan processes

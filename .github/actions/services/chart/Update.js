@@ -6,9 +6,12 @@
  * @author AXIVO
  * @license BSD-3-Clause
  */
+const fs = require('fs/promises');
+const os = require('os');
 const path = require('path');
 const Action = require('../../core/Action');
 const File = require('../File');
+const Git = require('../Git');
 const Helm = require('../helm');
 
 class Update extends Action {
@@ -20,6 +23,7 @@ class Update extends Action {
   constructor(params) {
     super(params);
     this.fileService = new File(params);
+    this.gitService = new Git(params);
     this.helmService = new Helm(params);
   }
 
@@ -32,15 +36,27 @@ class Update extends Action {
   async application(charts) {
     if (!charts || !charts.length) return true;
     this.logger.info(`Updating application files for ${charts.length} charts`);
+    const appFiles = [];
     const updatePromises = charts.map(async (chartDir) => {
       try {
         const appFilePath = path.join(chartDir, 'application.yaml');
-        if (await this.fileService.exists(appFilePath)) {
-          const appFile = await this.fileService.readYaml(appFilePath);
-          await this.fileService.writeYaml(appFilePath, appFile);
-          this.logger.info(`Updated application file for ${chartDir}`);
+        if (!await this.fileService.exists(appFilePath)) {
           return true;
         }
+        const chartName = path.basename(chartDir);
+        const chartYamlPath = path.join(chartDir, 'Chart.yaml');
+        const appConfig = await this.fileService.readYaml(appFilePath);
+        const chartMetadata = await this.fileService.readYaml(chartYamlPath);
+        const tagName = this.config.get('repository.release.title')
+          .replace('{{ .Name }}', chartName)
+          .replace('{{ .Version }}', chartMetadata.version);
+        if (appConfig.spec.source.targetRevision === tagName) {
+          return true;
+        }
+        appConfig.spec.source.targetRevision = tagName;
+        await this.fileService.writeYaml(appFilePath, appConfig);
+        appFiles.push(appFilePath);
+        this.logger.info(`Updated application file for ${chartDir}`);
         return true;
       } catch (error) {
         this.errorHandler.handle(error, {
@@ -51,6 +67,11 @@ class Update extends Action {
       }
     });
     const results = await Promise.all(updatePromises);
+    if (appFiles.length) {
+      const headRef = process.env.GITHUB_HEAD_REF;
+      const word = appFiles.length === 1 ? 'file' : 'files';
+      await this.gitService.signedCommit(headRef, appFiles, `chore(github-action): update application ${word}`);
+    }
     return results.every(result => result === true);
   }
 
@@ -63,9 +84,22 @@ class Update extends Action {
   async lock(charts) {
     if (!charts || !charts.length) return true;
     this.logger.info(`Updating lock files for ${charts.length} charts`);
+    const lockFiles = [];
     const updatePromises = charts.map(async (chartDir) => {
       try {
-        return await this.helmService.updateDependencies(chartDir);
+        const chartLockPath = path.join(chartDir, 'Chart.lock');
+        const chartYamlPath = path.join(chartDir, 'Chart.yaml');
+        const chart = await this.fileService.readYaml(chartYamlPath);
+        if (chart.dependencies?.length) {
+          await this.helmService.updateDependencies(chartDir);
+          lockFiles.push(chartLockPath);
+          this.logger.info(`Updated lock file for ${chartDir}`);
+        } else if (await this.fileService.exists(chartLockPath)) {
+          await this.fileService.delete(chartLockPath);
+          lockFiles.push(chartLockPath);
+          this.logger.info(`Removed lock file for ${chartDir}`);
+        }
+        return true;
       } catch (error) {
         this.errorHandler.handle(error, {
           operation: `update lock file for ${chartDir}`,
@@ -75,6 +109,11 @@ class Update extends Action {
       }
     });
     const results = await Promise.all(updatePromises);
+    if (lockFiles.length) {
+      const headRef = process.env.GITHUB_HEAD_REF;
+      const word = lockFiles.length === 1 ? 'file' : 'files';
+      await this.gitService.signedCommit(headRef, lockFiles, `chore(github-action): update dependency lock ${word}`);
+    }
     return results.every(result => result === true);
   }
 
@@ -87,15 +126,49 @@ class Update extends Action {
   async metadata(charts) {
     if (!charts || !charts.length) return true;
     this.logger.info(`Updating metadata files for ${charts.length} charts`);
+    const metadataFiles = [];
     const updatePromises = charts.map(async (chartDir) => {
       try {
+        const chartName = path.basename(chartDir);
         const metadataPath = path.join(chartDir, 'metadata.yaml');
+        const chartYamlPath = path.join(chartDir, 'Chart.yaml');
+        let metadata = null;
         if (await this.fileService.exists(metadataPath)) {
-          const metadata = await this.fileService.readYaml(metadataPath);
-          await this.fileService.writeYaml(metadataPath, metadata);
-          this.logger.info(`Updated metadata file for ${chartDir}`);
-          return true;
+          const chart = await this.fileService.readYaml(chartYamlPath);
+          metadata = await this.fileService.readYaml(metadataPath);
+          if (metadata.entries?.[chartName]?.some(entry => entry.version === chart.version)) {
+            return true;
+          }
         }
+        const chartType = path.basename(path.dirname(chartDir));
+        const assetName = [chartType, 'tgz'].join('.');
+        const baseUrl = [this.context.payload.repository.html_url, 'releases', 'download'].join('/');
+        const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'helm-metadata-'));
+        await this.fileService.createDir(tempDir);
+        await this.helmService.package(chartDir, { destination: tempDir });
+        await this.helmService.generateIndex(tempDir, { url: baseUrl });
+        const indexPath = path.join(tempDir, 'index.yaml');
+        const index = await this.fileService.readYaml(indexPath);
+        index.entries[chartName].forEach(entry => {
+          const tagName = this.config.get('repository.release.title')
+            .replace('{{ .Name }}', chartName)
+            .replace('{{ .Version }}', entry.version);
+          entry.urls = [[baseUrl, tagName, assetName].join('/')];
+        });
+        if (metadata) {
+          let entries = [...index.entries[chartName], ...metadata.entries[chartName]];
+          entries.sort((current, next) => next.version.localeCompare(current.version));
+          const seen = new Set();
+          entries = entries.filter(entry => !seen.has(entry.version) && seen.add(entry.version));
+          const retention = this.config.get('repository.chart.packages.retention');
+          if (retention && entries.length > retention) {
+            entries = entries.slice(0, retention);
+          }
+          index.entries[chartName] = entries;
+        }
+        await this.fileService.writeYaml(metadataPath, index);
+        metadataFiles.push(metadataPath);
+        this.logger.info(`Updated metadata file for ${chartDir}`);
         return true;
       } catch (error) {
         this.errorHandler.handle(error, {
@@ -106,6 +179,11 @@ class Update extends Action {
       }
     });
     const results = await Promise.all(updatePromises);
+    if (metadataFiles.length) {
+      const headRef = process.env.GITHUB_HEAD_REF;
+      const word = metadataFiles.length === 1 ? 'file' : 'files';
+      await this.gitService.signedCommit(headRef, metadataFiles, `chore(github-action): update metadata ${word}`);
+    }
     return results.every(result => result === true);
   }
 }
