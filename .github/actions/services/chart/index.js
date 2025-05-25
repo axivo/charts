@@ -10,6 +10,7 @@ const path = require('path');
 const Action = require('../../core/Action');
 const File = require('../File');
 const Helm = require('../helm');
+const Shell = require('../Shell');
 const Update = require('./Update');
 
 class Chart extends Action {
@@ -105,20 +106,26 @@ class Chart extends Action {
    */
   async lint(charts) {
     if (!charts || !charts.length) return true;
-    this.logger.info(`Linting ${charts.length} charts`);
-    let success = true;
-    for (const chartDir of charts) {
-      const helmService = new Helm({
+    try {
+      this.logger.info(`Linting ${charts.length} charts...`);
+      const shellService = new Shell({
         github: this.github,
         context: this.context,
         core: this.core,
         exec: this.exec,
         config: this.config
       });
-      const result = await helmService.lint(chartDir, { strict: true });
-      if (!result) success = false;
+      await shellService.execute('ct', ['lint', '--charts', charts.join(','), '--skip-helm-dependencies']);
+      const word = charts.length === 1 ? 'chart' : 'charts';
+      this.logger.info(`Successfully linted ${charts.length} ${word}`);
+      return true;
+    } catch (error) {
+      this.errorHandler.handle(error, {
+        operation: 'lint charts',
+        fatal: false
+      });
+      return false;
     }
-    return success;
   }
 
   /**

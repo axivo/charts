@@ -68,29 +68,6 @@ class Helm extends Action {
   }
 
   /**
-   * Lints a chart
-   * 
-   * @param {string} chartDir - Chart directory
-   * @param {Object} options - Lint options
-   * @param {boolean} options.strict - Whether to use strict linting
-   * @returns {Promise<boolean>} - True if lint passed
-   */
-  async lint(chartDir, options = {}) {
-    try {
-      this.logger.info(`Linting chart: ${chartDir}`);
-      await this.execute(['lint', chartDir, ...(options.strict ? ['--strict'] : [])]);
-      this.logger.info(`Lint passed for ${chartDir}`);
-      return true;
-    } catch (error) {
-      this.errorHandler.handle(error, {
-        operation: `lint chart ${chartDir}`,
-        fatal: false
-      });
-      return false;
-    }
-  }
-
-  /**
    * Packages a chart
    * 
    * @param {string} chartDir - Chart directory
