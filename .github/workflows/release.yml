@@ -29,10 +29,13 @@ jobs:
   distribution:
     name: Distribution
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    env:
+      ACTIONS_STEP_DEBUG: true
+      NODE_OPTIONS: "--trace-warnings"
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
+    timeout-minutes: 10
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
