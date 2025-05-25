@@ -8,8 +8,7 @@
  */
 const Action = require('../core/Action');
 const { IssueError } = require('../utils/errors');
-const { File, GitHub, Template } = require('../services');
-const Issue = require('../services/issue');
+const { File, GitHub, Template, Issue } = require('../services');
 const Label = require('../services/issue/Label');
 
 class Issue extends Action {
