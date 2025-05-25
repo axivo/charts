@@ -1295,7 +1295,58 @@
 4. Maintain same error handling approach
 5. Use same service dependencies
 
-### 12. Code Organization
+### 13. Private Method Standards
+
+**Convention**: Use underscore prefix for private methods (`_methodName`)
+**Ordering**: Private methods immediately after constructor, before public methods
+**Purpose**: Encapsulate internal implementation details from public API
+**JSDoc**: Use `@private` tag positioned before `@param` tags
+
+**Method Ordering Standard**:
+1. Constructor (always first)
+2. Private methods (prefixed with `_`)
+3. Public methods (alphabetical order)
+
+**JSDoc Format for Private Methods**:
+```javascript
+/**
+ * Method description
+ * 
+ * @private
+ * @param {Type} param - Parameter description
+ * @returns {Type} - Return description
+ */
+async _privateMethod(param) {
+  // Implementation without comments or blank lines
+}
+```
+
+**Migration Goal**: 
+All classes will eventually migrate to proper public/private method distinction to:
+- **Improve encapsulation**: Hide internal implementation details
+- **Clarify public API**: Only expose intended interface methods
+- **Enhance maintainability**: Reduce coupling between components
+- **Follow industry standards**: Match modern JavaScript development practices
+
+**Examples of Methods to Convert**:
+- Helper methods used only within the class
+- Validation methods used internally
+- Data transformation utilities
+- Internal state management methods
+
+**Current Implementation**: 
+- `Issue._validate()` - First private method implemented
+- Returns `false` by default to prevent false positive issue creation
+- Positioned after constructor, before public methods
+- Proper JSDoc with `@private` tag
+
+**Future Private Method Candidates**:
+- `Chart._extractPath()` - Internal path extraction logic
+- `Template._compile()` - Internal template compilation
+- `Git._executeCommand()` - Internal command execution
+- `Release._buildTagName()` - Internal tag name generation
+
+### 14. Code Organization
 - Alphabetical method ordering
 - Group related functionality
 - Keep handlers thin

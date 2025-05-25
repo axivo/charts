@@ -105,7 +105,7 @@ class Workflow extends Action {
       const templateService = new Template(params);
       const labelService = new Label(params);
       const fileService = new File(params);
-      if (workflow.config.get('issue.createLabels') && params.context.workflow === 'Chart') {
+      if (workflow.config.get('issue.createLabels') === true && params.context.workflow === 'Chart') {
         workflow.logger.warning('Set "createLabels: false" in config.js after initial setup, to optimize workflow performance.');
       }
       const templatePath = workflow.config.get('workflow.template');

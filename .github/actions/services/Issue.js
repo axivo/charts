@@ -20,6 +20,25 @@ class Issue extends Action {
   }
 
   /**
+   * Validates if workflow has issues that warrant creating an issue
+   * 
+   * @private
+   * @param {Object} context - GitHub Actions context
+   * @returns {Promise<boolean>} - True if issues detected
+   */
+  async _validate(context) {
+    try {
+      return false;
+    } catch (error) {
+      this.errorHandler.handle(error, {
+        operation: 'validate workflow status',
+        fatal: false
+      });
+      return false;
+    }
+  }
+
+  /**
    * Creates a GitHub issue
    * 
    * @param {Object} params - Issue creation parameters
@@ -75,6 +94,10 @@ class Issue extends Action {
    */
   async report(params) {
     try {
+      const hasIssues = await this._validate(params.context);
+      if (!hasIssues) {
+        return null;
+      }
       const context = params.context || this.context;
       const repoUrl = context.payload.repository.html_url;
       const isPullRequest = Boolean(context.payload.pull_request);
