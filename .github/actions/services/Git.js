@@ -8,6 +8,7 @@
  */
 const Action = require('../core/Action');
 const { GitError } = require('../utils/errors');
+const File = require('./File');
 const Shell = require('./Shell');
 
 class Git extends Action {
@@ -134,15 +135,33 @@ class Git extends Action {
    * @returns {Promise<Object>} - Object with additions and deletions arrays
    */
   async getStagedChanges() {
-    const additions = await this.execute([
-      'diff', '--staged', '--name-status', '--diff-filter=ACMRT'
+    const fileService = new File({
+      github: this.github,
+      context: this.context,
+      core: this.core,
+      exec: this.exec,
+      config: this.config
+    });
+    const additionsFiles = await this.execute([
+      'diff', '--name-only', '--staged', '--diff-filter=ACMR'
     ]);
-    const deletions = await this.execute([
-      'diff', '--staged', '--name-status', '--diff-filter=D'
+    const deletionsFiles = await this.execute([
+      'diff', '--name-only', '--staged', '--diff-filter=D'
     ]);
+    const additions = await Promise.all(
+      additionsFiles.split('\n')
+        .filter(Boolean)
+        .map(async file => {
+          const contents = await fileService.read(file);
+          return { path: file, contents: Buffer.from(contents).toString('base64') };
+        })
+    );
+    const deletions = deletionsFiles.split('\n')
+      .filter(Boolean)
+      .map(file => ({ path: file }));
     return {
-      additions: this.parseGitStatus(additions),
-      deletions: this.parseGitStatus(deletions)
+      additions,
+      deletions
     };
   }
 

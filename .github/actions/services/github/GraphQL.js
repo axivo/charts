@@ -28,7 +28,7 @@ class GraphQL extends Api {
     if (additions?.length) {
       fileChanges.additions = additions.map(file => ({
         path: file.path,
-        contents: Buffer.from(file.contents || '').toString('base64')
+        contents: file.contents
       }));
     }
     if (deletions?.length) {

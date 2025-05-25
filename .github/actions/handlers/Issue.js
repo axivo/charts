@@ -7,8 +7,10 @@
  * @license BSD-3-Clause
  */
 const Action = require('../core/Action');
-const { File, GitHub, Issue: IssueService, Label, Template } = require('../services');
 const { IssueError } = require('../utils/errors');
+const { File, GitHub, Template } = require('../services');
+const Issue = require('../services/issue');
+const Label = require('../services/issue/Label');
 
 class Issue extends Action {
   /**
@@ -20,7 +22,7 @@ class Issue extends Action {
     super(params);
     this.fileService = new File(params);
     this.githubService = new GitHub.Rest(params);
-    this.issueService = new IssueService(params);
+    this.issueService = new Issue(params);
     this.labelService = new Label(params);
     this.templateService = new Template(params);
   }

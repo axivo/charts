@@ -11,8 +11,7 @@ const File = require('./File');
 const Git = require('./Git');
 const GitHub = require('./github');
 const Helm = require('./helm');
-const Issue = require('./Issue');
-const Label = require('./Label');
+const Issue = require('./issue');
 const Release = require('./release');
 const Shell = require('./Shell');
 const Template = require('./Template');
@@ -25,7 +24,6 @@ module.exports = {
   GitHub,
   Helm,
   Issue,
-  Label,
   Release,
   Shell,
   Template
