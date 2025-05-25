@@ -8,8 +8,9 @@
  */
 const path = require('path');
 const Action = require('../../core/Action');
-const { File, GitHub } = require('../');
 const { ReleaseError } = require('../../utils/errors');
+const File = require('../File');
+const GitHub = require('../github');
 
 class Release extends Action {
   /**

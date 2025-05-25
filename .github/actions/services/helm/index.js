@@ -8,8 +8,8 @@
  */
 const path = require('path');
 const Action = require('../../core/Action');
-const Shell = require('../Shell');
 const { HelmError } = require('../../utils/errors');
+const Shell = require('../Shell');
 
 class Helm extends Action {
   /**

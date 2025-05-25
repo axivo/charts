@@ -62,7 +62,7 @@ class Issue extends Action {
       throw new IssueError(operation, error);
     }
   }
-  
+
   /**
    * Prepares and creates a workflow issue
    * 

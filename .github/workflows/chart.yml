@@ -28,6 +28,9 @@ jobs:
     name: Updates
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    env:
+      ACTIONS_STEP_DEBUG: true
+      NODE_OPTIONS: "--trace-warnings"
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -43,7 +46,7 @@ jobs:
           node-version: 22
 
       - name: Install node dependencies
-        run: npm install js-yaml handlebars
+        run: npm install glob handlebars js-yaml
 
       - name: Configure repository
         uses: actions/github-script@v7

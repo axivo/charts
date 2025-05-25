@@ -7,8 +7,9 @@
  * @license BSD-3-Clause
  */
 const Action = require('../core/Action');
-const Shell = require('./Shell');
 const { GitError } = require('../utils/errors');
+const File = require('./File');
+const Shell = require('./Shell');
 
 class Git extends Action {
   /**
@@ -75,7 +76,7 @@ class Git extends Action {
    */
   async execute(args, options = {}) {
     try {
-      return await this.shellService.execute('git', args, options);
+      return await this.shellService.execute('git', args, { output: true, ...options });
     } catch (error) {
       throw new GitError(`git ${args[0]}`, error);
     }
@@ -134,15 +135,33 @@ class Git extends Action {
    * @returns {Promise<Object>} - Object with additions and deletions arrays
    */
   async getStagedChanges() {
-    const additions = await this.execute([
-      'diff', '--staged', '--name-status', '--diff-filter=ACMRT'
+    const fileService = new File({
+      github: this.github,
+      context: this.context,
+      core: this.core,
+      exec: this.exec,
+      config: this.config
+    });
+    const additionsFiles = await this.execute([
+      'diff', '--name-only', '--staged', '--diff-filter=ACMR'
     ]);
-    const deletions = await this.execute([
-      'diff', '--staged', '--name-status', '--diff-filter=D'
+    const deletionsFiles = await this.execute([
+      'diff', '--name-only', '--staged', '--diff-filter=D'
     ]);
+    const additions = await Promise.all(
+      additionsFiles.split('\n')
+        .filter(Boolean)
+        .map(async file => {
+          const contents = await fileService.read(file);
+          return { path: file, contents: Buffer.from(contents).toString('base64') };
+        })
+    );
+    const deletions = deletionsFiles.split('\n')
+      .filter(Boolean)
+      .map(file => ({ path: file }));
     return {
-      additions: this.parseGitStatus(additions),
-      deletions: this.parseGitStatus(deletions)
+      additions,
+      deletions
     };
   }
 
@@ -213,6 +232,51 @@ class Git extends Action {
     const args = ['push', remote, targetBranch];
     if (options.force) args.push('--force');
     return this.execute(args);
+  }
+
+  /**
+   * Creates a signed commit using GitHub GraphQL API
+   * 
+   * @param {string} branch - Git branch reference
+   * @param {Array<string>} files - Modified files to commit
+   * @param {string} message - Commit message
+   * @returns {Promise<Object>} - Commit operation result
+   */
+  async signedCommit(branch, files, message) {
+    try {
+      const headRef = branch || process.env.GITHUB_HEAD_REF;
+      const currentHead = await this.getRevision('HEAD');
+      await this.fetch('origin', headRef);
+      await this.switch(headRef);
+      await this.add(files);
+      const stagedChanges = await this.getStagedChanges();
+      const { additions, deletions } = stagedChanges;
+      if (additions.length + deletions.length === 0) {
+        this.logger.info('No changes to commit');
+        return { updated: 0 };
+      }
+      const GitHub = require('./github');
+      const graphqlService = new GitHub.GraphQL({
+        github: this.github,
+        context: this.context,
+        core: this.core,
+        exec: this.exec,
+        config: this.config
+      });
+      await graphqlService.createSignedCommit({
+        owner: this.context.repo.owner,
+        repo: this.context.repo.repo,
+        branchName: headRef,
+        expectedHeadOid: currentHead,
+        additions,
+        deletions,
+        commitMessage: message
+      });
+      this.logger.info(`Successfully committed ${files.length} files`);
+      return { updated: files.length };
+    } catch (error) {
+      throw new GitError('create signed commit', error);
+    }
   }
 
   /**
