@@ -930,7 +930,7 @@
 - Non-fatal error handling
 
 **Migrated to:**
-- `Label.add()` in `/Users/floren/github/charts/.github/actions/services/Label.js`
+- `Label.add()` in `/Users/floren/github/charts/.github/actions/services/issue/Label.js`
 
 **New Implementation:**
 - Dedicated Label service
@@ -1072,7 +1072,7 @@
 - Comprehensive workflow context
 
 **Migrated to:**
-- `Issue.report()` in `/Users/floren/github/charts/.github/actions/services/Issue.js`
+- `Issue.report()` in `/Users/floren/github/charts/.github/actions/services/issue/index.js`
 - `Issue.validate()` in `/Users/floren/github/charts/.github/actions/handlers/Issue.js`
 - `Workflow.reportIssue()` in `/Users/floren/github/charts/.github/actions/handlers/Workflow.js`
 
@@ -1093,7 +1093,7 @@
 - Conditional on config
 
 **Migrated to:**
-- `Label.update()` in `/Users/floren/github/charts/.github/actions/services/Label.js`
+- `Label.update()` in `/Users/floren/github/charts/.github/actions/services/issue/Label.js`
 - `Workflow.updateLabels()` in `/Users/floren/github/charts/.github/actions/handlers/Workflow.js`
 
 **New Implementation:**

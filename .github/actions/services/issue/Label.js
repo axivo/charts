@@ -6,8 +6,8 @@
  * @author AXIVO
  * @license BSD-3-Clause
  */
-const Action = require('../core/Action');
-const { IssueError } = require('../utils/errors');
+const Action = require('../../core/Action');
+const { IssueError } = require('../../utils/errors');
 
 class Label extends Action {
   /**
