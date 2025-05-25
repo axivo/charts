@@ -245,9 +245,9 @@ class Git extends Action {
   async signedCommit(branch, files, message) {
     try {
       const headRef = branch || process.env.GITHUB_HEAD_REF;
-      const currentHead = await this.getRevision('HEAD');
       await this.fetch('origin', headRef);
       await this.switch(headRef);
+      const currentHead = await this.getRevision('HEAD');
       await this.add(files);
       const stagedChanges = await this.getStagedChanges();
       const { additions, deletions } = stagedChanges;
