@@ -391,19 +391,21 @@
 
 **Migrated to:**
 - `Rest.getWorkflowRun()` in `/Users/floren/github/charts/.github/actions/services/github/Rest.js`
-- `Issue.validate()` in `/Users/floren/github/charts/.github/actions/handlers/Issue.js`
+- `Workflow.reportIssue()` in `/Users/floren/github/charts/.github/actions/handlers/Workflow.js`
 
 **New Implementation:**
 - Rest.getWorkflowRun() only gets basic workflow info
-- Issue.validate() checks conclusion status only
+- Workflow.reportIssue() uses services directly without workflow validation
 - No job step analysis
 - No log download
 - No warning detection
+- **ARCHITECTURAL CHANGE**: Issue handler eliminated to resolve naming conflicts
 
 **CRITICAL MISSING FUNCTIONALITY:**
 - **Cannot detect warnings in logs**
 - **Cannot analyze individual job steps**
 - **Less comprehensive issue detection**
+- **No workflow status validation** (removed due to flawed logic causing false positives)
 
 ### 6. createRelease
 **Old Function Behavior:**
@@ -930,7 +932,7 @@
 - Non-fatal error handling
 
 **Migrated to:**
-- `Label.add()` in `/Users/floren/github/charts/.github/actions/services/issue/Label.js`
+- `Label.add()` in `/Users/floren/github/charts/.github/actions/services/Label.js`
 
 **New Implementation:**
 - Dedicated Label service
@@ -1072,14 +1074,14 @@
 - Comprehensive workflow context
 
 **Migrated to:**
-- `Issue.report()` in `/Users/floren/github/charts/.github/actions/services/issue/index.js`
-- `Issue.validate()` in `/Users/floren/github/charts/.github/actions/handlers/Issue.js`
+- `Issue.report()` in `/Users/floren/github/charts/.github/actions/services/Issue.js`
 - `Workflow.reportIssue()` in `/Users/floren/github/charts/.github/actions/handlers/Workflow.js`
 
 **New Implementation:**
-- Split across layers
-- Validation separated from reporting
-- Same issue creation logic
+- Direct service usage without handler layer
+- **ARCHITECTURAL CHANGE**: Issue handler removed to fix naming conflicts
+- Workflow validation logic eliminated (was causing false positives)
+- Same issue creation logic via services
 - Missing: Log analysis for warnings
 
 ### 9. updateIssueLabels
@@ -1093,10 +1095,12 @@
 - Conditional on config
 
 **Migrated to:**
-- `Label.update()` in `/Users/floren/github/charts/.github/actions/services/issue/Label.js`
+- `Label.update()` in `/Users/floren/github/charts/.github/actions/services/Label.js`
 - `Workflow.updateLabels()` in `/Users/floren/github/charts/.github/actions/handlers/Workflow.js`
 
 **New Implementation:**
+- Direct service usage without handler layer
+- **ARCHITECTURAL CHANGE**: Issue handler removed to fix naming conflicts
 - Same config check
 - Same bulk creation
 - Returns created label names
@@ -1113,7 +1117,13 @@
 - **Documentation signed commits**: ✅ IMPLEMENTED - `Docs.generate()` uses `Git.signedCommit()` for documentation updates
 - **`Git.getStagedChanges()`**: ⚠️ PARTIAL - Returns paths and status, but signed commit method handles file content encoding internally
 
-### 3. GitHub API Methods - ❌ STILL MISSING
+### 3. Issue Handler Architecture - ✅ RESOLVED
+- **Issue handler naming conflict**: ✅ FIXED - Removed redundant Issue handler to eliminate SyntaxError
+- **Workflow issue reporting**: ✅ REFACTORED - Uses services directly via `Workflow.reportIssue()`
+- **Label management**: ✅ REFACTORED - Uses Label service directly via `Workflow.updateLabels()`
+- **Workflow validation**: ✅ REMOVED - Eliminated flawed validation logic causing false positives
+
+### 4. GitHub API Methods - ❌ STILL MISSING
 - **`deleteReleases()`**: ❌ Still needed for cleanup operations
 - **`deleteOciPackage()`**: ❌ Still needed for OCI cleanup
 - **`_getReleaseIds()`**: ❌ Helper for bulk operations still missing
