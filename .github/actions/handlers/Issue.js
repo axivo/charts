@@ -8,9 +8,7 @@
  */
 const Action = require('../core/Action');
 const { IssueError } = require('../utils/errors');
-const { File, GitHub, Template } = require('../services');
-const IssueService = require('../services/Issue');
-const Label = require('../services/Label');
+const { File, GitHub, Issue, Label, Template } = require('../services');
 
 class Issue extends Action {
   /**
@@ -22,7 +20,7 @@ class Issue extends Action {
     super(params);
     this.fileService = new File(params);
     this.githubService = new GitHub.Rest(params);
-    this.issueService = new IssueService(params);
+    this.issueService = new Issue(params);
     this.labelService = new Label(params);
     this.templateService = new Template(params);
   }

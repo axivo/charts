@@ -76,7 +76,7 @@ class Git extends Action {
    */
   async execute(args, options = {}) {
     try {
-      return await this.shellService.execute('git', args, options);
+      return await this.shellService.execute('git', args, { output: true, ...options });
     } catch (error) {
       throw new GitError(`git ${args[0]}`, error);
     }
