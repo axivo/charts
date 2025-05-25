@@ -9,6 +9,7 @@
 const Action = require('../core/Action');
 const { GitError } = require('../utils/errors');
 const File = require('./File');
+const GitHub = require('./github');
 const Shell = require('./Shell');
 
 class Git extends Action {
@@ -19,6 +20,7 @@ class Git extends Action {
    */
   constructor(params) {
     super(params);
+    this.graphqlService = new GitHub.GraphQL(params);
     this.shellService = new Shell(params);
   }
 
@@ -255,15 +257,7 @@ class Git extends Action {
         this.logger.info('No changes to commit');
         return { updated: 0 };
       }
-      const GitHub = require('./github');
-      const graphqlService = new GitHub.GraphQL({
-        github: this.github,
-        context: this.context,
-        core: this.core,
-        exec: this.exec,
-        config: this.config
-      });
-      await graphqlService.createSignedCommit({
+      await this.graphqlService.createSignedCommit({
         owner: this.context.repo.owner,
         repo: this.context.repo.repo,
         branchName: headRef,

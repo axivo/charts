@@ -35,9 +35,6 @@ class Docs extends Action {
   async generate(dirs) {
     try {
       const headRef = process.env.GITHUB_HEAD_REF;
-      this.logger.info(`Getting the latest changes for '${headRef}' branch...`);
-      await this.gitService.fetch('origin', headRef);
-      await this.gitService.switch(headRef);
       this.logger.info('Generating documentation with helm-docs...');
       if (!dirs || !dirs.length) {
         await this.shellService.execute('helm-docs', ['-l', this.config.get('workflow.docs.logLevel')]);
@@ -45,8 +42,7 @@ class Docs extends Action {
         const dirsList = dirs.join(',');
         await this.shellService.execute('helm-docs', ['-g', dirsList, '-l', this.config.get('workflow.docs.logLevel')]);
       }
-      await this.gitService.execute(['add', '.']);
-      const filesOutput = await this.gitService.execute(['diff', '--staged', '--name-only']);
+      const filesOutput = await this.gitService.execute(['diff', '--name-only']);
       const files = filesOutput.split('\n').filter(Boolean);
       if (!files.length) {
         this.logger.info('No file changes detected, documentation is up to date');
