@@ -45,14 +45,6 @@ class Chart extends Action {
       await this.chartUpdate.metadata(allCharts);
       await this.chartService.lint(allCharts);
       await this.docsService.generate(allCharts);
-      const modifiedFiles = await this.fileService.filter(allCharts);
-      if (modifiedFiles.length) {
-        await this.gitService.add(modifiedFiles);
-        await this.gitService.commit('Update charts', { signoff: true });
-        this.logger.info(`Committed ${modifiedFiles.length} modified files`);
-      } else {
-        this.logger.info('No files were modified');
-      }
       this.logger.info('Chart update complete');
       return { charts: charts.total, updated: charts.total };
     } catch (error) {
