@@ -57,11 +57,11 @@ class Update extends Action {
         appConfig.spec.source.targetRevision = tagName;
         await this.fileService.writeYaml(appFilePath, appConfig);
         appFiles.push(appFilePath);
-        this.logger.info(`Successfully updated application file for ${chartDir} directory`);
+        this.logger.info(`Successfully updated '${chartDir}' application file`);
         return true;
       } catch (error) {
         this.errorHandler.handle(error, {
-          operation: `update application file for ${chartDir} directory`,
+          operation: `update '${chartDir}' application file`,
           fatal: false
         });
         return false;
@@ -95,16 +95,16 @@ class Update extends Action {
         if (chart.dependencies?.length) {
           await this.helmService.updateDependencies(chartDir);
           lockFiles.push(chartLockPath);
-          this.logger.info(`Successfully updated lock file for '${chartDir}' directory`);
+          this.logger.info(`Successfully updated '${chartDir}' lock file`);
         } else if (await this.fileService.exists(chartLockPath)) {
           await this.fileService.delete(chartLockPath);
           lockFiles.push(chartLockPath);
-          this.logger.info(`Successfully removed lock file for '${chartDir}' directory`);
+          this.logger.info(`Successfully removed '${chartDir}' lock file`);
         }
         return true;
       } catch (error) {
         this.errorHandler.handle(error, {
-          operation: `update lock file for '${chartDir}' directory`,
+          operation: `update '${chartDir}' lock file`,
           fatal: false
         });
         return false;
@@ -144,8 +144,8 @@ class Update extends Action {
           }
         }
         const chartType = path.basename(path.dirname(chartDir));
-        const assetName = [chartType, 'tgz'].join('.');
-        const baseUrl = [this.context.payload.repository.html_url, 'releases', 'download'].join('/');
+        const assetName = `${chartType}.tgz`;
+        const baseUrl = `${this.context.payload.repository.html_url}/releases/download`;
         const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'helm-metadata-'));
         await this.fileService.createDir(tempDir);
         await this.helmService.package(chartDir, { destination: tempDir });
@@ -156,7 +156,7 @@ class Update extends Action {
           const tagName = this.config.get('repository.release.title')
             .replace('{{ .Name }}', chartName)
             .replace('{{ .Version }}', entry.version);
-          entry.urls = [[baseUrl, tagName, assetName].join('/')];
+          entry.urls = [`${baseUrl}/${tagName}/${assetName}`];
         });
         if (metadata) {
           let entries = [...index.entries[chartName], ...metadata.entries[chartName]];
@@ -171,11 +171,11 @@ class Update extends Action {
         }
         await this.fileService.writeYaml(metadataPath, index);
         metadataFiles.push(metadataPath);
-        this.logger.info(`Updated metadata file for ${chartDir}`);
+        this.logger.info(`Successfully updated '${chartDir}' metadata file`);
         return true;
       } catch (error) {
         this.errorHandler.handle(error, {
-          operation: `update metadata file for ${chartDir}`,
+          operation: `update '${chartDir}' metadata file`,
           fatal: false
         });
         return false;
