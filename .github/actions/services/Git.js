@@ -7,7 +7,6 @@
  * @license BSD-3-Clause
  */
 const Action = require('../core/Action');
-const { GitError } = require('../utils/errors');
 const File = require('./File');
 const GitHub = require('./github');
 const Shell = require('./Shell');
@@ -31,8 +30,13 @@ class Git extends Action {
    * @returns {Promise<string>} - Command output
    */
   async add(files) {
-    if (!files || !files.length) return '';
-    return this.execute(['add', ...files]);
+    if (!files || !files.length) {
+      this.logger.info('No files to add to git staging area');
+      return '';
+    }
+    return this.execute(`add ${files.length} files to git staging area`, async () => {
+      return await this.shellService.execute('git', ['add', ...files], { output: true });
+    });
   }
 
   /**
@@ -45,10 +49,12 @@ class Git extends Action {
    * @returns {Promise<string>} - Command output
    */
   async commit(message, options = {}) {
-    const args = ['commit', '-m', message];
-    if (options.signoff) args.push('--signoff');
-    if (options.noVerify) args.push('--no-verify');
-    return this.execute(args);
+    return this.execute(`commit changes: '${message}'`, async () => {
+      const args = ['commit', '-m', message];
+      if (options.signoff) args.push('--signoff');
+      if (options.noVerify) args.push('--no-verify');
+      return await this.shellService.execute('git', args, { output: true });
+    });
   }
 
   /**
@@ -57,30 +63,29 @@ class Git extends Action {
    * @returns {Promise<void>}
    */
   async configure() {
-    try {
+    return this.execute('configure repository', async () => {
       const userEmail = this.config.get('repository.user.email');
       const userName = this.config.get('repository.user.name');
-      await this.execute(['config', 'user.email', userEmail]);
-      await this.execute(['config', 'user.name', userName]);
-      this.logger.info('Git repository configured successfully');
-    } catch (error) {
-      this.errorHandler.handle(error, { operation: 'configure git repository' });
-    }
+      await this.shellService.execute('git', ['config', 'user.email', userEmail], { output: true });
+      await this.shellService.execute('git', ['config', 'user.name', userName], { output: true });
+      this.logger.info('Successfully configured repository');
+    });
   }
 
   /**
-   * Executes a git command
+   * Executes a git operation
    * 
-   * @param {string[]} args - Command arguments
-   * @param {Object} options - Execution options
-   * @param {boolean} options.silent - Whether to suppress command output
-   * @returns {Promise<string>} - Command output
+   * @param {string} operation - Git operation to perform
+   * @param {function} action - Async function to execute
+   * @param {boolean} [fatal=true] - Whether errors should be fatal
+   * @returns {Promise<any>} - Operation result
    */
-  async execute(args, options = {}) {
+  async execute(operation, action, fatal = true) {
     try {
-      return await this.shellService.execute('git', args, { output: true, ...options });
+      return await action();
     } catch (error) {
-      throw new GitError(`git ${args[0]}`, error);
+      this.errorHandler.handle(error, { operation, fatal });
+      return null;
     }
   }
 
@@ -88,13 +93,15 @@ class Git extends Action {
    * Fetches from a remote
    * 
    * @param {string} remote - Remote name
-   * @param {string} [ref] - Specific ref to fetch
+   * @param {string} [reference] - Specific reference to fetch
    * @returns {Promise<string>} - Command output
    */
-  async fetch(remote = 'origin', ref) {
-    const args = ['fetch', remote];
-    if (ref) args.push(ref);
-    return this.execute(args);
+  async fetch(remote = 'origin', reference) {
+    return this.execute(`fetch from '${remote}' remote${reference ? ` (${reference})` : ''}`, async () => {
+      const args = ['fetch', remote];
+      if (reference) args.push(reference);
+      return await this.shellService.execute('git', args, { output: true });
+    });
   }
 
   /**
@@ -103,32 +110,36 @@ class Git extends Action {
    * @returns {Promise<string>} - Current branch name
    */
   async getCurrentBranch() {
-    return this.execute(['rev-parse', '--abbrev-ref', 'HEAD']);
+    return this.execute('get current branch name', async () => {
+      return await this.shellService.execute('git', ['rev-parse', '--abbrev-ref', 'HEAD'], { output: true });
+    });
   }
 
   /**
    * Gets changes between working tree and reference
    * 
-   * @param {string} [ref] - Reference to compare against working tree
+   * @param {string} [reference] - Reference to compare against working tree
    * @returns {Promise<Object>} - Object with files property containing array of changed files
    */
-  async getChanges(ref) {
-    const args = ['diff', '--name-only'];
-    if (ref) args.push(ref);
-    const result = await this.execute(args);
-    return {
-      files: result ? result.split('\n').filter(Boolean) : []
-    };
+  async getChanges(reference) {
+    return this.execute(`get changes${reference ? ` against '${reference}'` : ''}`, async () => {
+      const args = ['diff', '--name-only'];
+      if (reference) args.push(reference);
+      const result = await this.shellService.execute('git', args, { output: true });
+      return { files: result ? result.split('\n').filter(Boolean) : [] };
+    }, false);
   }
 
   /**
    * Gets the revision hash for a reference
    * 
-   * @param {string} [ref='HEAD'] - Git reference
+   * @param {string} [reference='HEAD'] - Git reference
    * @returns {Promise<string>} - Revision hash
    */
-  async getRevision(ref = 'HEAD') {
-    return this.execute(['rev-parse', ref]);
+  async getRevision(reference = 'HEAD') {
+    return this.execute(`get revision for '${reference}' reference`, async () => {
+      return await this.shellService.execute('git', ['rev-parse', reference], { output: true });
+    });
   }
 
   /**
@@ -137,34 +148,36 @@ class Git extends Action {
    * @returns {Promise<Object>} - Object with additions and deletions arrays
    */
   async getStagedChanges() {
-    const fileService = new File({
-      github: this.github,
-      context: this.context,
-      core: this.core,
-      exec: this.exec,
-      config: this.config
-    });
-    const additionsFiles = await this.execute([
-      'diff', '--name-only', '--staged', '--diff-filter=ACMR'
-    ]);
-    const deletionsFiles = await this.execute([
-      'diff', '--name-only', '--staged', '--diff-filter=D'
-    ]);
-    const additions = await Promise.all(
-      additionsFiles.split('\n')
+    return this.execute('get staged changes', async () => {
+      const fileService = new File({
+        github: this.github,
+        context: this.context,
+        core: this.core,
+        exec: this.exec,
+        config: this.config
+      });
+      const additionsFiles = await this.shellService.execute('git', [
+        'diff', '--name-only', '--staged', '--diff-filter=ACMR'
+      ], { output: true });
+      const deletionsFiles = await this.shellService.execute('git', [
+        'diff', '--name-only', '--staged', '--diff-filter=D'
+      ], { output: true });
+      const additions = await Promise.all(
+        additionsFiles.split('\n')
+          .filter(Boolean)
+          .map(async file => {
+            const contents = await fileService.read(file);
+            return { path: file, contents: Buffer.from(contents).toString('base64') };
+          })
+      );
+      const deletions = deletionsFiles.split('\n')
         .filter(Boolean)
-        .map(async file => {
-          const contents = await fileService.read(file);
-          return { path: file, contents: Buffer.from(contents).toString('base64') };
-        })
-    );
-    const deletions = deletionsFiles.split('\n')
-      .filter(Boolean)
-      .map(file => ({ path: file }));
-    return {
-      additions,
-      deletions
-    };
+        .map(file => ({ path: file }));
+      return {
+        additions,
+        deletions
+      };
+    });
   }
 
   /**
@@ -173,21 +186,23 @@ class Git extends Action {
    * @returns {Promise<Object>} - Git status information
    */
   async getStatus() {
-    const result = await this.execute(['status', '--porcelain']);
-    const modified = [];
-    const untracked = [];
-    const staged = [];
-    if (result) {
-      result.split('\n').forEach(line => {
-        if (!line) return;
-        const status = line.substring(0, 2);
-        const file = line.substring(3);
-        if (status.includes('M')) modified.push(file);
-        if (status.includes('?')) untracked.push(file);
-        if (status.includes('A') || status.includes('R') || status.includes('C')) staged.push(file);
-      });
-    }
-    return { modified, untracked, staged };
+    return this.execute('get git status', async () => {
+      const result = await this.shellService.execute('git', ['status', '--porcelain'], { output: true });
+      const modified = [];
+      const untracked = [];
+      const staged = [];
+      if (result) {
+        result.split('\n').forEach(line => {
+          if (!line) return;
+          const status = line.substring(0, 2);
+          const file = line.substring(3);
+          if (status.includes('M')) modified.push(file);
+          if (status.includes('?')) untracked.push(file);
+          if (status.includes('A') || status.includes('R') || status.includes('C')) staged.push(file);
+        });
+      }
+      return { modified, untracked, staged };
+    }, false);
   }
 
   /**
@@ -215,9 +230,11 @@ class Git extends Action {
    * @returns {Promise<string>} - Command output
    */
   async pull(remote = 'origin', branch) {
-    const targetBranch = branch || await this.getCurrentBranch();
-    this.logger.info(`Pulling latest changes from ${remote}/${targetBranch}`);
-    return this.execute(['pull', remote, targetBranch]);
+    return this.execute(`pull from '${remote}' remote`, async () => {
+      const targetBranch = branch || await this.getCurrentBranch();
+      this.logger.info(`Pulling latest changes from '${remote}/${targetBranch}' branch`);
+      return await this.shellService.execute('git', ['pull', remote, targetBranch], { output: true });
+    });
   }
 
   /**
@@ -230,10 +247,12 @@ class Git extends Action {
    * @returns {Promise<string>} - Command output
    */
   async push(remote = 'origin', branch, options = {}) {
-    const targetBranch = branch || await this.getCurrentBranch();
-    const args = ['push', remote, targetBranch];
-    if (options.force) args.push('--force');
-    return this.execute(args);
+    return this.execute(`push to '${remote}' remote`, async () => {
+      const targetBranch = branch || await this.getCurrentBranch();
+      const args = ['push', remote, targetBranch];
+      if (options.force) args.push('--force');
+      return await this.shellService.execute('git', args, { output: true });
+    });
   }
 
   /**
@@ -245,7 +264,8 @@ class Git extends Action {
    * @returns {Promise<Object>} - Commit operation result
    */
   async signedCommit(branch, files, message) {
-    try {
+    const word = files.length === 1 ? 'file' : 'files';
+    return this.execute(`create signed commit for ${files.length} ${word}`, async () => {
       const headRef = branch || process.env.GITHUB_HEAD_REF;
       await this.fetch('origin', headRef);
       await this.switch(headRef);
@@ -254,6 +274,7 @@ class Git extends Action {
       const stagedChanges = await this.getStagedChanges();
       const { additions, deletions } = stagedChanges;
       if (additions.length + deletions.length === 0) {
+        this.logger.info('No staged changes to commit');
         return { updated: 0 };
       }
       await this.graphqlService.createSignedCommit({
@@ -265,11 +286,9 @@ class Git extends Action {
         deletions,
         commitMessage: message
       });
-      this.logger.info(`Successfully committed ${files.length} files`);
+      this.logger.info(`Successfully committed ${files.length} ${word}`);
       return { updated: files.length };
-    } catch (error) {
-      throw new GitError('create signed commit', error);
-    }
+    });
   }
 
   /**
@@ -279,7 +298,9 @@ class Git extends Action {
    * @returns {Promise<string>} - Command output
    */
   async switch(branch) {
-    return this.execute(['switch', branch]);
+    return this.execute(`switch to '${branch}' branch`, async () => {
+      return await this.shellService.execute('git', ['switch', branch], { output: true });
+    });
   }
 }
 
