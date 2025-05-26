@@ -29,29 +29,33 @@ class Docs extends Action {
   /**
    * Generates documentation for charts
    * 
-   * @param {Array<string>} dirs - Chart directories to generate documentation for
+   * @param {Array<string>} directories - Chart directories to generate documentation for
    * @returns {Promise<Object>} - Documentation generation results
    */
-  async generate(dirs) {
+  async generate(directories) {
     try {
       const headRef = process.env.GITHUB_HEAD_REF;
       this.logger.info('Generating documentation with helm-docs...');
-      if (!dirs || !dirs.length) {
+      if (!directories || !directories.length) {
         await this.shellService.execute('helm-docs', ['-l', this.config.get('workflow.docs.logLevel')]);
       } else {
-        const dirsList = dirs.join(',');
+        const dirsList = directories.join(',');
         await this.shellService.execute('helm-docs', ['-g', dirsList, '-l', this.config.get('workflow.docs.logLevel')]);
       }
       const filesOutput = await this.gitService.execute(['diff', '--name-only']);
       const files = filesOutput.split('\n').filter(Boolean);
       if (!files.length) {
         this.logger.info('No documentation file changes to commit');
-        return { updated: 0, total: dirs ? dirs.length : 0 };
+        return { updated: 0, total: directories ? directories.length : 0 };
       }
       const result = await this.gitService.signedCommit(headRef, files, 'chore(github-action): update documentation');
-      return { updated: result.updated, total: dirs ? dirs.length : 0 };
+      return { updated: result.updated, total: directories ? directories.length : 0 };
     } catch (error) {
-      throw new HelmError('generate documentation', error);
+      this.errorHandler.handle(error, {
+        operation: 'generate documentation',
+        fatal: false
+      });
+      return { updated: 0, total: directories ? directories.length : 0, error: true };
     }
   }
 
@@ -74,7 +78,8 @@ class Docs extends Action {
       this.logger.info('Successfully installed helm-docs');
       return true;
     } catch (error) {
-      throw new HelmError('install helm-docs', error);
+      this.errorHandler.handle(error, { operation: 'install helm-docs' });
+      return false;
     }
   }
 }
