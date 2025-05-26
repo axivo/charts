@@ -85,7 +85,7 @@ class Update extends Action {
   async lock(charts) {
     if (!charts || !charts.length) return true;
     const word = charts.length === 1 ? 'chart' : 'charts';
-    this.logger.info(`Updating lock files for ${charts.length} ${word}`);
+    this.logger.info(`Updating lock files for ${charts.length} ${word}...`);
     const lockFiles = [];
     const updatePromises = charts.map(async (chartDir) => {
       try {
@@ -95,16 +95,16 @@ class Update extends Action {
         if (chart.dependencies?.length) {
           await this.helmService.updateDependencies(chartDir);
           lockFiles.push(chartLockPath);
-          this.logger.info(`Updated lock file for ${chartDir}`);
+          this.logger.info(`Successfully updated lock file for '${chartDir}' directory`);
         } else if (await this.fileService.exists(chartLockPath)) {
           await this.fileService.delete(chartLockPath);
           lockFiles.push(chartLockPath);
-          this.logger.info(`Removed lock file for ${chartDir}`);
+          this.logger.info(`Successfully removed lock file for '${chartDir}' directory`);
         }
         return true;
       } catch (error) {
         this.errorHandler.handle(error, {
-          operation: `update lock file for ${chartDir}`,
+          operation: `update lock file for '${chartDir}' directory`,
           fatal: false
         });
         return false;
@@ -128,7 +128,7 @@ class Update extends Action {
   async metadata(charts) {
     if (!charts || !charts.length) return true;
     const word = charts.length === 1 ? 'chart' : 'charts';
-    this.logger.info(`Updating metadata files for ${charts.length} ${word}`);
+    this.logger.info(`Updating metadata files for ${charts.length} ${word}...`);
     const metadataFiles = [];
     const updatePromises = charts.map(async (chartDir) => {
       try {

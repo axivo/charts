@@ -41,26 +41,26 @@ class Helm extends Action {
   /**
    * Generates a Helm repository index file
    * 
-   * @param {string} dir - Directory containing chart packages
+   * @param {string} directory - Directory containing chart packages
    * @param {Object} options - Index options
    * @param {string} options.url - URL prefix for chart references
    * @param {string} options.merge - Path to existing index file to merge with
    * @param {boolean} options.generateMetadata - Generate missing metadata from chart contents
    * @returns {Promise<boolean>} - True if index was generated successfully
    */
-  async generateIndex(dir, options = {}) {
+  async generateIndex(directory, options = {}) {
     try {
-      const args = ['repo', 'index', dir];
+      const args = ['repo', 'index', directory];
       if (options.url) args.push('--url', options.url);
       if (options.merge) args.push('--merge', options.merge);
       if (options.generateMetadata) args.push('--generate-metadata');
-      this.logger.info(`Generating index file for: ${dir}`);
+      this.logger.info(`Generating index file for '${directory}' directory...`);
       await this.execute(args);
-      this.logger.info(`Successfully generated index file for ${dir}`);
+      this.logger.info(`Successfully generated index file for ${directory} directory`);
       return true;
     } catch (error) {
       this.errorHandler.handle(error, {
-        operation: `generate index for ${dir}`,
+        operation: `generate index file for '${directory}' directory`,
         fatal: false
       });
       return false;
@@ -70,18 +70,18 @@ class Helm extends Action {
   /**
    * Packages a chart
    * 
-   * @param {string} chartDir - Chart directory
+   * @param {string} directory - Chart directory
    * @param {Object} options - Package options
    * @param {string} options.destination - Destination directory
    * @returns {Promise<string>} - Path to packaged chart
    */
-  async package(chartDir, options = {}) {
+  async package(directory, options = {}) {
     try {
-      const args = ['package', chartDir];
+      const args = ['package', directory];
       if (options.destination) args.push('--destination', options.destination);
       if (options.version) args.push('--version', options.version);
       if (options.appVersion) args.push('--app-version', options.appVersion);
-      this.logger.info(`Packaging chart: ${chartDir}`);
+      this.logger.info(`Packaging chart to '${directory}' directory...`);
       const output = await this.execute(args, { output: true });
       const lines = output.split('\n');
       let packagePath = null;
@@ -91,11 +91,11 @@ class Helm extends Action {
           break;
         }
       }
-      this.logger.info(`Successfully packaged chart to ${packagePath}`);
+      this.logger.info(`Successfully packaged chart to '${packagePath}' directory`);
       return packagePath;
     } catch (error) {
       this.errorHandler.handle(error, {
-        operation: `package chart ${chartDir}`,
+        operation: `package chart to '${directory}' directory`,
         fatal: false
       });
       return null;
@@ -105,18 +105,18 @@ class Helm extends Action {
   /**
    * Updates chart dependencies
    * 
-   * @param {string} chartDir - Chart directory
+   * @param {string} directory - Chart directory
    * @returns {Promise<boolean>} - True if dependencies were updated
    */
-  async updateDependencies(chartDir) {
+  async updateDependencies(directory) {
     try {
-      this.logger.info(`Updating dependencies for ${chartDir}`);
-      await this.execute(['dependency', 'update', chartDir]);
-      this.logger.info(`Dependencies updated for ${chartDir}`);
+      this.logger.info(`Updating chart dependencies for '${directory}' directory...`);
+      await this.execute(['dependency', 'update', directory]);
+      this.logger.info(`Successfully updated chart dependencies for '${directory}' directory`);
       return true;
     } catch (error) {
       this.errorHandler.handle(error, {
-        operation: `update dependencies for ${chartDir}`,
+        operation: `update chart dependencies for '${directory}' directory`,
         fatal: false
       });
       return false;

@@ -101,13 +101,14 @@ class Chart extends Action {
   /**
    * Lints multiple charts
    * 
-   * @param {Array<string>} charts - Chart directories to lint
+   * @param {Array<string>} charts - Charts to lint
    * @returns {Promise<boolean>} - True if all charts passed linting
    */
   async lint(charts) {
     if (!charts || !charts.length) return true;
     try {
-      this.logger.info(`Linting ${charts.length} charts...`);
+      const word = charts.length === 1 ? 'chart' : 'charts';
+      this.logger.info(`Linting ${charts.length} ${word}...`);
       const shellService = new Shell({
         github: this.github,
         context: this.context,
@@ -116,7 +117,6 @@ class Chart extends Action {
         config: this.config
       });
       await shellService.execute('ct', ['lint', '--charts', charts.join(','), '--skip-helm-dependencies']);
-      const word = charts.length === 1 ? 'chart' : 'charts';
       this.logger.info(`Successfully linted ${charts.length} ${word}`);
       return true;
     } catch (error) {
