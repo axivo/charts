@@ -70,8 +70,8 @@ class Docs extends Action {
       const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'helm-docs-'));
       const packageFile = `helm-docs_${version}_Linux_x86_64.deb`;
       const packageBaseUrl = 'https://github.com/norwoodj/helm-docs/releases/download';
-      const packageUrl = [packageBaseUrl, `v${version}`, packageFile].join('/');
-      const packagePath = [tempDir, packageFile].join('/');
+      const packageUrl = `${packageBaseUrl}/v${version}/${packageFile}`;
+      const packagePath = `${tempDir}/${packageFile}`;
       this.logger.info(`Installing helm-docs v${version}...`);
       await this.shellService.execute('sudo', ['wget', '-qP', tempDir, '-t', '10', '-T', '60', packageUrl]);
       await this.shellService.execute('sudo', ['apt-get', '-y', 'install', packagePath]);
