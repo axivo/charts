@@ -110,7 +110,7 @@ class Workflow extends Action {
       const templateContent = await fileService.read(templatePath);
       const issue = await issueService.report({ context: params.context, templateContent, templateService, labelService });
       if (issue) {
-        workflow.logger.info('Workflow issue reported successfully');
+        workflow.logger.info('Successfully reported workflow issue');
         return { created: true, issue };
       } else {
         workflow.logger.info('No workflow issues to report');

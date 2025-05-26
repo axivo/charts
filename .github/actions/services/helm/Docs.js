@@ -51,11 +51,8 @@ class Docs extends Action {
       const result = await this.gitService.signedCommit(headRef, files, 'chore(github-action): update documentation');
       return { updated: result.updated, total: directories ? directories.length : 0 };
     } catch (error) {
-      this.errorHandler.handle(error, {
-        operation: 'generate documentation',
-        fatal: false
-      });
-      return { updated: 0, total: directories ? directories.length : 0, error: true };
+      this.errorHandler.handle(error, { operation: 'generate documentation', fatal: false });
+      return { updated: 0, total: directories ? directories.length : 0 };
     }
   }
 
