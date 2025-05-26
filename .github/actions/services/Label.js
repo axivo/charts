@@ -7,7 +7,6 @@
  * @license BSD-3-Clause
  */
 const Action = require('../core/Action');
-const { LabelError } = require('../utils/errors');
 
 class Label extends Action {
   /**
@@ -26,26 +25,26 @@ class Label extends Action {
    * @returns {Promise<boolean>} - True if label was created or exists
    */
   async add(name) {
-    if (!name) {
-      this.logger.warning('Label name is required');
-      return false;
-    }
-    const labelConfig = this.config.get(`issue.labels.${name}`);
-    if (!labelConfig) {
-      this.logger.warning(`Label configuration not found for '${name}'`);
-      return false;
-    }
-    const githubRest = this.github.rest || this.github;
-    try {
-      await githubRest.issues.getLabel({
-        owner: this.context.repo.owner,
-        repo: this.context.repo.repo,
-        name: name
-      });
-      return true;
-    } catch (error) {
-      if (error.status === 404) {
-        try {
+    return this.execute(`add '${name}' label`, async () => {
+      if (!name) {
+        this.logger.warning('Label name is required');
+        return false;
+      }
+      const labelConfig = this.config.get(`issue.labels.${name}`);
+      if (!labelConfig) {
+        this.logger.warning(`Label configuration not found for '${name}'`);
+        return false;
+      }
+      const githubRest = this.github.rest || this.github;
+      try {
+        await githubRest.issues.getLabel({
+          owner: this.context.repo.owner,
+          repo: this.context.repo.repo,
+          name: name
+        });
+        return true;
+      } catch (error) {
+        if (error.status === 404) {
           if (!this.config.get('issue.createLabels')) {
             this.logger.warning(`Label '${name}' not found and createLabels is disabled`);
             return false;
@@ -57,22 +56,12 @@ class Label extends Action {
             color: labelConfig.color,
             description: labelConfig.description
           });
-          this.logger.info(`Created '${name}' label`);
+          this.logger.info(`Successfully created '${name}' label`);
           return true;
-        } catch (createError) {
-          this.errorHandler.handle(createError, {
-            operation: `create '${name}' label`,
-            fatal: false
-          });
-          return false;
         }
+        throw error;
       }
-      this.errorHandler.handle(error, {
-        operation: `check '${name}' label`,
-        fatal: false
-      });
-      return false;
-    }
+    }, false);
   }
 
   /**
@@ -80,13 +69,15 @@ class Label extends Action {
    * 
    * @param {string} operation - Operation name for error reporting
    * @param {Function} action - Function to execute
-   * @returns {Promise<any>} - Result of the operation
+   * @param {boolean} fatal - Whether errors should be fatal
+   * @returns {Promise<any>} - Result of the operation or null on error
    */
-  async execute(operation, action) {
+  async execute(operation, action, fatal = true) {
     try {
       return await action();
     } catch (error) {
-      throw new LabelError(operation, error);
+      this.errorHandler.handle(error, { operation, fatal });
+      return null;
     }
   }
 
@@ -96,11 +87,11 @@ class Label extends Action {
    * @returns {Promise<string[]>} Array of created label names
    */
   async update() {
-    if (!this.config.get('issue.createLabels')) {
-      this.logger.info('Label creation is disabled in configuration, skipping label updates');
-      return [];
-    }
-    try {
+    return this.execute('update repository issue labels', async () => {
+      if (!this.config.get('issue.createLabels')) {
+        this.logger.info('Label creation is disabled in configuration, skipping label updates');
+        return [];
+      }
       this.logger.info('Updating repository issue labels...');
       const labelNames = Object.keys(this.config.get('issue.labels'));
       const results = await Promise.all(
@@ -114,13 +105,7 @@ class Label extends Action {
         this.logger.info(`Successfully updated ${createdLabels.length} issue labels`);
       }
       return createdLabels;
-    } catch (error) {
-      this.errorHandler.handle(error, {
-        operation: 'update repository issue labels',
-        fatal: false
-      });
-      return [];
-    }
+    }, false);
   }
 }
 

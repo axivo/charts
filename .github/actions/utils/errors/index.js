@@ -12,7 +12,6 @@ const GitError = require('./Git');
 const GitHubApiError = require('./GitHubApi');
 const HelmError = require('./Helm');
 const IssueError = require('./Issue');
-const LabelError = require('./Label');
 const ReleaseError = require('./Release');
 const ShellError = require('./Shell');
 const TemplateError = require('./Template');
@@ -25,7 +24,6 @@ module.exports = {
   GitHubApiError,
   HelmError,
   IssueError,
-  LabelError,
   ReleaseError,
   ShellError,
   TemplateError

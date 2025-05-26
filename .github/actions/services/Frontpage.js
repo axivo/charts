@@ -60,30 +60,23 @@ class Frontpage extends Action {
       const charts = await chartService.discover();
       const chartEntries = {};
       const allCharts = [
-        ...charts.application.map(dir => ({ dir, type: 'application' })),
-        ...charts.library.map(dir => ({ dir, type: 'library' }))
+        ...charts.application.map(directory => ({ directory, type: 'application' })),
+        ...charts.library.map(directory => ({ directory, type: 'library' }))
       ];
-      await Promise.all(allCharts.map(async ({ dir, type }) => {
-        try {
-          const chartName = path.basename(dir);
-          const chartYamlPath = path.join(dir, 'Chart.yaml');
-          const chartContent = await this.fileService.read(chartYamlPath);
-          const chartYaml = yaml.load(chartContent);
-          chartEntries[chartName] = {
-            description: chartYaml.description || '',
-            type,
-            version: chartYaml.version || ''
-          };
-        } catch (error) {
-          this.errorHandler.handle(error, {
-            operation: `read chart metadata for ${dir}`,
-            fatal: false
-          });
-        }
+      await Promise.all(allCharts.map(async ({ directory, type }) => {
+        const chartName = path.basename(directory);
+        const chartYamlPath = path.join(directory, 'Chart.yaml');
+        const chartContent = await this.fileService.read(chartYamlPath);
+        const chartYaml = yaml.load(chartContent);
+        chartEntries[chartName] = {
+          description: chartYaml.description || '',
+          type,
+          version: chartYaml.version || ''
+        };
       }));
       const sortedCharts = Object.entries(chartEntries)
-        .sort(([aName, aData], [bName, bData]) => {
-          return aData.type.localeCompare(bData.type) || aName.localeCompare(bName);
+        .sort(([currentName, currentData], [nextName, nextData]) => {
+          return currentData.type.localeCompare(nextData.type) || currentName.localeCompare(nextName);
         })
         .map(([name, data]) => ({
           Description: data.description || '',
@@ -115,32 +108,14 @@ class Frontpage extends Action {
     return this.execute('set Jekyll theme', async () => {
       const config = this.config.get();
       this.logger.info(`Setting up Jekyll theme for '${config.repository.release.deployment}' deployment...`);
-      try {
-        this.logger.info('Copying Jekyll theme config to ./_config.yml...');
-        await this.fileService.copy(config.theme.configuration.file, './_config.yml');
-      } catch (error) {
-        throw this.errorHandler.handle(error, { operation: 'copy Jekyll theme config' });
-      }
-      try {
-        this.logger.info('Copying Jekyll theme custom head content to ./_includes/head-custom.html...');
-        await this.fileService.createDir('./_includes');
-        await this.fileService.copy(config.theme.head.template, './_includes/head-custom.html');
-      } catch (error) {
-        this.errorHandler.handle(error, {
-          operation: 'copy Jekyll theme custom head content',
-          fatal: false
-        });
-      }
-      try {
-        this.logger.info('Copying Jekyll theme custom layout content to ./_layouts/default.html...');
-        await this.fileService.createDir('./_layouts');
-        await this.fileService.copy(config.theme.layout.template, './_layouts/default.html');
-      } catch (error) {
-        this.errorHandler.handle(error, {
-          operation: 'copy Jekyll theme custom layout content',
-          fatal: false
-        });
-      }
+      this.logger.info('Copying Jekyll theme config to ./_config.yml...');
+      await this.fileService.copy(config.theme.configuration.file, './_config.yml');
+      this.logger.info('Copying Jekyll theme custom head content to ./_includes/head-custom.html...');
+      await this.fileService.createDir('./_includes');
+      await this.fileService.copy(config.theme.head.template, './_includes/head-custom.html');
+      this.logger.info('Copying Jekyll theme custom layout content to ./_layouts/default.html...');
+      await this.fileService.createDir('./_layouts');
+      await this.fileService.copy(config.theme.layout.template, './_layouts/default.html');
       const isPrivate = this.context.payload.repository.private === true;
       const publish = !isPrivate && config.repository.release.deployment === 'production';
       this.core.setOutput('publish', publish);

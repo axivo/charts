@@ -30,20 +30,68 @@ class Update extends Action {
   /**
    * Commits files and returns results
    * 
-   * @param {string} type - Type of files (application, dependency lock, metadata)
-   * @param {Array<string>} files - Files to commit
-   * @param {Array<boolean>} results - Update operation results
+   * @param {Object} data - Commit data object
+   * @param {string} data.type - Type of files (application, dependency lock, metadata)
+   * @param {Array<string>} data.files - Files to commit
+   * @param {Array<boolean>} data.results - Update operation results
    * @returns {Promise<boolean>} - True if all operations succeeded
    */
-  async #commit(type, files, results) {
-    if (!files.length) {
-      this.logger.info(`No ${type} file changes to commit`);
-      return results.every(result => result === true);
+  async #commit(data) {
+    if (!data.files.length) {
+      this.logger.info(`No ${data.type} file changes to commit`);
+      return data.results.every(result => result === true);
     }
     const headRef = process.env.GITHUB_HEAD_REF;
-    const word = files.length === 1 ? 'file' : 'files';
-    await this.gitService.signedCommit(headRef, files, `chore(github-action): update ${type} ${word}`);
-    return results.every(result => result === true);
+    const word = data.files.length === 1 ? 'file' : 'files';
+    await this.gitService.signedCommit(headRef, data.files, `chore(github-action): update ${data.type} ${word}`);
+    return data.results.every(result => result === true);
+  }
+
+  /**
+   * Generates chart index from directory
+   * 
+   * @param {Object} directory - Directory object with chart and temp paths
+   * @param {string} directory.chart - Chart directory path
+   * @param {string} directory.temp - Temporary directory path
+   * @returns {Promise<Object>} Generated index object
+   */
+  async #generateIndex(directory) {
+    const chartType = path.basename(path.dirname(directory.chart));
+    const assetName = `${chartType}.tgz`;
+    const baseUrl = `${this.context.payload.repository.html_url}/releases/download`;
+    await this.fileService.createDir(directory.temp);
+    await this.helmService.package(directory.chart, { destination: directory.temp });
+    await this.helmService.generateIndex(directory.temp, { url: baseUrl });
+    const indexPath = path.join(directory.temp, 'index.yaml');
+    const index = await this.fileService.readYaml(indexPath);
+    const chartName = path.basename(directory.chart);
+    index.entries[chartName].forEach(entry => {
+      const tagName = this.config.get('repository.release.title')
+        .replace('{{ .Name }}', chartName)
+        .replace('{{ .Version }}', entry.version);
+      entry.urls = [`${baseUrl}/${tagName}/${assetName}`];
+    });
+    return index;
+  }
+
+  /**
+   * Merges metadata entries with retention policy
+   * 
+   * @param {Object} chart - Chart object with index, metadata and name
+   * @param {Object} chart.index - Generated index object
+   * @param {Object} chart.metadata - Existing metadata object
+   * @param {string} chart.name - Chart name
+   * @returns {Object} Updated index with merged entries
+   */
+  async #mergeEntries(chart) {
+    let entries = [...chart.index.entries[chart.name], ...chart.metadata.entries[chart.name]];
+    entries.sort((current, next) => next.version.localeCompare(current.version));
+    const seen = new Set();
+    entries = entries.filter(entry => !seen.has(entry.version) && seen.add(entry.version));
+    const retention = this.config.get('repository.chart.packages.retention');
+    if (retention && entries.length > retention) entries = entries.slice(0, retention);
+    chart.index.entries[chart.name] = entries;
+    return chart.index;
   }
 
   /**
@@ -54,41 +102,55 @@ class Update extends Action {
    */
   async application(charts) {
     if (!charts || !charts.length) return true;
-    const type = 'application';
-    const word = charts.length === 1 ? 'chart' : 'charts';
-    this.logger.info(`Updating ${type} files for ${charts.length} ${word}...`);
-    const appFiles = [];
-    const updatePromises = charts.map(async (chartDir) => {
-      try {
-        const appFilePath = path.join(chartDir, 'application.yaml');
-        if (!await this.fileService.exists(appFilePath)) {
+    return this.execute('update application files', async () => {
+      const type = 'application';
+      const word = charts.length === 1 ? 'chart' : 'charts';
+      this.logger.info(`Updating ${type} files for ${charts.length} ${word}...`);
+      const files = [];
+      const updatePromises = charts.map(async (chartDir) => {
+        try {
+          const appFilePath = path.join(chartDir, 'application.yaml');
+          if (!await this.fileService.exists(appFilePath)) return true;
+          const chartName = path.basename(chartDir);
+          const chartYamlPath = path.join(chartDir, 'Chart.yaml');
+          const appConfig = await this.fileService.readYaml(appFilePath);
+          const chartMetadata = await this.fileService.readYaml(chartYamlPath);
+          const tagName = this.config.get('repository.release.title')
+            .replace('{{ .Name }}', chartName)
+            .replace('{{ .Version }}', chartMetadata.version);
+          if (appConfig.spec.source.targetRevision === tagName) {
+            return true;
+          }
+          appConfig.spec.source.targetRevision = tagName;
+          await this.fileService.writeYaml(appFilePath, appConfig);
+          files.push(appFilePath);
+          this.logger.info(`Successfully updated '${chartDir}' ${type} file`);
           return true;
+        } catch (error) {
+          this.errorHandler.handle(error, { operation: `update '${chartDir}' ${type} file`, fatal: false });
+          return false;
         }
-        const chartName = path.basename(chartDir);
-        const chartYamlPath = path.join(chartDir, 'Chart.yaml');
-        const appConfig = await this.fileService.readYaml(appFilePath);
-        const chartMetadata = await this.fileService.readYaml(chartYamlPath);
-        const tagName = this.config.get('repository.release.title')
-          .replace('{{ .Name }}', chartName)
-          .replace('{{ .Version }}', chartMetadata.version);
-        if (appConfig.spec.source.targetRevision === tagName) {
-          return true;
-        }
-        appConfig.spec.source.targetRevision = tagName;
-        await this.fileService.writeYaml(appFilePath, appConfig);
-        appFiles.push(appFilePath);
-        this.logger.info(`Successfully updated '${chartDir}' ${type} file`);
-        return true;
-      } catch (error) {
-        this.errorHandler.handle(error, {
-          operation: `update '${chartDir}' ${type} file`,
-          fatal: false
-        });
-        return false;
-      }
+      });
+      const results = await Promise.all(updatePromises);
+      return this.#commit({ type, files, results });
     });
-    const results = await Promise.all(updatePromises);
-    return this.#commit(type, appFiles, results);
+  }
+
+  /**
+   * Executes a chart update operation with error handling
+   * 
+   * @param {string} operation - Operation name for error reporting
+   * @param {Function} action - Function to execute
+   * @param {boolean} fatal - Whether errors should be fatal
+   * @returns {Promise<any>} - Result of the operation or null on error
+   */
+  async execute(operation, action, fatal = true) {
+    try {
+      return await action();
+    } catch (error) {
+      this.errorHandler.handle(error, { operation, fatal });
+      return null;
+    }
   }
 
   /**
@@ -99,35 +161,34 @@ class Update extends Action {
    */
   async lock(charts) {
     if (!charts || !charts.length) return true;
-    const type = 'dependency lock';
-    const word = charts.length === 1 ? 'chart' : 'charts';
-    this.logger.info(`Updating ${type} files for ${charts.length} ${word}...`);
-    const lockFiles = [];
-    const updatePromises = charts.map(async (chartDir) => {
-      try {
-        const chartLockPath = path.join(chartDir, 'Chart.lock');
-        const chartYamlPath = path.join(chartDir, 'Chart.yaml');
-        const chart = await this.fileService.readYaml(chartYamlPath);
-        if (chart.dependencies?.length) {
-          await this.helmService.updateDependencies(chartDir);
-          lockFiles.push(chartLockPath);
-          this.logger.info(`Successfully updated '${chartDir}' ${type} file`);
-        } else if (await this.fileService.exists(chartLockPath)) {
-          await this.fileService.delete(chartLockPath);
-          lockFiles.push(chartLockPath);
-          this.logger.info(`Successfully removed '${chartDir}' ${type} file`);
+    return this.execute('update dependency lock files', async () => {
+      const type = 'dependency lock';
+      const word = charts.length === 1 ? 'chart' : 'charts';
+      this.logger.info(`Updating ${type} files for ${charts.length} ${word}...`);
+      const files = [];
+      const updatePromises = charts.map(async (chartDir) => {
+        try {
+          const chartLockPath = path.join(chartDir, 'Chart.lock');
+          const chartYamlPath = path.join(chartDir, 'Chart.yaml');
+          const chart = await this.fileService.readYaml(chartYamlPath);
+          if (chart.dependencies?.length) {
+            await this.helmService.updateDependencies(chartDir);
+            files.push(chartLockPath);
+            this.logger.info(`Successfully updated '${chartDir}' ${type} file`);
+          } else if (await this.fileService.exists(chartLockPath)) {
+            await this.fileService.delete(chartLockPath);
+            files.push(chartLockPath);
+            this.logger.info(`Successfully removed '${chartDir}' ${type} file`);
+          }
+          return true;
+        } catch (error) {
+          this.errorHandler.handle(error, { operation: `update '${chartDir}' ${type} file`, fatal: false });
+          return false;
         }
-        return true;
-      } catch (error) {
-        this.errorHandler.handle(error, {
-          operation: `update '${chartDir}' ${type} file`,
-          fatal: false
-        });
-        return false;
-      }
+      });
+      const results = await Promise.all(updatePromises);
+      return this.#commit({ type, files, results });
     });
-    const results = await Promise.all(updatePromises);
-    return this.#commit(type, lockFiles, results);
   }
 
   /**
@@ -138,63 +199,39 @@ class Update extends Action {
    */
   async metadata(charts) {
     if (!charts || !charts.length) return true;
-    const type = 'metadata';
-    const word = charts.length === 1 ? 'chart' : 'charts';
-    this.logger.info(`Updating ${type} files for ${charts.length} ${word}...`);
-    const metadataFiles = [];
-    const updatePromises = charts.map(async (chartDir) => {
-      try {
-        const chartName = path.basename(chartDir);
-        const metadataPath = path.join(chartDir, 'metadata.yaml');
-        const chartYamlPath = path.join(chartDir, 'Chart.yaml');
-        let metadata = null;
-        if (await this.fileService.exists(metadataPath)) {
-          const chart = await this.fileService.readYaml(chartYamlPath);
-          metadata = await this.fileService.readYaml(metadataPath);
-          if (metadata.entries?.[chartName]?.some(entry => entry.version === chart.version)) {
-            return true;
+    return this.execute('update metadata files', async () => {
+      const type = 'metadata';
+      const word = charts.length === 1 ? 'chart' : 'charts';
+      this.logger.info(`Updating ${type} files for ${charts.length} ${word}...`);
+      const files = [];
+      const updatePromises = charts.map(async (chartDir) => {
+        try {
+          const chartName = path.basename(chartDir);
+          const metadataPath = path.join(chartDir, 'metadata.yaml');
+          const chartYamlPath = path.join(chartDir, 'Chart.yaml');
+          let metadata = null;
+          if (await this.fileService.exists(metadataPath)) {
+            const chart = await this.fileService.readYaml(chartYamlPath);
+            metadata = await this.fileService.readYaml(metadataPath);
+            if (metadata.entries?.[chartName]?.some(entry => entry.version === chart.version)) {
+              return true;
+            }
           }
+          const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'helm-metadata-'));
+          const index = await this.#generateIndex({ chart: chartDir, temp: tempDir });
+          if (metadata) await this.#mergeEntries({ index, metadata, name: chartName });
+          await this.fileService.writeYaml(metadataPath, index);
+          files.push(metadataPath);
+          this.logger.info(`Successfully updated '${chartDir}' ${type} file`);
+          return true;
+        } catch (error) {
+          this.errorHandler.handle(error, { operation: `update '${chartDir}' ${type} file`, fatal: false });
+          return false;
         }
-        const chartType = path.basename(path.dirname(chartDir));
-        const assetName = `${chartType}.tgz`;
-        const baseUrl = `${this.context.payload.repository.html_url}/releases/download`;
-        const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'helm-metadata-'));
-        await this.fileService.createDir(tempDir);
-        await this.helmService.package(chartDir, { destination: tempDir });
-        await this.helmService.generateIndex(tempDir, { url: baseUrl });
-        const indexPath = path.join(tempDir, 'index.yaml');
-        const index = await this.fileService.readYaml(indexPath);
-        index.entries[chartName].forEach(entry => {
-          const tagName = this.config.get('repository.release.title')
-            .replace('{{ .Name }}', chartName)
-            .replace('{{ .Version }}', entry.version);
-          entry.urls = [`${baseUrl}/${tagName}/${assetName}`];
-        });
-        if (metadata) {
-          let entries = [...index.entries[chartName], ...metadata.entries[chartName]];
-          entries.sort((current, next) => next.version.localeCompare(current.version));
-          const seen = new Set();
-          entries = entries.filter(entry => !seen.has(entry.version) && seen.add(entry.version));
-          const retention = this.config.get('repository.chart.packages.retention');
-          if (retention && entries.length > retention) {
-            entries = entries.slice(0, retention);
-          }
-          index.entries[chartName] = entries;
-        }
-        await this.fileService.writeYaml(metadataPath, index);
-        metadataFiles.push(metadataPath);
-        this.logger.info(`Successfully updated '${chartDir}' ${type} file`);
-        return true;
-      } catch (error) {
-        this.errorHandler.handle(error, {
-          operation: `update '${chartDir}' ${type} file`,
-          fatal: false
-        });
-        return false;
-      }
+      });
+      const results = await Promise.all(updatePromises);
+      return this.#commit({ type, files, results });
     });
-    const results = await Promise.all(updatePromises);
-    return this.#commit(type, metadataFiles, results);
   }
 }
 

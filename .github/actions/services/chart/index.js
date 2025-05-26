@@ -20,8 +20,8 @@ class Chart extends Action {
    * @returns {Promise<Object>} - Object containing application and library chart paths
    */
   async discover() {
-    const charts = { application: [], library: [], total: 0 };
-    try {
+    return this.execute('discover charts', async () => {
+      const charts = { application: [], library: [], total: 0 };
       const fileService = new File({
         github: this.github,
         context: this.context,
@@ -50,13 +50,25 @@ class Chart extends Action {
       }
       const word = charts.total === 1 ? 'chart' : 'charts';
       this.logger.info(`Discovered ${charts.total} ${word} in repository`);
+      return charts;
+    }, false);
+  }
+
+  /**
+   * Executes a chart operation with error handling
+   * 
+   * @param {string} operation - Operation name for error reporting
+   * @param {Function} action - Function to execute
+   * @param {boolean} fatal - Whether errors should be fatal
+   * @returns {Promise<any>} - Result of the operation or null on error
+   */
+  async execute(operation, action, fatal = true) {
+    try {
+      return await action();
     } catch (error) {
-      this.errorHandler.handle(error, {
-        operation: 'discover charts',
-        fatal: false
-      });
+      this.errorHandler.handle(error, { operation, fatal });
+      return null;
     }
-    return charts;
   }
 
   /**
@@ -66,8 +78,8 @@ class Chart extends Action {
    * @returns {Promise<Object>} - Object containing application and library chart paths
    */
   async find(files) {
-    const charts = { application: [], library: [], total: 0 };
-    try {
+    return this.execute('find modified charts', async () => {
+      const charts = { application: [], library: [], total: 0 };
       const fileService = new File({
         github: this.github,
         context: this.context,
@@ -89,13 +101,8 @@ class Chart extends Action {
         const word = charts.total === 1 ? 'chart' : 'charts';
         this.logger.info(`Found ${charts.total} modified ${word}`);
       }
-    } catch (error) {
-      this.errorHandler.handle(error, {
-        operation: 'find modified charts',
-        fatal: false
-      });
-    }
-    return charts;
+      return charts;
+    }, false);
   }
 
   /**
@@ -106,7 +113,7 @@ class Chart extends Action {
    */
   async lint(charts) {
     if (!charts || !charts.length) return true;
-    try {
+    return this.execute('lint charts', async () => {
       const word = charts.length === 1 ? 'chart' : 'charts';
       this.logger.info(`Linting ${charts.length} ${word}...`);
       const shellService = new Shell({
@@ -119,13 +126,7 @@ class Chart extends Action {
       await shellService.execute('ct', ['lint', '--charts', charts.join(','), '--skip-helm-dependencies']);
       this.logger.info(`Successfully linted ${charts.length} ${word}`);
       return true;
-    } catch (error) {
-      this.errorHandler.handle(error, {
-        operation: 'lint charts',
-        fatal: false
-      });
-      return false;
-    }
+    }, false);
   }
 
   /**
@@ -135,7 +136,7 @@ class Chart extends Action {
    * @returns {Promise<boolean>} - True if validation passed
    */
   async validate(directory) {
-    try {
+    return this.execute('validate chart', async () => {
       const helmService = new Helm({
         github: this.github,
         context: this.context,
@@ -147,13 +148,7 @@ class Chart extends Action {
         return false;
       }
       return true;
-    } catch (error) {
-      this.errorHandler.handle(error, {
-        operation: `validate chart '${directory}' directory`,
-        fatal: false
-      });
-      return false;
-    }
+    }, false);
   }
 }
 
