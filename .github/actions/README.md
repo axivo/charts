@@ -7,6 +7,131 @@ This repository contains modular, object-oriented JavaScript components for GitH
 1. [Configuration System](#configuration-system)
 2. [Base Action Class](#base-action-class)
 3. [Error Handling](#error-handling)
+4. [Architecture Overview](#architecture-overview)
+5. [Service Layer Patterns](#service-layer-patterns)
+6. [Coding Standards Compliance](#coding-standards-compliance)
+7. [GitHub API Integration](#github-api-integration)
+
+## Architecture Overview
+
+The codebase follows a modular, layered architecture designed for maintainability and consistency:
+
+### Directory Structure
+
+```
+.github/actions/
+├── config/                 # Configuration management
+│   ├── index.js            # Singleton configuration instance
+│   └── production.js       # Production configuration values
+├── core/                   # Base classes and utilities
+│   ├── Action.js           # Base Action class with lifecycle hooks
+│   ├── Configuration.js    # Configuration management class
+│   ├── Logger.js           # Standardized logging class
+│   └── index.js            # Core module exports
+├── handlers/               # High-level workflow orchestration
+│   ├── Chart.js            # Chart update handler
+│   ├── Workflow.js         # Common workflow operations
+│   └── release/            # Release-specific handlers
+├── services/               # Business logic services
+│   ├── chart/              # Chart-specific services
+│   ├── github/             # GitHub API services
+│   ├── helm/               # Helm tool services
+│   ├── release/            # Release management services
+│   └── [service files]     # Individual service files
+├── templates/              # Handlebars templates
+└── utils/                  # Utility classes and functions
+    ├── errors/             # Typed error classes
+    └── [utility files]    # Error handling utilities
+```
+
+### Architectural Principles
+
+- **Single Responsibility**: Each service handles one specific domain
+- **Dependency Injection**: Services receive dependencies through constructors
+- **Stateless Services**: Services maintain no state between operations
+- **Consistent Error Handling**: All services use typed errors with context
+- **Alphabetical Organization**: Methods are ordered alphabetically for consistency
+
+## Service Layer Patterns
+
+Services form the core business logic layer with standardized patterns:
+
+### Service Implementation Pattern
+
+Services are stateless classes that extend the Action base class and provide domain-specific functionality. They follow strict implementation guidelines for consistency and maintainability.
+
+### Service Composition
+
+- Services use dependency injection via constructor parameters
+- Each service focuses on a single domain (GitHub API, Helm operations, file management)
+- Services throw typed errors with contextual information
+- All methods follow alphabetical ordering after the constructor
+
+### Error Handling in Services
+
+Services use the `execute()` pattern for consistent error handling and context preservation. Operations are wrapped with appropriate error types that include operation context and debugging information.
+
+## Coding Standards Compliance
+
+See below, the critical implementation requirements.
+
+### File Structure Standards
+
+- **Import Order**: Node.js built-ins, third-party modules, internal modules (all alphabetical)
+- **Class Structure**: Constructor first, then methods in alphabetical order
+- **Export Pattern**: Single default export per file
+
+### Method Implementation Rules
+
+- **No Comments**: Method bodies contain no comments under any circumstances
+- **No Blank Lines**: Method bodies contain no blank lines
+- **Single Responsibility**: Each method performs one clear operation
+- **Consistent Returns**: Methods return consistent data structures
+
+### Error Handling Standards
+
+- **Typed Errors**: Use specific error classes (ReleaseError, GitError, etc.)
+- **Error Context**: Include operation name and debugging details
+- **Fatal vs Non-Fatal**: Distinguish between blocking and non-blocking errors
+- **Consistent Patterns**: Follow established error handling patterns exactly
+
+### Service Layer Requirements
+
+- **Stateless Design**: Services maintain no instance state
+- **Constructor Injection**: Dependencies injected via constructor
+- **Alphabetical Methods**: All methods ordered alphabetically after constructor
+- **Parameter Objects**: Methods accept parameter objects for flexibility
+
+### Git Operations Pattern
+
+- **Signed Commits**: All file updates use GraphQL signed commit pattern
+- **File Tracking**: Track modified files for atomic commits
+- **Branch Operations**: Fetch and switch to correct branches before operations
+- **Error Isolation**: Individual file errors don't block entire operations
+
+## GitHub API Integration
+
+The system provides comprehensive GitHub API integration through specialized services:
+
+### REST API Service
+
+Handles standard CRUD operations, file uploads, and repository management. Uses parameter objects for all methods and provides consistent error handling with proper GitHub API error translation.
+
+### GraphQL API Service
+
+Manages complex queries, signed commits, and advanced repository operations. Includes pagination support for large result sets and batch operations for efficiency.
+
+### API Usage Patterns
+
+- **REST for Simple Operations**: Basic CRUD, uploads, standard repository operations
+- **GraphQL for Complex Operations**: Signed commits, complex queries, batch operations
+- **Consistent Parameters**: All methods use parameter objects with owner/repo/additional params
+- **Error Translation**: GitHub API errors translated to typed application errors
+- **Rate Limit Handling**: Built-in handling for GitHub API rate limits and retry logic
+
+### Release Management Integration
+
+Specialized services handle GitHub releases, OCI package management, and chart publishing with automatic cleanup and error recovery. The system supports both traditional Helm repositories and OCI registries.
 
 ## Configuration System
 
@@ -26,36 +151,6 @@ const config = require('../config');
 // Access configuration values with dot notation
 const repoUrl = config.get('repository.url');
 const defaultValue = config.get('some.missing.path', 'default value');
-
-// Modify configuration values
-config.set('custom.setting', 'new value');
-
-// Merge additional configuration
-config.merge({
-  custom: {
-    settings: {
-      advanced: true
-    }
-  }
-});
-
-// Load environment variables (ENV_CONFIG_* pattern)
-// Example: ENV_CONFIG_REPOSITORY_URL becomes repository.url
-config.loadEnvironmentVariables();
-
-// Validate required configuration exists
-config.validate();
-```
-
-### Creating Custom Instances
-
-```javascript
-const { Configuration } = require('../core');
-const customConfig = new Configuration({
-  custom: {
-    setting: 'value'
-  }
-});
 ```
 
 ### Environment Variables
@@ -66,6 +161,7 @@ Environment variables that start with `ENV_CONFIG_` will be automatically loaded
 - `ENV_CONFIG_WORKFLOW_LABELS` → `workflow.labels`
 
 Values are automatically converted to appropriate types:
+
 - `"true"` and `"false"` become boolean values
 - Numeric strings become numbers
 - Other values remain as strings
@@ -79,30 +175,6 @@ The Action class provides a foundation for building GitHub Actions with:
 - Integrated error handling
 - Common utility methods
 
-### Usage
-
-```javascript
-const { Action } = require('../core');
-
-class ChartUpdateAction extends Action {
-  async run() {
-    const charts = await this.findCharts();
-    await this.updateCharts(charts);
-    return 'Charts updated successfully';
-  }
-  
-  async findCharts() {
-    // Implementation here
-  }
-  
-  async updateCharts(charts) {
-    // Implementation here
-  }
-}
-
-module.exports = ChartUpdateAction;
-```
-
 ### Lifecycle Hooks
 
 The Action class provides several hooks to customize behavior:
@@ -113,38 +185,6 @@ The Action class provides several hooks to customize behavior:
 4. `run()` - Main action implementation (must be overridden)
 5. `afterExecute(result)` - Runs after execution with the result
 
-### Creating Action Instances
-
-```javascript
-const core = require('@actions/core');
-const github = require('@actions/github');
-const exec = require('@actions/exec');
-const { Configuration } = require('../core');
-const ChartUpdateAction = require('./ChartUpdateAction');
-const config = require('../config');
-
-async function run() {
-  try {
-    const configuration = new Configuration(config);
-    configuration.validate();
-    
-    const action = new ChartUpdateAction({
-      core,
-      github,
-      exec,
-      config: configuration
-    });
-    
-    const result = await action.execute();
-    core.setOutput('result', result);
-  } catch (error) {
-    core.setFailed(`Action failed: ${error.message}`);
-  }
-}
-
-run();
-```
-
 ## Error Handling
 
 The Error handling system provides standardized error management:
@@ -154,22 +194,25 @@ The Error handling system provides standardized error management:
 - Error categorization (fatal vs. non-fatal)
 - Stack trace preservation
 
-### Using ErrorHandler
+### Error Classes
 
-```javascript
-const { createErrorHandler, createErrorContext } = require('../utils/errorUtils');
+The system uses typed error classes for different domains:
 
-// In a class constructor
-this.errorHandler = createErrorHandler(core);
+- **AppError**: Base error class for all application errors
+- **ReleaseError**: Release and publishing operation errors  
+- **GitError**: Git operation and repository errors
+- **GitHubApiError**: GitHub API communication errors
+- **HelmError**: Helm CLI and chart operation errors
+- **FileError**: File system operation errors
 
-// Handling errors
-try {
-  // Some operation
-} catch (error) {
-  this.errorHandler.handle(error, createErrorContext('operation name', {
-    fatal: true,
-    file: 'path/to/file.yml',
-    line: 42
-  }));
-}
-```
+### Error Context
+
+All errors include contextual information for debugging:
+- Operation name and description
+- File paths and line numbers (when applicable)
+- Original error details and stack traces
+- Severity level (fatal vs non-fatal)
+
+### Error Handling Patterns
+
+Services use consistent error handling patterns with proper context preservation and GitHub Actions integration for annotations and workflow failure management.

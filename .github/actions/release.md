@@ -1,670 +1,920 @@
-# GitHub Actions Release Migration Analysis
+# Release Workflow Code Analysis Report - Phased Implementation Plan
 
 ## Overview
 
-This document provides a comprehensive analysis of missing functionality from the old GitHub Actions scripts that needs to be implemented in the new object-oriented codebase. The analysis covers critical GitHub API methods, validation systems, and cleanup operations that are required for complete chart release management.
+After comprehensive line-by-line analysis of the entire `/Users/floren/github/charts/.github/actions` codebase specifically for the release.yml workflow, I have identified code quality issues that impact release processing, GitHub publishing, OCI publishing, and frontpage generation. This report organizes fixes into 4 manageable phases for systematic implementation across multiple chat sessions.
 
-## Migration Status Summary
+**Release Workflow Components Analyzed:**
+- `Workflow.configureRepository()` → Git configuration
+- `Workflow.processReleases()` → Main release processing pipeline 
+- `Workflow.setFrontpage()` → Jekyll frontpage generation
+- `Workflow.reportIssue()` → Error reporting
 
-### ✅ COMPLETED MIGRATIONS (70%)
-- Chart update operations (application, lock, metadata files)
-- Git signed commit functionality with GraphQL API
-- Documentation generation with helm-docs
-- Basic GitHub API operations (create release, upload assets)
-- Template rendering and frontpage generation
-- Package creation and OCI publishing (creation only)
-- Issue and label management
-- File system operations and YAML processing
+---
 
-### ❌ MISSING CRITICAL FUNCTIONALITY (30%)
-- GitHub release cleanup operations
-- OCI package cleanup operations
-- Comprehensive chart validation pipeline
-- Icon validation system
-- Dependency verification system
-- Advanced workflow log analysis
+## PHASE 1: Critical Release Service Organization (Session 1)
+**Priority: CRITICAL** | **Estimated Time: 1 session** | **Risk: LOW**
 
-## CRITICAL MISSING IMPLEMENTATIONS
+### 1.1 Import Organization in Release Services
 
-### 1. GitHub Release Deletion System
-
-#### 1.1 Missing Method: `deleteReleases()`
-
-**Original Implementation**: `/Users/floren/github/charts-old/.github/scripts/github-api.js` (lines 183-208)
-
-**Old Code Analysis**:
+**File:** `/services/release/Publish.js` (Lines 8-15)
 ```javascript
-async function deleteReleases(core, github, chartName) {
-  // 1. Gets all release IDs using _getReleaseIds helper
-  const releases = await _getReleaseIds(github, chartName);
-  
-  // 2. For each release:
-  //    - Deletes git tag reference 
-  //    - Deletes release itself
-  // 3. Tracks success/failure per release
-  // 4. Returns true if at least one deleted
-}
+// CURRENT (incorrect grouping)
+const path = require('path');
+const yaml = require('js-yaml');
+const Action = require('../../core/Action');
+const { ReleaseError } = require('../../utils/errors');
+const File = require('../File');
+const GitHub = require('../github');
+const Helm = require('../helm');
+const Package = require('./Package');
+const Template = require('../Template');
+
+// REQUIRED (proper grouping and alphabetical)
+// Node.js built-ins
+const path = require('path');
+
+// Third-party modules  
+const yaml = require('js-yaml');
+
+// Internal core
+const Action = require('../../core/Action');
+const { ReleaseError } = require('../../utils/errors');
+
+// Services (alphabetical)
+const File = require('../File');
+const GitHub = require('../github');
+const Helm = require('../helm');
+const Package = require('./Package');
+const Template = require('../Template');
 ```
 
-**Required Implementation Location**: `/Users/floren/github/charts/.github/actions/services/github/Rest.js`
-
-**New Implementation Strategy**:
+**File:** `/handlers/release/index.js` (Lines 8-11)
 ```javascript
-/**
- * Deletes all releases for a specific chart
- * 
- * @param {Object} params - Function parameters
- * @param {string} params.owner - Repository owner
- * @param {string} params.repo - Repository name
- * @param {string} params.chartName - Chart name to delete releases for
- * @returns {Promise<Object>} - Deletion results with count
- */
-async deleteReleases({ owner, repo, chartName }) {
-  // Implementation follows existing error handling pattern
-  // Uses this.getReleaseIds() helper method
-  // Calls this.execute() for each deletion operation
-  // Returns standardized response format
-}
+// CURRENT (mixed organization)
+const Action = require('../../core/Action');
+const { File, GitHub, Release: ReleaseService } = require('../../services');
+const { ReleaseError } = require('../../utils/errors');
+
+// REQUIRED (grouped imports)
+const Action = require('../../core/Action');
+const { ReleaseError } = require('../../utils/errors');
+
+const { File, GitHub, Release: ReleaseService } = require('../../services');
 ```
 
-**Dependencies**: Requires implementation of `getReleaseIds()` helper method
-
-#### 1.2 Missing Helper Method: `getReleaseIds()`
-
-**Original Implementation**: `/Users/floren/github/charts-old/.github/scripts/github-api.js` (lines 46-69)
-
-**Old Code Analysis**:
+**File:** `/handlers/release/Local.js` (Lines 8-12)
 ```javascript
-async function _getReleaseIds(github, chartName) {
-  // 1. Uses pagination to fetch all releases
-  // 2. Filters by tag name prefix pattern (chartname-*)
-  // 3. Returns array of objects with databaseId and tagName
-  // 4. Handles pagination with while loop
-}
+// CURRENT (mixed imports)
+const path = require('path');
+const Action = require('../../core/Action');
+const { File, GitHub, Helm, Release: ReleaseService } = require('../../services');
+const { ReleaseError } = require('../../utils/errors');
+
+// REQUIRED (grouped imports)
+const path = require('path');
+
+const Action = require('../../core/Action');
+const { ReleaseError } = require('../../utils/errors');
+
+const { File, GitHub, Helm, Release: ReleaseService } = require('../../services');
 ```
 
-**Required Implementation Location**: `/Users/floren/github/charts/.github/actions/services/github/Rest.js`
+### 1.2 Method Ordering in Release Services
 
-**New Implementation Strategy**:
+**File:** `/services/release/Publish.js`
+**Current method order (incorrect):**
+- `authenticate()` (line 25)
+- `createIndex()` (line 53)
+- `execute()` (line 87)
+- `find()` (line 118)
+- `generateIndexes()` (line 141)
+- `generateContent()` (line 186)
+- `github()` (line 218)
+- `oci()` (line 318)
+
+**Required alphabetical order:**
+1. `constructor()`
+2. `authenticate()`
+3. `createIndex()`
+4. `execute()`
+5. `find()`
+6. `generateContent()`
+7. `generateIndexes()`
+8. `github()`
+9. `oci()`
+
+### 1.3 Frontpage Service Import Issues
+
+**File:** `/services/Frontpage.js` (Lines 8-13)
 ```javascript
-/**
- * Gets all release IDs for a specific chart
- * 
- * @param {Object} params - Function parameters
- * @param {string} params.owner - Repository owner
- * @param {string} params.repo - Repository name
- * @param {string} params.chartName - Chart name to filter releases
- * @returns {Promise<Array<Object>>} - Array of release objects with id and tagName
- */
-async getReleaseIds({ owner, repo, chartName }) {
-  // Use existing this.paginate() method
-  // Filter releases by tag pattern: chartName-*
-  // Return standardized format
-}
+// CURRENT (incorrect order)
+const path = require('path');
+const yaml = require('js-yaml');
+const Action = require('../core/Action');
+const { FrontpageError } = require('../utils/errors');
+const Chart = require('./chart');
+const File = require('./File');
+const Template = require('./Template');
+
+// REQUIRED (grouped and alphabetical)
+// Node.js built-ins
+const path = require('path');
+
+// Third-party modules
+const yaml = require('js-yaml');
+
+// Internal core
+const Action = require('../core/Action');
+const { FrontpageError } = require('../utils/errors');
+
+// Services (alphabetical)
+const Chart = require('./chart');
+const File = require('./File');
+const Template = require('./Template');
 ```
 
-### 2. OCI Package Deletion System
+### Phase 1 Success Criteria:
+- [ ] All release service imports properly grouped and ordered
+- [ ] All release service methods in alphabetical order after constructor
+- [ ] No functional changes to release workflow logic
+- [ ] Release workflow continues to function identically
 
-#### 2.1 Missing Method: `deleteOciPackage()`
+---
 
-**Original Implementation**: `/Users/floren/github/charts-old/.github/scripts/github-api.js` (lines 210-237)
+## PHASE 2: Release Method Complexity and Error Handling (Session 2)
+**Priority: HIGH** | **Estimated Time: 1-2 sessions** | **Risk: MEDIUM**
 
-**Old Code Analysis**:
+### 2.1 GitHub Publishing Method Complexity
+
+**File:** `/services/release/Publish.js` - `github()` method (Lines 218-318)
+**Current Issues:**
+- 100+ lines of complex logic
+- Multiple responsibilities (metadata loading, release creation, asset upload)
+- Nested try-catch blocks
+- Difficult to test individual components
+
+**Required Refactoring:**
 ```javascript
-async function deleteOciPackage(core, github, chartName, chartType) {
-  // 1. Constructs package name as: repo/type/chartname
-  // 2. Determines if owner is org or user using _getRepositoryType
-  // 3. Uses different API endpoints for org vs user:
-  //    - Organizations: DELETE /orgs/{org}/packages/{package_type}/{package_name}
-  //    - Users: DELETE /users/{username}/packages/{package_type}/{package_name}
-  // 4. Returns true on success, false on error
-}
-```
-
-**Required Implementation Location**: `/Users/floren/github/charts/.github/actions/services/github/Rest.js`
-
-**New Implementation Strategy**:
-```javascript
-/**
- * Deletes OCI package from GitHub Container Registry
- * 
- * @param {Object} params - Function parameters
- * @param {string} params.owner - Repository owner
- * @param {string} params.repo - Repository name
- * @param {string} params.chartName - Chart name
- * @param {string} params.chartType - Chart type (application/library)
- * @returns {Promise<boolean>} - True if deletion succeeded
- */
-async deleteOciPackage({ owner, repo, chartName, chartType }) {
-  // Use this.getRepositoryType() to determine org vs user
-  // Construct package name following existing pattern
-  // Use appropriate API endpoint based on owner type
-  // Follow existing error handling pattern
-}
-```
-
-**Dependencies**: Requires implementation of `getRepositoryType()` helper method
-
-#### 2.2 Missing Helper Method: `getRepositoryType()`
-
-**Original Implementation**: `/Users/floren/github/charts-old/.github/scripts/github-api.js` (lines 71-88)
-
-**Old Code Analysis**:
-```javascript
-async function _getRepositoryType(github, owner) {
-  // 1. Uses GraphQL to get __typename field
-  // 2. Returns lowercase string: 'organization' or 'user'
-  // 3. Required for package deletion API routing
-  // 4. Handles errors gracefully
-}
-```
-
-**Required Implementation Location**: `/Users/floren/github/charts/.github/actions/services/github/GraphQL.js`
-
-**New Implementation Strategy**:
-```javascript
-/**
- * Determines repository owner type for API routing
- * 
- * @param {Object} params - Function parameters
- * @param {string} params.owner - Repository owner
- * @returns {Promise<string>} - 'organization' or 'user'
- */
-async getRepositoryType({ owner }) {
-  // Use GraphQL query to get owner __typename
-  // Return lowercase string for API endpoint selection
-  // Follow existing GraphQL error handling pattern
-}
-```
-
-### 3. Service Integration Points
-
-#### 3.1 Release Service Integration
-
-**Current Location**: `/Users/floren/github/charts/.github/actions/services/release/index.js`
-
-**Required Enhancement**:
-```javascript
-/**
- * Enhanced delete method with GitHub and OCI cleanup
- * 
- * @param {Array} files - List of deleted chart files
- * @returns {Promise<Object>} - Deletion results
- */
-async delete(files) {
-  // Current implementation calls this.githubService.deleteReleases()
-  // Add OCI package deletion when config.repository.oci.packages.enabled
-  // Use this.githubService.deleteOciPackage() for each chart
-}
-```
-
-#### 3.2 Publish Service Integration
-
-**Current Location**: `/Users/floren/github/charts/.github/actions/services/release/Publish.js`
-
-**Required Enhancement**: OCI publish method already calls missing deleteOciPackage:
-
-**Current Issue** (line needs implementation):
-```javascript
-async oci(packages, packagesPath) {
-  // Line missing: await this.deleteExistingOciPackages(packages);
-  // Requires this.restService.deleteOciPackage() implementation
-}
-```
-
-## VALIDATION SYSTEM ENHANCEMENTS
-
-### 4. Icon Validation System
-
-#### 4.1 Missing Implementation: Icon Validation
-
-**Original Implementation**: `/Users/floren/github/charts-old/.github/scripts/release-local.js` (lines 12-39)
-
-**Old Code Analysis**:
-```javascript
-async function _validateIcon(chartDir) {
-  // 1. Checks icon.png exists in chart directory
-  // 2. Uses sharp library to read image metadata
-  // 3. Verifies dimensions are exactly 256x256 pixels
-  // 4. Verifies format is PNG
-  // 5. Provides specific error messages for each failure
-}
-```
-
-**Required Implementation Location**: `/Users/floren/github/charts/.github/actions/services/chart/index.js`
-
-**New Implementation Strategy**:
-```javascript
-/**
- * Validates chart icon requirements
- * 
- * @private
- * @param {string} chartDir - Chart directory path
- * @returns {Promise<boolean>} - True if icon validation passed
- */
-async _validateIcon(chartDir) {
-  // Check if icon.png exists using this.fileService.exists()
-  // Use sharp library for image metadata validation
-  // Verify 256x256 dimensions and PNG format
-  // Use this.errorHandler.handle() for non-fatal errors
-}
-```
-
-**Integration Point**: Enhance existing `validate()` method in Chart service:
-```javascript
-async validate(chartDir) {
-  // Existing helm lint validation
-  // Add: await this._validateIcon(chartDir);
-  // Return combined validation result
-}
-```
-
-**Dependencies**: 
-- Add `sharp` library to package dependencies
-- Import sharp in Chart service constructor
-
-### 5. Dependency Verification System
-
-#### 5.1 Missing Implementation: Dependency Checking
-
-**Original Implementation**: `/Users/floren/github/charts-old/.github/scripts/release-local.js` (lines 41-75)
-
-**Old Code Analysis**:
-```javascript
-async function _checkDependencies(core, exec) {
-  // 1. Tests Kubernetes cluster connectivity
-  // 2. Checks git, helm, kubectl tools installed
-  // 3. Verifies tool versions
-  // 4. Checks required Node packages
-  // 5. Provides visual feedback with ✅/❌ symbols
-}
-```
-
-**Required Implementation Location**: `/Users/floren/github/charts/.github/actions/handlers/release/Local.js`
-
-**New Implementation Strategy**:
-```javascript
-/**
- * Verifies all required dependencies are available
- * 
- * @private
- * @returns {Promise<boolean>} - True if all dependencies available
- */
-async _checkDependencies() {
-  // Use this.shellService.execute() to test tool availability
-  // Test kubectl cluster connectivity
-  // Verify tool versions meet requirements
-  // Use this.logger.info() for visual feedback
-  // Return combined validation result
-}
-```
-
-**Integration Point**: Enhance existing `process()` method in Local handler:
-```javascript
-async process() {
-  // Add at beginning: await this._checkDependencies();
-  // Skip processing if dependencies unavailable
-}
-```
-
-### 6. Comprehensive Chart Validation Pipeline
-
-#### 6.1 Enhanced Validation Implementation
-
-**Original Implementation**: `/Users/floren/github/charts-old/.github/scripts/release-local.js` (lines 109-142)
-
-**Old Code Analysis**:
-```javascript
-async function _validateChart(core, exec, chartDir) {
-  // 1. Runs helm lint --strict
-  // 2. Renders templates with helm template
-  // 3. Validates rendered YAML is not empty
-  // 4. Writes rendered content to temp file
-  // 5. Validates against Kubernetes API with kubectl
-  // 6. Deletes temp file
-  // 7. Validates icon using _validateIcon
-}
-```
-
-**Required Enhancement Location**: `/Users/floren/github/charts/.github/actions/services/chart/index.js`
-
-**Current Implementation** (only helm lint):
-```javascript
-async validate(chartDir) {
-  // Current: Only helmService.lint(chartDir, { strict: true })
-  // Missing: Template rendering, Kubernetes validation, icon validation
-}
-```
-
-**Enhanced Implementation Strategy**:
-```javascript
-async validate(chartDir) {
-  // 1. Existing helm lint validation
-  // 2. Add: await this._validateTemplates(chartDir);
-  // 3. Add: await this._validateKubernetes(chartDir);
-  // 4. Add: await this._validateIcon(chartDir);
-  // Return combined validation result
-}
-
-/**
- * Validates chart templates render correctly
- * 
- * @private
- * @param {string} chartDir - Chart directory path
- * @returns {Promise<boolean>} - True if templates valid
- */
-async _validateTemplates(chartDir) {
-  // Use this.helmService.execute(['template', chartDir])
-  // Validate rendered YAML is not empty
-  // Write to temp file for Kubernetes validation
-}
-
-/**
- * Validates rendered templates against Kubernetes API
- * 
- * @private
- * @param {string} chartDir - Chart directory path
- * @param {string} tempFile - Path to rendered YAML
- * @returns {Promise<boolean>} - True if Kubernetes validation passed
- */
-async _validateKubernetes(chartDir, tempFile) {
-  // Use kubectl --dry-run=server --validate=true
-  // Clean up temp file after validation
-  // Use this.shellService.execute() for kubectl commands
-}
-```
-
-## WORKFLOW MONITORING ENHANCEMENTS
-
-### 7. Advanced Workflow Analysis
-
-#### 7.1 Enhanced Issue Validation
-
-**Original Implementation**: `/Users/floren/github/charts-old/.github/scripts/github-api.js` (lines 90-118)
-
-**Current Implementation**: `/Users/floren/github/charts/.github/actions/services/Issue.js` - `_validate()` returns `false`
-
-**Enhancement Strategy**:
-```javascript
-/**
- * Validates if workflow has issues that warrant creating an issue
- * 
- * @private
- * @param {Object} context - GitHub Actions context
- * @returns {Promise<boolean>} - True if issues detected
- */
-async _validate(context) {
-  // Option 1: Basic workflow status check
-  // const workflowRun = await this.restService.getWorkflowRun({
-  //   owner: context.repo.owner,
-  //   repo: context.repo.repo,
-  //   runId: context.runId
-  // });
-  // return workflowRun.conclusion === 'failure';
-  
-  // Option 2: Enhanced validation with log analysis (future)
-  // - Download workflow logs
-  // - Search for warning patterns
-  // - Analyze job step failures
-  
-  // Current: Conservative approach to prevent false positives
-  return false;
-}
-```
-
-## PHASED IMPLEMENTATION ROADMAP
-
-> **Note**: Implementation is designed for multiple chat sessions to optimize Claude Max subscription usage. Each phase delivers working functionality and leaves the codebase in a stable state.
-
-### **Phase 1: Critical GitHub API Foundation** 🔧
-**Session 1 | Target**: Core deletion capabilities foundation
-**Priority**: CRITICAL (Required for cleanup operations)
-**Estimated Complexity**: Medium
-
-**Deliverables**:
-1. **Implement `getReleaseIds()` in GitHub Rest service**
-   - Location: `/Users/floren/github/charts/.github/actions/services/github/Rest.js`
-   - Pattern: Follow existing `paginate()` method usage
-   - Dependencies: None
-   - **Test**: Verify can fetch release IDs for existing charts
-
-2. **Implement `getRepositoryType()` in GitHub GraphQL service**
-   - Location: `/Users/floren/github/charts/.github/actions/services/github/GraphQL.js`
-   - Pattern: Follow existing GraphQL query patterns
-   - Dependencies: None
-   - **Test**: Verify returns 'organization' or 'user' correctly
-
-**Session Outcome**: Foundation methods ready for deletion operations
-
-### **Phase 2: Release Cleanup Implementation** 🗑️
-**Session 2 | Target**: Complete GitHub release management
-**Priority**: CRITICAL (Builds on Phase 1)
-**Estimated Complexity**: Medium-High
-
-**Deliverables**:
-1. **Implement `deleteReleases()` in GitHub Rest service**
-   - Location: `/Users/floren/github/charts/.github/actions/services/github/Rest.js`
-   - Pattern: Follow existing `execute()` error handling
-   - Dependencies: Uses `getReleaseIds()` from Phase 1
-   - **Test**: Verify can delete releases for test charts
-
-2. **Integrate with Release service `delete()` method**
-   - Location: `/Users/floren/github/charts/.github/actions/services/release/index.js`
-   - Enhancement: Add GitHub release cleanup to existing method
-   - **Test**: End-to-end chart deletion workflow
-
-**Session Outcome**: Complete GitHub release cleanup functionality
-
-### **Phase 3: OCI Package Cleanup** 📦
-**Session 3 | Target**: Container registry management
-**Priority**: HIGH (Completes cleanup operations)
-**Estimated Complexity**: Medium
-
-**Deliverables**:
-1. **Implement `deleteOciPackage()` in GitHub Rest service**
-   - Location: `/Users/floren/github/charts/.github/actions/services/github/Rest.js`
-   - Pattern: Follow existing REST API patterns
-   - Dependencies: Uses `getRepositoryType()` from Phase 1
-   - **Test**: Verify can delete OCI packages from registry
-
-2. **Integrate with Publish service `oci()` method**
-   - Location: `/Users/floren/github/charts/.github/actions/services/release/Publish.js`
-   - Enhancement: Add OCI package cleanup before publishing
-   - **Test**: End-to-end OCI publish/cleanup workflow
-
-**Session Outcome**: Complete OCI package lifecycle management
-
-### **Phase 4: Chart Validation Enhancement** ✅
-**Session 4 | Target**: Quality assurance improvements
-**Priority**: MEDIUM (Improves chart quality)
-**Estimated Complexity**: High
-
-**Deliverables**:
-1. **Icon Validation System**
-   - Add `sharp` dependency to package.json
-   - Implement `_validateIcon()` in Chart service
-   - Location: `/Users/floren/github/charts/.github/actions/services/chart/index.js`
-   - **Test**: Verify icon validation (256x256 PNG requirement)
-
-2. **Enhanced Chart Validation Pipeline**
-   - Implement `_validateTemplates()` in Chart service
-   - Implement `_validateKubernetes()` in Chart service
-   - Enhance existing `validate()` method
-   - **Test**: Comprehensive chart validation workflow
-
-**Session Outcome**: Comprehensive chart validation system
-
-### **Phase 5: Development Tools** 🛠️
-**Session 5 | Target**: Local development improvements
-**Priority**: LOW (Developer experience enhancements)
-**Estimated Complexity**: Medium
-
-**Deliverables**:
-1. **Dependency Verification System**
-   - Implement `_checkDependencies()` in Local handler
-   - Location: `/Users/floren/github/charts/.github/actions/handlers/release/Local.js`
-   - Integrate with existing `process()` method
-   - **Test**: Verify dependency checking (kubectl, helm, git)
-
-2. **Enhanced Workflow Monitoring**
-   - Enhance `_validate()` method in Issue service
-   - Location: `/Users/floren/github/charts/.github/actions/services/Issue.js`
-   - Add configurable validation criteria
-   - **Test**: Verify improved issue detection
-
-**Session Outcome**: Complete development workflow tools
-
-### **Phase 6: Private Method Migration** 🔒
-**Session 6 | Target**: Code architecture improvement and encapsulation
-**Priority**: LOW (Code quality and maintainability)
-**Estimated Complexity**: Medium
-
-**Deliverables**:
-1. **Identify Public Methods That Should Be Private**
-   - Audit all service classes for methods used only internally
-   - Follow `Issue._validate()` example pattern from `/Users/floren/github/charts/.github/actions/services/Issue.js`
-   - Document methods that should be converted to private
-
-2. **Convert Methods to Private with Underscore Prefix**
-   - **Candidates for conversion**:
-     - Helper methods used only within the class
-     - Validation methods used internally
-     - Data transformation utilities
-     - Internal state management methods
-   - **Pattern**: Add underscore prefix and move after constructor
-   - **JSDoc**: Add `@private` tag positioned before `@param` tags
-   - **Ordering**: Private methods after constructor, before public methods
-
-3. **Update Method Ordering and Documentation**
-   - Ensure all classes follow: Constructor → Private methods → Public methods (alphabetical)
-   - Update JSDoc documentation with proper `@private` tags
-   - Verify no external references to converted private methods
-   - **Test**: Verify all functionality works after private method conversion
-
-**Example Conversion Pattern** (following Issue service example):
-```javascript
-// BEFORE: Public method used only internally
-async validateSomething(param) {
-  // Internal validation logic
-}
-
-// AFTER: Private method with proper positioning
-/**
- * Validates something internally
- * 
- * @private
- * @param {Type} param - Parameter description
- * @returns {boolean} - Validation result
- */
-async _validateSomething(param) {
-  // Internal validation logic
-}
-```
-
-**Session Outcome**: Improved code encapsulation with proper public/private API boundaries
-
-## 🎯 SESSION OPTIMIZATION STRATEGY
-
-### **Pre-Session Preparation**
-- Review previous phase implementations
-- Verify codebase is in stable state
-- Identify exact files to modify
-- Prepare test scenarios for validation
-
-### **During Session Guidelines**
-- **Focus**: Maximum 2 methods per session
-- **Quality**: Complete implementation with proper testing
-- **Standards**: Strict adherence to coding guidelines
-- **Verification**: Immediate testing of implemented functionality
-- **Documentation**: Update implementation status
-
-### **Post-Session Validation**
-- Verify all new methods follow established patterns
-- Test integration with existing services
-- Confirm no breaking changes introduced
-- Document any discovered edge cases
-
-### **Session Dependencies**
-- **Phase 2** requires **Phase 1** completion
-- **Phase 3** requires **Phase 1** completion
-- **Phases 4-6** can be implemented independently
-- Each phase leaves codebase in working state
-- **Phase 6** should be implemented last as it's purely architectural improvement
-
-### **Implementation Status Tracking**
-
-| Phase | Status | Methods | Session | Notes |
-|-------|--------|---------|---------|-------|
-| 1 | 🔄 Pending | `getReleaseIds()`, `getRepositoryType()` | - | Foundation methods |
-| 2 | ⏳ Waiting | `deleteReleases()` + integration | - | Requires Phase 1 |
-| 3 | ⏳ Waiting | `deleteOciPackage()` + integration | - | Requires Phase 1 |
-| 4 | ⏳ Waiting | `_validateIcon()`, validation pipeline | - | Independent |
-| 5 | ⏳ Waiting | `_checkDependencies()`, monitoring | - | Independent |
-| 6 | ⏳ Waiting | Private method conversion | - | Code quality improvement |
-
-**Status Legend**: 🔄 In Progress | ⏳ Waiting | ✅ Complete | ❌ Blocked
-
-## CODING STANDARDS COMPLIANCE
-
-All implementations must follow the established coding guidelines:
-
-### Method Implementation Rules
-- **NO comments inside method bodies under any circumstances**
-- **NO blank lines inside methods**
-- **Exact pattern matching from existing code**
-- **Alphabetical method ordering** (constructor, private methods, public methods)
-- **Use existing service dependencies** (no new service creation)
-
-### Error Handling Pattern
-```javascript
-async methodName(param) {
+// EXTRACT helper methods:
+async #loadChartMetadata(chartDir, chartYamlPath) {
   try {
-    return await this.serviceMethod(param);
+    const chartYamlContent = await this.fileService.readFile(chartYamlPath);
+    const metadata = yaml.load(chartYamlContent);
+    this.logger.info(`Successfully loaded '${chartDir}' chart metadata`);
+    return metadata;
   } catch (error) {
-    throw new ServiceError('operation name', error);
+    this.errorHandler.handle(error, {
+      operation: `load '${chartDir}' chart metadata`,
+      fatal: false
+    });
+    return {};
   }
 }
-```
 
-### Private Method Pattern
-```javascript
-/**
- * Method description
- * 
- * @private
- * @param {Type} param - Parameter description
- * @returns {Type} - Return description
- */
-async _privateMethod(param) {
-  // Implementation without comments or blank lines
+async #createChartRelease(chart, config) {
+  const tagName = config.repository.release.title
+    .replace('{{ .Name }}', chart.name)
+    .replace('{{ .Version }}', chart.version);
+    
+  this.logger.info(`Processing '${tagName}' repository release...`);
+  
+  const existingRelease = await this.restService.getReleaseByTag(tagName);
+  if (existingRelease) {
+    this.logger.info(`Release '${tagName}' already exists, skipping`);
+    return null;
+  }
+  
+  const body = await this.generateContent(chart);
+  return await this.restService.createRelease({ name: tagName, body });
+}
+
+async #uploadChartAsset(release, chart) {
+  const assetName = [chart.type, 'tgz'].join('.');
+  const assetData = await this.fileService.readFile(chart.path);
+  await this.restService.uploadReleaseAsset({
+    releaseId: release.id,
+    assetName,
+    assetData
+  });
+}
+
+// SIMPLIFIED main method:
+async github(packages, packagesPath) {
+  return this.execute('publish to GitHub', async () => {
+    if (!packages.length) {
+      this.logger.info('No packages to publish to GitHub');
+      return [];
+    }
+    
+    const config = this.config.get();
+    const word = packages.length === 1 ? 'release' : 'releases';
+    this.logger.info(`Publishing ${packages.length} GitHub ${word}...`);
+    
+    const releases = [];
+    for (const pkg of packages) {
+      try {
+        const chart = await this.#prepareChartForRelease(pkg, packagesPath, config);
+        const release = await this.#createChartRelease(chart, config);
+        
+        if (release) {
+          await this.#uploadChartAsset(release, chart);
+          releases.push(this.#createReleaseResult(chart, release));
+          this.logger.info(`Successfully created '${chart.tagName}' repository release`);
+        }
+      } catch (error) {
+        this.errorHandler.handle(error, {
+          operation: `process '${pkg.source}' package`,
+          fatal: false
+        });
+      }
+    }
+    
+    if (releases.length) {
+      const successWord = releases.length === 1 ? 'release' : 'releases';
+      this.logger.info(`Successfully published ${releases.length} GitHub ${successWord}`);
+    }
+    
+    return releases;
+  }, { packagesCount: packages.length });
 }
 ```
 
-### Service Integration Pattern
+### 2.2 OCI Publishing Method Issues
+
+**File:** `/services/release/Publish.js` - `oci()` method (Lines 318-440)
+**Current Issues:**
+- Complex authentication logic mixed with publishing
+- Sequential processing without error isolation
+- Redundant package cleanup handling
+
+**Required Refactoring:**
 ```javascript
-// Use existing service instances from constructor
-const result = await this.existingService.method(param);
-// Follow existing error handling patterns
-// Return consistent data structures
+// EXTRACT helper methods:
+async #cleanupOciPackages(packages) {
+  this.logger.info('Cleaning up existing OCI packages...');
+  const cleanupResults = [];
+  
+  for (const pkg of packages) {
+    try {
+      const { name } = this.packageService.parseInfo(pkg.source);
+      const deleted = await this.restService.deleteOciPackage({
+        owner: this.context.repo.owner,
+        repo: this.context.repo.repo,
+        chart: { name, type: pkg.type }
+      });
+      
+      cleanupResults.push({ package: name, deleted });
+      if (deleted) {
+        this.logger.info(`Deleted existing OCI package for ${name}`);
+      }
+    } catch (error) {
+      this.errorHandler.handle(error, {
+        operation: `delete existing OCI package for ${pkg.source}`,
+        fatal: false
+      });
+    }
+  }
+  
+  return cleanupResults;
+}
+
+async #publishSingleOciPackage(pkg, packagesPath) {
+  this.logger.info(`Publishing '${pkg.source}' chart package to OCI registry...`);
+  
+  const chartPath = path.join(packagesPath, pkg.type, pkg.source);
+  const registry = ['oci:/', this.config.get('repository.oci.registry'), 
+                   this.context.payload.repository.full_name, pkg.type].join('/');
+                   
+  await this.exec.exec('helm', ['push', chartPath, registry], { silent: true });
+  
+  const { name, version } = this.packageService.parseInfo(pkg.source);
+  return { name, version, source: pkg.source, registry };
+}
 ```
 
-## VERIFICATION CHECKLIST
+### 2.3 Frontpage Generation Complexity
 
-Before implementing any missing functionality:
+**File:** `/services/Frontpage.js` - `generate()` method (Lines 35-85)
+**Current Issues:**
+- Mixed chart discovery and processing logic
+- Complex sorting and transformation in single method
+- Template rendering mixed with data preparation
 
-- [ ] **Pattern Analysis**: Identify exact existing pattern to follow
-- [ ] **Service Location**: Confirm correct service class for implementation
-- [ ] **Dependencies**: Verify all required helper methods exist
-- [ ] **Error Handling**: Use established error types and patterns
-- [ ] **Method Ordering**: Place methods in correct alphabetical order
-- [ ] **Documentation**: Follow established JSDoc format
-- [ ] **Integration**: Update dependent services and handlers
-- [ ] **Testing**: Verify implementation works with existing workflow
+**Required Refactoring:**
+```javascript
+// EXTRACT helper methods:
+async #processChartMetadata(dir, type) {
+  try {
+    const chartName = path.basename(dir);
+    const chartYamlPath = path.join(dir, 'Chart.yaml');
+    const chartContent = await this.fileService.read(chartYamlPath);
+    const chartYaml = yaml.load(chartContent);
+    
+    return {
+      [chartName]: {
+        description: chartYaml.description || '',
+        type,
+        version: chartYaml.version || ''
+      }
+    };
+  } catch (error) {
+    this.errorHandler.handle(error, {
+      operation: `read chart metadata for ${dir}`,
+      fatal: false
+    });
+    return {};
+  }
+}
 
-## CONCLUSION
+async #prepareChartData(charts) {
+  const chartEntries = {};
+  const allCharts = [
+    ...charts.application.map(dir => ({ dir, type: 'application' })),
+    ...charts.library.map(dir => ({ dir, type: 'library' }))
+  ];
+  
+  const chartMetadataList = await Promise.all(
+    allCharts.map(({ dir, type }) => this.#processChartMetadata(dir, type))
+  );
+  
+  chartMetadataList.forEach(metadata => Object.assign(chartEntries, metadata));
+  return this.#sortChartEntries(chartEntries);
+}
 
-The migration has successfully implemented 70% of the original functionality with improved architecture and maintainability. The remaining 30% consists of critical cleanup operations, enhanced validation systems, and development tools that require careful implementation following the established patterns.
+#sortChartEntries(chartEntries) {
+  return Object.entries(chartEntries)
+    .sort(([aName, aData], [bName, bData]) => {
+      return aData.type.localeCompare(bData.type) || aName.localeCompare(bName);
+    })
+    .map(([name, data]) => ({
+      Description: data.description || '',
+      Name: name,
+      Type: data.type || 'application',
+      Version: data.version || ''
+    }));
+}
+```
 
-Priority should be given to the GitHub API methods (`deleteReleases`, `deleteOciPackage`) as these are essential for proper chart lifecycle management. The validation enhancements can be implemented in subsequent phases to improve chart quality assurance.
+### Phase 2 Success Criteria:
+- [ ] GitHub publishing method under 50 lines
+- [ ] OCI publishing method under 50 lines  
+- [ ] Frontpage generation method under 40 lines
+- [ ] Each method has single responsibility
+- [ ] Helper methods follow private method conventions
 
-All implementations must strictly follow the established coding standards to maintain architectural consistency and prevent violations of the implementation protocol.
+---
+
+## PHASE 3: Release Workflow Pipeline Optimization (Session 3)
+**Priority: HIGH** | **Estimated Time: 1 session** | **Risk: MEDIUM**
+
+### 3.1 Release Processing Pipeline Issues
+
+**File:** `/handlers/release/index.js` - `process()` method (Lines 35-75)
+**Current Issues:**
+- Sequential processing without proper error isolation
+- Redundant configuration retrieval
+- Mixed processing and cleanup logic
+
+**Required Refactoring:**
+```javascript
+// EXTRACT pipeline methods:
+async #processReleasePackaging(charts) {
+  if (charts.total === 0) {
+    return { packages: [], processed: 0 };
+  }
+  
+  await this.packageService.package(charts);
+  const config = this.config.get();
+  const packagesDir = config.repository.release.packages;
+  const packages = await this.packageService.get(packagesDir);
+  
+  return { packages, processed: charts.total };
+}
+
+async #processReleaseCleanup(deletedCharts) {
+  if (!deletedCharts.length) {
+    return { deleted: 0 };
+  }
+  
+  const deletedCount = await this.releaseService.delete(deletedCharts);
+  return { deleted: deletedCount };
+}
+
+async #processReleasePublishing(packages, config) {
+  if (!packages.length) {
+    this.logger.info('No chart packages available for publishing');
+    return { published: 0 };
+  }
+  
+  const packagesDir = config.repository.release.packages;
+  const releases = await this.publishService.github(packages, packagesDir);
+  
+  // Process additional publishing targets
+  const publishingTasks = [];
+  
+  if (config.repository.chart.packages.enabled) {
+    publishingTasks.push(this.publishService.generateIndexes());
+  }
+  
+  if (config.repository.oci.packages.enabled) {
+    publishingTasks.push(this.publishService.oci(packages, packagesDir));
+  }
+  
+  await Promise.all(publishingTasks);
+  return { published: releases.length };
+}
+
+// SIMPLIFIED main method:
+async process() {
+  return this.execute('process releases', async () => {
+    this.logger.info('Starting chart release process...');
+    
+    const files = await this.githubService.getUpdatedFiles({ context: this.context });
+    const charts = await this.releaseService.find(files);
+    
+    if (!charts.total && !charts.deleted.length) {
+      this.logger.info(`No ${charts.word} chart releases found`);
+      return { processed: 0, published: 0, deleted: 0 };
+    }
+    
+    // Process packaging and cleanup in parallel where safe
+    const [packagingResult, cleanupResult] = await Promise.allSettled([
+      this.#processReleasePackaging(charts),
+      this.#processReleaseCleanup(charts.deleted)
+    ]);
+    
+    const packaging = packagingResult.status === 'fulfilled' ? packagingResult.value : { packages: [], processed: 0 };
+    const cleanup = cleanupResult.status === 'fulfilled' ? cleanupResult.value : { deleted: 0 };
+    
+    // Process publishing
+    const config = this.config.get();
+    const publishingResult = await this.#processReleasePublishing(packaging.packages, config);
+    
+    const result = {
+      processed: packaging.processed,
+      published: publishingResult.published,
+      deleted: cleanup.deleted
+    };
+    
+    this.logger.info('Successfully completed the chart releases process');
+    return result;
+  });
+}
+```
+
+### 3.2 Package Service Optimization
+
+**File:** `/services/release/Package.js` - `package()` method (Lines 82-140)
+**Current Issues:**
+- Complex chart type determination logic
+- Mixed directory creation and packaging logic
+- Redundant error handling patterns
+
+**Required Refactoring:**
+```javascript
+// EXTRACT helper methods:
+#determineChartType(chartDir, appChartType) {
+  return chartDir.startsWith(appChartType) ? 'application' : 'library';
+}
+
+async #packageSingleChart(chartDir, packageDest, appChartType) {
+  this.logger.info(`Packaging '${chartDir}' chart...`);
+  this.logger.info(`Updating dependencies for '${chartDir}' chart...`);
+  
+  await this.helmService.updateDependencies(chartDir);
+  await this.helmService.package(chartDir, packageDest);
+  
+  return {
+    chartDir,
+    success: true,
+    type: this.#determineChartType(chartDir, appChartType)
+  };
+}
+
+async #processChartPackaging(chartDirs, dirs, appChartType) {
+  const packagingPromises = chartDirs.map(async (chartDir) => {
+    try {
+      const isAppChartType = chartDir.startsWith(appChartType);
+      const packageDest = isAppChartType ? dirs.application : dirs.library;
+      return await this.#packageSingleChart(chartDir, packageDest, appChartType);
+    } catch (error) {
+      this.errorHandler.handle(error, {
+        operation: `package ${chartDir} chart`,
+        fatal: false
+      });
+      return {
+        chartDir,
+        success: false,
+        type: this.#determineChartType(chartDir, appChartType)
+      };
+    }
+  });
+  
+  return Promise.all(packagingPromises);
+}
+```
+
+### Phase 3 Success Criteria:
+- [ ] Release processing pipeline properly separated into stages
+- [ ] Error isolation between packaging, cleanup, and publishing
+- [ ] Parallel processing where safe (packaging + cleanup)
+- [ ] Each pipeline stage under 30 lines
+- [ ] Improved error recovery and reporting
+
+---
+
+## PHASE 4: Release Performance and Resource Management (Session 4)
+**Priority: MEDIUM** | **Estimated Time: 1-2 sessions** | **Risk: LOW**
+
+### 4.1 OCI Authentication Caching
+
+**File:** `/services/release/Publish.js`
+```javascript
+// ADD authentication cache
+constructor(params) {
+  super(params);
+  this.fileService = new File(params);
+  this.helmService = new Helm(params);
+  this.packageService = new Package(params);
+  this.templateService = new Template(params);
+  this.restService = new GitHub.Rest(params);
+  this.graphqlService = new GitHub.GraphQL(params);
+  this.authCache = new Map(); // Add authentication cache
+}
+
+// OPTIMIZE authentication with caching
+async authenticate() {
+  return this.execute('authenticate to OCI registry', async () => {
+    const config = this.config.get();
+    const ociRegistry = config.repository.oci.registry;
+    const cacheKey = `${ociRegistry}-${this.context.repo.owner}`;
+    
+    // Check cache first
+    if (this.authCache.has(cacheKey)) {
+      const authResult = this.authCache.get(cacheKey);
+      if (Date.now() - authResult.timestamp < 3600000) { // 1 hour cache
+        this.logger.info('Using cached OCI authentication');
+        return authResult.success;
+      }
+    }
+    
+    this.logger.info('Authenticating to OCI registry...');
+    try {
+      await this.exec.exec('helm', ['registry', 'login', ociRegistry, '-u', this.context.repo.owner, '--password-stdin'], {
+        input: Buffer.from(process.env['INPUT_GITHUB-TOKEN']),
+        silent: true
+      });
+      
+      // Cache successful authentication
+      this.authCache.set(cacheKey, {
+        success: true,
+        timestamp: Date.now()
+      });
+      
+      this.logger.info('Successfully authenticated to OCI registry');
+      return true;
+    } catch (authError) {
+      // Cache failed authentication (shorter cache time)
+      this.authCache.set(cacheKey, {
+        success: false,
+        timestamp: Date.now()
+      });
+      
+      this.errorHandler.handle(authError, {
+        operation: 'authenticate to OCI registry',
+        fatal: false
+      });
+      return false;
+    }
+  });
+}
+```
+
+### 4.2 Package Directory Cleanup
+
+**File:** `/services/release/Package.js`
+```javascript
+// ADD cleanup functionality
+async #cleanupPackageDirectories(directories) {
+  const cleanupTasks = Object.values(directories).map(async (dir) => {
+    try {
+      const files = await this.fileService.listDir(dir);
+      const oldPackages = files.filter(file => 
+        file.endsWith('.tgz') && this.#isOldPackage(file)
+      );
+      
+      await Promise.all(oldPackages.map(pkg => 
+        this.fileService.delete(path.join(dir, pkg))
+      ));
+      
+      if (oldPackages.length) {
+        this.logger.info(`Cleaned up ${oldPackages.length} old packages from ${dir}`);
+      }
+    } catch (error) {
+      this.logger.warning(`Failed to cleanup directory ${dir}: ${error.message}`);
+    }
+  });
+  
+  await Promise.all(cleanupTasks);
+}
+
+#isOldPackage(packageFile) {
+  // Implement logic to identify packages older than retention period
+  const stats = this.fileService.getStats(packageFile);
+  const maxAge = 24 * 60 * 60 * 1000; // 24 hours
+  return stats && (Date.now() - stats.modified.getTime()) > maxAge;
+}
+
+// UPDATE createDirectories to include cleanup
+async createDirectories() {
+  return this.execute('create package directories', async () => {
+    const config = this.config.get();
+    const packagesPath = config.repository.release.packages;
+    const appChartType = config.repository.chart.type.application;
+    const libChartType = config.repository.chart.type.library;
+    
+    this.logger.info(`Creating ${packagesPath} directory...`);
+    await this.fileService.createDirectory(packagesPath);
+    
+    const directories = {
+      root: packagesPath,
+      application: path.join(packagesPath, appChartType),
+      library: path.join(packagesPath, libChartType)
+    };
+    
+    await this.fileService.createDirectory(directories.application);
+    await this.fileService.createDirectory(directories.library);
+    
+    // Cleanup old packages
+    await this.#cleanupPackageDirectories(directories);
+    
+    this.logger.info(`Successfully created and cleaned ${packagesPath} directory structure`);
+    return directories;
+  });
+}
+```
+
+### 4.3 Release Content Generation Optimization
+
+**File:** `/services/release/Publish.js`
+```javascript
+// ADD content generation caching
+async generateContent(chart) {
+  return this.execute('generate release content', async () => {
+    const cacheKey = `${chart.name}-${chart.version}-${chart.type}`;
+    
+    // Check if content was recently generated
+    if (this.contentCache && this.contentCache.has(cacheKey)) {
+      this.logger.info(`Using cached release content for ${chart.name}-${chart.version}`);
+      return this.contentCache.get(cacheKey);
+    }
+    
+    this.logger.info(`Generating release content for '${chart.type}/${chart.name}' chart...`);
+    
+    const config = this.config.get();
+    const releaseTemplate = config.repository.release.template;
+    
+    // Parallel fetch of template and issues
+    const [templateContent, issues] = await Promise.all([
+      this.fileService.readFile(releaseTemplate),
+      this.graphqlService.getReleaseIssues(chart)
+    ]);
+    
+    const tagName = config.repository.release.title
+      .replace('{{ .Name }}', chart.name)
+      .replace('{{ .Version }}', chart.version);
+    
+    const templateContext = this.#buildTemplateContext(chart, issues, tagName);
+    const content = this.templateService.render(templateContent, templateContext);
+    
+    // Cache the generated content
+    if (!this.contentCache) {
+      this.contentCache = new Map();
+    }
+    this.contentCache.set(cacheKey, content);
+    
+    return content;
+  }, { chart: `${chart.name}-${chart.version}` });
+}
+
+#buildTemplateContext(chart, issues, tagName) {
+  return {
+    AppVersion: chart.metadata.appVersion || '',
+    Branch: this.context.payload.repository.default_branch,
+    Dependencies: (chart.metadata.dependencies || []).map(dependency => ({
+      Name: dependency.name,
+      Repository: dependency.repository,
+      Source: [this.context.payload.repository.html_url, 'blob', tagName, chart.type, chart.name, 'Chart.yaml'].join('/'),
+      Version: dependency.version
+    })),
+    Description: chart.metadata.description || '',
+    Icon: chart.icon ? this.config.get('repository.chart.icon') : null,
+    Issues: issues.length ? issues : null,
+    KubeVersion: chart.metadata.kubeVersion || '',
+    Name: chart.name,
+    RepoURL: this.context.payload.repository.html_url,
+    Type: chart.type,
+    Version: chart.version
+  };
+}
+```
+
+### 4.4 Batch Processing for Multiple Releases
+
+**File:** `/handlers/release/index.js`
+```javascript
+// ADD batch processing for better performance
+async #processBatchedPublishing(packages, config) {
+  const BATCH_SIZE = 3; // Process 3 releases at a time
+  const batches = [];
+  
+  for (let i = 0; i < packages.length; i += BATCH_SIZE) {
+    batches.push(packages.slice(i, i + BATCH_SIZE));
+  }
+  
+  const allReleases = [];
+  
+  for (const batch of batches) {
+    this.logger.info(`Processing batch of ${batch.length} packages...`);
+    
+    try {
+      const batchReleases = await this.publishService.github(batch, config.repository.release.packages);
+      allReleases.push(...batchReleases);
+      
+      // Small delay between batches to avoid rate limiting
+      if (batches.indexOf(batch) < batches.length - 1) {
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+    } catch (error) {
+      this.errorHandler.handle(error, {
+        operation: `process batch of ${batch.length} packages`,
+        fatal: false
+      });
+    }
+  }
+  
+  return allReleases;
+}
+```
+
+### Phase 4 Success Criteria:
+- [ ] OCI authentication cached for 1 hour
+- [ ] Old package files automatically cleaned up
+- [ ] Release content generation optimized with caching
+- [ ] Batch processing prevents GitHub API rate limiting
+- [ ] Improved resource usage and cleanup
+- [ ] Better error recovery in batch operations
+
+---
+
+## Release Workflow Specific Issues
+
+### 1. GitHub Pages Publishing Chain
+
+**Current Issue:** Jekyll theme setup in `Frontpage.setTheme()` has inconsistent error handling
+```javascript
+// CURRENT (inconsistent error handling)
+try {
+  this.logger.info('Copying Jekyll theme config to ./_config.yml...');
+  await this.fileService.copy(config.theme.configuration.file, './_config.yml');
+} catch (error) {
+  throw this.errorHandler.handle(error, { operation: 'copy Jekyll theme config' });
+}
+
+try {
+  this.logger.info('Copying Jekyll theme custom head content...');
+  await this.fileService.copy(config.theme.head.template, './_includes/head-custom.html');
+} catch (error) {
+  this.errorHandler.handle(error, { operation: 'copy Jekyll theme custom head content', fatal: false });
+}
+```
+
+**Required Fix:** Standardize error handling - either all fatal or all non-fatal
+
+### 2. Release Asset Upload Missing Error Recovery
+
+**Current Issue:** Asset upload in `Publish.github()` doesn't handle partial failures
+**Required Fix:** Implement retry logic for asset uploads and cleanup failed releases
+
+### 3. OCI Package Cleanup Race Conditions
+
+**Current Issue:** OCI package deletion and creation can race during rapid deployments
+**Required Fix:** Add proper synchronization and conflict resolution
+
+## Implementation Guidelines
+
+### **CRITICAL: Incremental Implementation with Workflow Testing**
+**ALL CHANGES MADE IN SMALL STEPS WITH IMMEDIATE TESTING**
+
+**Required Process:**
+1. **Show diff for ONE file** using `edit_file` with `dryRun: true`
+2. **Wait for approval** - Get explicit approval before implementing
+3. **Implement single file change** - Only after diff is reviewed and approved
+4. **User tests workflow** - Run release.yml workflow to verify no breakage
+5. **Proceed to next file** - Only after successful workflow test
+6. **Never batch changes** - One file at a time, always
+
+**Example Process:**
+```
+1. "Here's the proposed change for Publish.js imports:"
+   [show diff with dryRun: true for Publish.js ONLY]
+2. "Do you approve this change?"
+3. [Wait for user approval]
+4. [Implement Publish.js change ONLY]
+5. "Change applied. Please test release.yml workflow"
+6. [Wait for user to test and confirm workflow passes]
+7. "Ready for next file: release/index.js"
+```
+
+**NEVER implement multiple files without testing between each change**
+
+### Session Preparation Checklist:
+1. **Before each session:**
+   - Verify release workflow currently functions
+   - Review specific release services to be modified
+   - Understand release dependencies and Jekyll publishing chain
+
+2. **During each session:**
+   - **ALWAYS show diffs before implementing**
+   - Test release workflow after each major change
+   - Verify GitHub Pages deployment still works
+   - Check OCI publishing functionality
+   - Ensure frontpage generation succeeds
+
+3. **After each session:**
+   - Run complete release workflow test
+   - Verify all publishing targets (GitHub, OCI, Pages)
+   - Update progress tracking
+
+### Cross-Phase Dependencies:
+- **Phase 1 → Phase 2:** Service organization before complexity reduction
+- **Phase 2 → Phase 3:** Method simplification before pipeline optimization  
+- **Phase 3 → Phase 4:** Pipeline structure before performance optimization
+
+### Risk Mitigation:
+- **Phase 1 (LOW RISK):** Import/ordering only - no logic changes
+- **Phase 2 (MEDIUM RISK):** Method extraction - maintain exact functionality
+- **Phase 3 (MEDIUM RISK):** Pipeline changes - verify release process integrity  
+- **Phase 4 (LOW RISK):** Performance additions - backward compatible
+
+### **MANDATORY: Diff Review Process**
+**Every code change MUST follow this process:**
+1. **Show diff with dryRun: true** before any implementation
+2. **Wait for explicit approval** from user
+3. **Implement only after approval**
+4. **Verify implementation** was applied correctly
+
+**No exceptions - all changes require diff review and approval**
+
+### Release Workflow Validation:
+Each phase must pass these release-specific tests:
+- [ ] Chart packaging completes successfully
+- [ ] GitHub releases are created correctly
+- [ ] OCI packages are published (if enabled)
+- [ ] Jekyll frontpage generates properly
+- [ ] GitHub Pages deployment succeeds
+- [ ] Error reporting functions correctly
+
+---
+
+## Progress Tracking
+
+- [ ] **Phase 1 Complete:** Release service import organization and method ordering
+- [ ] **Phase 2 Complete:** Release method complexity reduction and error handling
+- [ ] **Phase 3 Complete:** Release workflow pipeline optimization
+- [ ] **Phase 4 Complete:** Release performance and resource management
+
+**Next Session Request Template:**
+```
+I will implement Phase 1 from /Users/floren/github/charts/.github/actions/release.md following STRICT IMPLEMENTATION PROTOCOL.
+
+Phase 1 focuses on Critical Release Service Organization with LOW RISK - import reordering and method positioning only, no functional changes.
+
+Please read /Users/floren/github/charts/.github/actions/release.md and implement Phase 1.1 Import Organization Fixes for these files:
+- /Users/floren/github/charts/.github/actions/services/release/Publish.js
+- /Users/floren/github/charts/.github/actions/handlers/release/index.js
+- /Users/floren/github/charts/.github/actions/handlers/release/Local.js
+- /Users/floren/github/charts/.github/actions/services/Frontpage.js
+
+Then implement Phase 1.2 Method Ordering Fix for:
+- /Users/floren/github/charts/.github/actions/services/release/Publish.js
+
+IMPORTANT: Show diffs for review before implementing any changes. Follow the exact patterns shown in release.md. Test release workflow after each change.
+```
+
+**Next Session:** Phase 1 - Critical Release Service Organization
+
+---
+
+## Release Workflow Impact Summary
+
+These optimizations will specifically improve:
+- **Release Processing Speed:** Batch processing and parallel operations
+- **Resource Usage:** Proper cleanup and caching mechanisms
+- **Error Recovery:** Better isolation and retry logic for release steps
+- **OCI Publishing:** Authentication caching and conflict resolution
+- **GitHub Pages:** Standardized Jekyll theme setup and error handling
+- **Release Asset Management:** Improved upload reliability and cleanup
+
+The release workflow handles critical business functions including chart distribution, GitHub Pages deployment, and OCI registry publishing. These improvements ensure reliable, efficient, and maintainable release processes.

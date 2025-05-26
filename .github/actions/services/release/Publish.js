@@ -345,6 +345,25 @@ class Publish extends Action {
         this.logger.warning('OCI authentication failed, skipping OCI publishing');
         return [];
       }
+      this.logger.info('Cleaning up existing OCI packages...');
+      for (const pkg of packages) {
+        try {
+          const { name } = this.packageService.parseInfo(pkg.source);
+          const deleted = await this.restService.deleteOciPackage({
+            owner: this.context.repo.owner,
+            repo: this.context.repo.repo,
+            chart: { name, type: pkg.type }
+          });
+          if (deleted) {
+            this.logger.info(`Deleted existing OCI package for ${name}`);
+          }
+        } catch (error) {
+          this.errorHandler.handle(error, {
+            operation: `delete existing OCI package for ${pkg.source}`,
+            fatal: false
+          });
+        }
+      }
       const ociRegistry = config.repository.oci.registry;
       const word = packages.length === 1 ? 'package' : 'packages';
       this.logger.info(`Publishing ${packages.length} OCI ${word}...`);

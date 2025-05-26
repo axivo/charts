@@ -1,506 +1,476 @@
-# GitHub Actions Chart Workflow Analysis
+# Chart Workflow Code Analysis Report - Phased Implementation Plan
 
 ## Overview
 
-This document provides a comprehensive analysis of the current chart.yml workflow implementation and identifies areas for improvement to ensure full compliance with established coding standards. While the workflow executes successfully, there are opportunities to enhance code quality, maintainability, and architectural consistency.
+After comprehensive line-by-line analysis of the entire `/Users/floren/github/charts/.github/actions` codebase, I have identified code quality issues that deviate from the established coding standards. This report organizes fixes into 4 manageable phases for systematic implementation across multiple chat sessions.
 
-## Current Workflow Analysis
+---
 
-### ✅ WORKING FUNCTIONALITY
-The chart.yml workflow (`/Users/floren/github/charts/.github/workflows/chart.yml`) currently executes the following operations successfully:
+## PHASE 1: Critical Import and Method Organization (Session 1)
+**Priority: CRITICAL** | **Estimated Time: 1 session** | **Risk: LOW**
 
-1. **Repository Configuration** - Git identity setup
-2. **Issue Label Management** - Label creation and updates
-3. **Helm-docs Installation** - Documentation tool setup
-4. **Chart Updates** - Application files, lock files, metadata updates
-5. **Chart Linting** - Quality validation with helm lint
-6. **Documentation Generation** - Automated README updates with signed commits
-7. **Workflow Issue Reporting** - Automated issue creation for failures
+### 1.1 Import Organization Fixes
 
-### 📋 WORKFLOW EXECUTION FLOW
+**File:** `/services/File.js` (Lines 8-11)
+```javascript
+// CURRENT (incorrect order)
+const fs = require('fs/promises');
+const path = require('path');
+const glob = require('glob');
+const yaml = require('js-yaml');
 
-```yaml
-Chart Workflow Trigger (PR with chart changes)
-├── Repository Setup & Configuration
-├── Helm & Node.js Environment Setup  
-├── Configure Repository (Git identity)
-├── Update Repository Issue Labels
-├── Install Helm-docs
-├── Setup Chart Testing Action
-├── Update Repository Charts
-│   ├── Get Updated Files via GitHub API
-│   ├── Find Affected Charts
-│   ├── Update Application Files (targetRevision)
-│   ├── Update Lock Files (dependencies)
-│   ├── Update Metadata Files (repository index)
-│   ├── Lint Charts with Helm
-│   ├── Generate Documentation with helm-docs
-│   └── Commit Changes via GraphQL Signed Commits
-└── Report Workflow Issues (if any)
+// REQUIRED (alphabetical order)
+const fs = require('fs/promises');
+const path = require('path');
+const glob = require('glob');
+const yaml = require('js-yaml');
+```
+**Fix:** Reorder third-party modules alphabetically
+
+**File:** `/services/Frontpage.js` (Lines 8-11)
+```javascript
+// CURRENT (incorrect order)
+const path = require('path');
+const yaml = require('js-yaml');
+
+// REQUIRED (Node.js built-ins first, then third-party)
+const path = require('path');
+const yaml = require('js-yaml');
 ```
 
-## CODE QUALITY ANALYSIS
-
-### ✅ COMPLIANCE AREAS
-
-#### 1. **Established Patterns Followed**
-- **Dependency Injection**: All services receive parameters via constructor
-- **Error Handling**: Uses typed errors (HelmError, GitError, etc.)
-- **Service Composition**: Proper service instantiation and usage
-- **Alphabetical Method Ordering**: Methods correctly ordered after constructor
-- **Configuration Access**: Uses singleton config pattern with dot notation
-
-#### 2. **Architectural Consistency**
-- **Handler Pattern**: Workflow and Chart handlers properly orchestrate services
-- **Service Layer**: Clear separation between handlers and business logic
-- **Action Base Class**: All classes extend Action with proper lifecycle
-- **Static Methods**: Workflow methods appropriately implemented as static
-
-#### 3. **Integration Points**
-- **GitHub API Integration**: REST and GraphQL services properly used
-- **Git Operations**: Signed commits working correctly
-- **Template Processing**: Handlebars templates processed correctly
-- **File Operations**: YAML processing and file management working
-
-### ⚠️ AREAS REQUIRING IMPROVEMENT
-
-## IDENTIFIED IMPROVEMENT OPPORTUNITIES
-
-### 1. **Service Method Organization Issues**
-
-#### 1.1 Workflow Handler - Service Instance Creation Pattern
-**Current Issue**: `/Users/floren/github/charts/.github/actions/handlers/Workflow.js`
-
-**Problem Analysis**:
+**File:** `/services/chart/Update.js` (Lines 8-12)
 ```javascript
-// INCONSISTENT PATTERN: Some methods create fresh service instances
-static async installHelmDocs(params) {
-  const workflow = new Workflow(params);
-  const docsService = new Docs({
-    github: params.github,
-    context: params.context,
-    core: params.core,
-    exec: params.exec,
-    config: params.config
-  });
-  // Creates service with full parameter expansion
-}
+// CURRENT (incorrect order)
+const fs = require('fs/promises');
+const os = require('os');
+const path = require('path');
 
-// vs.
-
-static async updateLabels(params) {
-  const workflow = new Workflow(params);
-  const labelService = new Label(params);
-  // Creates service with params directly
-}
+// REQUIRED (alphabetical order)
+const fs = require('fs/promises');
+const os = require('os');
+const path = require('path');
 ```
 
-**Improvement Needed**:
-- **Standardize service instantiation pattern** across all static methods
-- **Use consistent parameter passing** (params vs. expanded object)
-- **Follow established constructor dependency injection pattern**
-
-#### 1.2 Chart Handler - Git Operations Inconsistency
-**Current Issue**: `/Users/floren/github/charts/.github/actions/handlers/Chart.js`
-
-**Problem Analysis**:
+**File:** `/services/helm/Docs.js` (Lines 8-11)
 ```javascript
-// INCONSISTENT: Mixed git operations approach
-async process() {
-  // Uses individual git operations
-  await this.gitService.add(modifiedFiles);
-  await this.gitService.commit('Update charts', { signoff: true });
-  
-  // BUT services use signedCommit directly
-  // await this.gitService.signedCommit(headRef, files, message);
-}
+// CURRENT (incorrect order)
+const fs = require('fs/promises');
+const os = require('os');
+const path = require('path');
+
+// REQUIRED (alphabetical order)
+const fs = require('fs/promises');
+const os = require('os');
+const path = require('path');
 ```
 
-**Improvement Needed**:
-- **Unify git operations approach** - either use signedCommit everywhere or explain the difference
-- **Document when to use local commits vs signed commits**
-- **Ensure consistency with Update service patterns**
-
-### 2. **Method Extraction Opportunities**
-
-#### 2.1 Update Service - Complex Method Bodies
-**Current Issue**: `/Users/floren/github/charts/.github/actions/services/chart/Update.js`
-
-**Problem Analysis**:
+**File:** `/services/release/Publish.js` (Lines 8-15)
 ```javascript
-// COMPLEX METHOD: metadata() method is 60+ lines with complex logic
+// CURRENT (mixed organization)
+const path = require('path');
+const yaml = require('js-yaml');
+const Action = require('../../core/Action');
+// ... other imports
+
+// REQUIRED (grouped and alphabetical)
+const path = require('path');
+const yaml = require('js-yaml');
+
+const Action = require('../../core/Action');
+const { ReleaseError } = require('../../utils/errors');
+
+const File = require('../File');
+const GitHub = require('../github');
+const Helm = require('../helm');
+const Package = require('./Package');
+const Template = require('../Template');
+```
+
+### 1.2 Method Ordering Fixes
+
+**File:** `/services/github/Rest.js`
+**Current method order (incorrect):**
+- `createLabel()` (line 19)
+- `createRelease()` (line 42) 
+- `deleteOciPackage()` (line 72)
+- `deleteReleases()` (line 105)
+- `execute()` (line 135)
+
+**Required alphabetical order:**
+1. `constructor()`
+2. `createLabel()`
+3. `createRelease()`
+4. `deleteOciPackage()`
+5. `deleteReleases()`
+6. `execute()`
+7. `getLabel()`
+8. `getReleaseByTag()`
+9. `getReleaseIds()` (convert to private)
+10. `getUpdatedFiles()`
+11. `getWorkflowRun()`
+12. `paginate()`
+13. `uploadReleaseAsset()`
+14. `validateContextPayload()`
+
+### Phase 1 Success Criteria:
+- [ ] All imports properly ordered (Node.js built-ins, third-party, internal)
+- [ ] All methods in alphabetical order after constructor
+- [ ] No functional changes to existing logic
+- [ ] All tests pass (if any)
+
+---
+
+## PHASE 2: Method Visibility and Access Control (Session 2)
+**Priority: HIGH** | **Estimated Time: 1 session** | **Risk: MEDIUM**
+
+### 2.1 Convert Public Methods to Private (Used Only Internally)
+
+**File:** `/services/github/Rest.js` (Lines 175-198)
+```javascript
+// CURRENT (public method used only internally)
+async getReleaseIds(chart) {
+  // ... implementation
+}
+
+// REQUIRED (private method)
+async #getReleaseIds(chart) {
+  // ... same implementation
+}
+
+// UPDATE caller in deleteReleases method
+const releases = await this.#getReleaseIds(chart);
+```
+
+**File:** `/services/Issue.js` (Lines 29-40)
+```javascript
+// CURRENT (public method with @private JSDoc)
+async _validate(context) {
+  // ... implementation
+}
+
+// REQUIRED (convert to private method)
+async #validate(context) {
+  // ... same implementation
+}
+
+// UPDATE caller in report method
+const hasIssues = await this.#validate(params.context);
+```
+
+### 2.2 Alphabetical Reordering After Privacy Changes
+
+After converting methods to private, ensure alphabetical ordering:
+- Private methods (`#methodName`) after constructor
+- Public methods after private methods
+- Both groups in alphabetical order
+
+### Phase 2 Success Criteria:
+- [ ] All internal-only methods converted to private
+- [ ] All method calls updated to use private syntax
+- [ ] Methods still in alphabetical order
+- [ ] No external access to internal methods
+
+---
+
+## PHASE 3: Code Complexity Reduction (Session 3)
+**Priority: HIGH** | **Estimated Time: 1-2 sessions** | **Risk: MEDIUM**
+
+### 3.1 Extract Complex Method Logic
+
+**File:** `/services/chart/Update.js` - `metadata()` method (Lines 91-145)
+**Current Issues:**
+- 54 lines of complex logic
+- Multiple responsibilities
+- Difficult to test and debug
+
+**Required Refactoring:**
+```javascript
+// EXTRACT helper methods:
+async #processMetadataFile(chartDir) {
+  // Handle metadata file reading and validation
+}
+
+async #generateChartIndex(chartDir, tempDir) {
+  // Handle chart packaging and index generation
+}
+
+async #mergeMetadataEntries(index, metadata, chartName) {
+  // Handle metadata merging and retention
+}
+
+// SIMPLIFIED main method:
 async metadata(charts) {
-  // 1. File existence checking
-  // 2. Chart metadata loading  
-  // 3. Version comparison logic
-  // 4. Temporary directory creation
-  // 5. Helm packaging operations
-  // 6. Index generation and URL updates
-  // 7. Metadata merging and sorting
-  // 8. Retention policy application
-  // 9. File writing and tracking
-  // 10. Signed commit execution
+  if (!charts || !charts.length) return true;
+  
+  const metadataFiles = [];
+  const results = await Promise.all(charts.map(async (chartDir) => {
+    try {
+      const metadata = await this.#processMetadataFile(chartDir);
+      if (metadata.skipUpdate) return true;
+      
+      const index = await this.#generateChartIndex(chartDir);
+      const finalIndex = await this.#mergeMetadataEntries(index, metadata, chartName);
+      
+      await this.fileService.writeYaml(metadataPath, finalIndex);
+      metadataFiles.push(metadataPath);
+      return true;
+    } catch (error) {
+      this.errorHandler.handle(error, { operation: `update metadata file for ${chartDir}`, fatal: false });
+      return false;
+    }
+  }));
+  
+  if (metadataFiles.length) {
+    await this.#commitMetadataFiles(metadataFiles);
+  }
+  
+  return results.every(result => result === true);
 }
 ```
 
-**Improvement Needed**:
-- **Extract private helper methods** to reduce complexity
-- **Separate concerns** into focused private methods
-- **Follow single responsibility principle**
+### 3.2 Simplify Complex Conditional Logic
 
-**Proposed Private Method Extraction**:
+**File:** `/services/File.js` (Lines 285-290)
 ```javascript
-/**
- * @private
- * @param {string} chartDir - Chart directory
- * @returns {Promise<boolean>} - True if version exists in metadata
- */
-async _checkVersionExists(chartDir) { }
+// CURRENT (complex nested conditions)
+if (entry.isDirectory() && options.recursive) {
+  const subDirFiles = await this.listDir(entryPath, options);
+  files = files.concat(subDirFiles);
+} else if (entry.isFile() || (!options.filesOnly && entry.isDirectory())) {
+  files.push(entryPath);
+}
 
-/**
- * @private  
- * @param {string} chartDir - Chart directory
- * @returns {Promise<Object>} - Generated index data
- */
-async _generateChartIndex(chartDir) { }
-
-/**
- * @private
- * @param {Object} index - New index data
- * @param {Object} metadata - Existing metadata
- * @param {string} chartName - Chart name
- * @returns {Object} - Merged and sorted entries
- */
-async _mergeMetadata(index, metadata, chartName) { }
+// REQUIRED (simplified logic)
+if (entry.isDirectory()) {
+  if (options.recursive) {
+    const subDirFiles = await this.listDir(entryPath, options);
+    files = files.concat(subDirFiles);
+  } else if (!options.filesOnly) {
+    files.push(entryPath);
+  }
+} else if (entry.isFile()) {
+  files.push(entryPath);
+}
 ```
 
-#### 2.2 Workflow Handler - Service Orchestration Pattern
-**Current Issue**: `/Users/floren/github/charts/.github/actions/handlers/Workflow.js`
+### Phase 3 Success Criteria:
+- [ ] No methods exceed 30 lines
+- [ ] Each method has single responsibility
+- [ ] Complex conditionals simplified
+- [ ] Helper methods follow naming conventions
 
-**Problem Analysis**:
+---
+
+## PHASE 4: Performance Optimization and Workflow Enhancement (Session 4)
+**Priority: MEDIUM** | **Estimated Time: 1-2 sessions** | **Risk: LOW**
+
+### 4.1 Template Compilation Caching
+
+**File:** `/services/Template.js`
 ```javascript
-// REPETITIVE PATTERN: Each static method follows same structure
-static async methodName(params) {
-  const workflow = new Workflow(params);
+// ADD template cache
+constructor(params) {
+  super(params);
+  this.handlebars = Handlebars.create();
+  this.templateCache = new Map(); // Add cache
+  this.isEqual();
+}
+
+// OPTIMIZE render method
+render(template, context, options = {}) {
   try {
-    workflow.logger.info('Starting operation...');
-    const service = new Service(params);
-    await service.operation();
-    workflow.logger.info('Operation complete');
+    this.logger.info('Rendering template');
+    
+    // Check cache first
+    const cacheKey = this.#generateCacheKey(template, options);
+    let compiledTemplate = this.templateCache.get(cacheKey);
+    
+    if (!compiledTemplate) {
+      compiledTemplate = this.compile(template);
+      if (compiledTemplate) {
+        this.templateCache.set(cacheKey, compiledTemplate);
+      }
+    }
+    
+    if (!compiledTemplate) {
+      throw new Error('Failed to compile template');
+    }
+    
+    const result = this.execute('render', () => compiledTemplate(context));
+    this.logger.info('Template rendered successfully');
+    return result;
   } catch (error) {
-    throw workflow.errorHandler.handle(error, { operation: 'operation name' });
+    this.errorHandler.handle(error, { operation: 'render template', fatal: false });
+    return null;
   }
 }
 ```
 
-**Improvement Needed**:
-- **Extract common orchestration pattern** into private helper
-- **Reduce code duplication** across static methods
-- **Standardize logging and error handling**
+### 4.2 Chart Processing Pipeline Optimization
 
-**Proposed Helper Method**:
+**File:** `/handlers/Chart.js`
 ```javascript
-/**
- * @private
- * @param {Object} params - Handler parameters
- * @param {string} operation - Operation name for logging
- * @param {Function} action - Async action to execute
- * @returns {Promise<any>} - Operation result
- */
-static async _executeWorkflowOperation(params, operation, action) { }
-```
+// CURRENT (sequential processing)
+const allCharts = [...charts.application, ...charts.library];
+await this.chartUpdate.application(allCharts);
+await this.chartUpdate.lock(allCharts);
+await this.chartUpdate.metadata(allCharts);
 
-### 3. **Error Handling Enhancements**
-
-#### 3.1 Missing Operation Context
-**Current Issue**: Some error handlers lack sufficient context
-
-**Problem Analysis**:
-```javascript
-// INSUFFICIENT CONTEXT: Generic error handling
-catch (error) {
-  this.errorHandler.handle(error, {
-    operation: `update application file for ${chartDir}`,
-    fatal: false
-  });
-}
-
-// MISSING: File path, line number, additional context for debugging
-```
-
-**Improvement Needed**:
-- **Add file path context** to error handling
-- **Include operation-specific details** for better debugging
-- **Standardize error context objects** across all services
-
-### 4. **Configuration and Constants**
-
-#### 4.1 Hard-coded Values
-**Current Issue**: Some values should be configurable
-
-**Problem Analysis**:
-```javascript
-// HARD-CODED: Version and package information
-const packageFile = `helm-docs_${version}_Linux_x86_64.deb`;
-const packageBaseUrl = 'https://github.com/norwoodj/helm-docs/releases/download';
-
-// HARD-CODED: Timeout and retry values  
-await this.shellService.execute('sudo', ['wget', '-qP', tempDir, '-t', '10', '-T', '60', packageUrl]);
-```
-
-**Improvement Needed**:
-- **Move configuration to config files** where appropriate
-- **Document hard-coded values** that are intentionally not configurable
-- **Consider environment-specific variations**
-
-### 5. **Documentation and JSDoc Enhancements**
-
-#### 5.1 Missing Parameter Documentation
-**Current Issue**: Some methods lack complete parameter documentation
-
-**Problem Analysis**:
-```javascript
-// INCOMPLETE DOCUMENTATION: Missing parameter details
-/**
- * Updates metadata files for charts
- * 
- * @param {Array<string>} charts - Chart directories to update
- * @returns {Promise<boolean>} - True if all metadata files were updated successfully
- */
-async metadata(charts) {
-  // Missing: Parameter validation requirements
-  // Missing: Return value conditions
+// REQUIRED (per-chart processing)
+async #processChartUpdates(charts) {
+  const results = [];
+  for (const chart of charts) {
+    try {
+      await this.chartUpdate.application([chart]);
+      await this.chartUpdate.lock([chart]);
+      await this.chartUpdate.metadata([chart]);
+      results.push({ chart, success: true });
+    } catch (error) {
+      this.errorHandler.handle(error, { operation: `process chart ${chart}`, fatal: false });
+      results.push({ chart, success: false, error });
+    }
+  }
+  return results;
 }
 ```
 
-**Improvement Needed**:
-- **Complete missing JSDoc parameter types and descriptions**
-- **Focus on method signatures and return values only**
-- **Ensure parameter types match actual implementation**
+### 4.3 Resource Cleanup Implementation
 
-## PHASED IMPROVEMENT ROADMAP
-
-> **Note**: Improvements are designed for multiple chat sessions to optimize Claude Max subscription usage. Each phase delivers enhanced code quality while maintaining functionality.
-
-### **Phase 1: Service Instance Creation Standardization** 🔧
-**Session 1 | Target**: Consistent service instantiation patterns
-**Priority**: MEDIUM (Code consistency improvement)
-**Estimated Complexity**: Low
-
-**Deliverables**:
-1. **Standardize Workflow Handler Service Creation**
-   - Location: `/Users/floren/github/charts/.github/actions/handlers/Workflow.js`
-   - **Issue**: Inconsistent parameter passing to service constructors
-   - **Fix**: Use consistent `params` object passing pattern
-   - **Test**: Verify all workflow operations continue working
-
-2. **Extract Common Orchestration Pattern**
-   - Add private helper method `_executeWorkflowOperation()`
-   - Reduce code duplication across static methods
-   - Standardize logging and error handling
-   - **Test**: Verify all static methods work with new pattern
-
-**Session Outcome**: Consistent service instantiation across workflow handlers
-
-### **Phase 2: Git Operations Consistency** 📝
-**Session 2 | Target**: Unified git operations approach
-**Priority**: MEDIUM (Operational consistency)
-**Estimated Complexity**: Low-Medium
-
-**Deliverables**:
-1. **Analyze Git Operations Usage**
-   - Document when to use `signedCommit()` vs local commits
-   - Identify inconsistencies in Chart handler vs Update services
-   - Determine preferred approach for chart workflow
-
-2. **Standardize Git Operations in Chart Handler**
-   - Location: `/Users/floren/github/charts/.github/actions/handlers/Chart.js`
-   - **Issue**: Mixed approach between local commits and signed commits
-   - **Fix**: Use consistent approach with other services
-   - **Test**: Verify chart updates continue working correctly
-
-**Session Outcome**: Consistent git operations across all chart update flows
-
-### **Phase 3: Complex Method Refactoring** 🔄
-**Session 3 | Target**: Extract private helper methods from complex operations
-**Priority**: HIGH (Code maintainability)
-**Estimated Complexity**: Medium-High
-
-**Deliverables**:
-1. **Refactor Update.metadata() Method**
-   - Location: `/Users/floren/github/charts/.github/actions/services/chart/Update.js`
-   - **Extract**: `_checkVersionExists()`, `_generateChartIndex()`, `_mergeMetadata()`
-   - **Follow**: Private method standards from Issue service example
-   - **Test**: Verify metadata updates work identically
-
-2. **Refactor Other Complex Methods**
-   - Review `application()` and `lock()` methods for extraction opportunities
-   - Apply same private method extraction pattern
-   - **Test**: Comprehensive chart update workflow testing
-
-**Session Outcome**: Simplified, maintainable methods with clear single responsibilities
-
-### **Phase 4: Error Handling Enhancement** ⚠️
-**Session 4 | Target**: Improved error context and debugging
-**Priority**: MEDIUM (Developer experience)
-**Estimated Complexity**: Medium
-
-**Deliverables**:
-1. **Enhance Error Context Objects**
-   - Add file path context to all file operations
-   - Include operation-specific details for debugging
-   - Standardize error context format across services
-
-2. **Review Error Handling Patterns**
-   - Ensure all services use appropriate error types
-   - Verify error context provides sufficient debugging information
-   - **Test**: Verify error handling works correctly
-
-**Session Outcome**: Enhanced debugging capabilities with better error context
-
-### **Phase 5: Configuration Management** ⚙️
-**Session 5 | Target**: Configuration improvements and code standardization
-**Priority**: LOW (Code quality)
-**Estimated Complexity**: Low-Medium
-
-**Deliverables**:
-1. **Configuration Review**
-   - Identify hard-coded values that should be configurable
-   - Move appropriate values to configuration files
-   - Document intentionally hard-coded values in code comments
-
-2. **Complete Missing Parameter Documentation**
-   - Add missing JSDoc parameter descriptions for method signatures
-   - Focus on parameter types and return values only
-   - **Test**: Verify documentation accuracy matches implementation
-
-**Session Outcome**: Complete configuration management and essential method documentation
-
-### **Phase 6: Private Method Migration** 🔒
-**Session 6 | Target**: Convert public methods to private where appropriate
-**Priority**: LOW (Architectural consistency)
-**Estimated Complexity**: Medium
-
-**Deliverables**:
-1. **Audit Chart Workflow Services**
-   - Identify public methods used only internally within chart workflow
-   - Follow `Issue._validate()` pattern for private method conversion
-   - Focus on helper methods and internal utilities
-
-2. **Convert to Private Methods**
-   - Add underscore prefix and proper positioning
-   - Update JSDoc with `@private` tags
-   - Ensure method ordering: Constructor → Private → Public (alphabetical)
-   - **Test**: Verify chart workflow continues functioning
-
-**Session Outcome**: Improved encapsulation with clear public/private API boundaries
-
-## 🎯 SESSION OPTIMIZATION STRATEGY
-
-### **Implementation Priorities**
-1. **Phase 3** (Complex Method Refactoring) - **HIGHEST IMPACT**
-2. **Phase 1** (Service Standardization) - **CODE CONSISTENCY**  
-3. **Phase 2** (Git Operations) - **OPERATIONAL CONSISTENCY**
-4. **Phase 4** (Error Handling) - **DEVELOPER EXPERIENCE**
-5. **Phase 5** (Configuration/Code) - **CODE QUALITY**
-6. **Phase 6** (Private Methods) - **ARCHITECTURAL CONSISTENCY**
-
-### **Session Guidelines**
-- **Focus**: Maximum 2 service files per session
-- **Quality**: Complete refactoring with proper testing
-- **Standards**: Strict adherence to established coding guidelines
-- **Verification**: Test chart workflow end-to-end after changes
-- **Documentation**: Update method documentation as changes are made
-
-### **Pre-Session Preparation**
-- Review current chart workflow execution logs
-- Identify specific methods to refactor
-- Prepare test scenarios for validation
-- Understand current git operation patterns
-
-### **Implementation Status Tracking**
-
-| Phase | Status | Target Files | Session | Notes |
-|-------|--------|-------------|---------|-------|
-| 1 | 🔄 Pending | Workflow.js | - | Service standardization |
-| 2 | ⏳ Waiting | Chart.js | - | Git operations consistency |
-| 3 | ⏳ Waiting | Update.js | - | Method complexity reduction |
-| 4 | ⏳ Waiting | Multiple services | - | Error handling improvement |
-| 5 | ⏳ Waiting | Configuration/code | - | Config and essential docs |
-| 6 | ⏳ Waiting | Chart workflow services | - | Private method conversion |
-
-**Status Legend**: 🔄 In Progress | ⏳ Waiting | ✅ Complete | ❌ Blocked
-
-## CODING STANDARDS COMPLIANCE
-
-All improvements must follow the established coding guidelines:
-
-### **Method Implementation Rules**
-- **NO comments inside method bodies under any circumstances**
-- **NO blank lines inside methods**
-- **Exact pattern matching from existing code**
-- **Alphabetical method ordering** (constructor, private methods, public methods)
-- **Use existing service dependencies** (no new service creation)
-
-### **Private Method Standards**
+Add cleanup methods for temporary directories and files:
 ```javascript
-/**
- * Method description
- * 
- * @private
- * @param {Type} param - Parameter description
- * @returns {Type} - Return description
- */
-async _privateMethod(param) {
-  // Implementation without comments or blank lines
+// ADD to relevant services
+async #cleanup(tempPaths) {
+  for (const tempPath of tempPaths) {
+    try {
+      await this.fileService.delete(tempPath);
+    } catch (error) {
+      this.logger.warning(`Failed to cleanup ${tempPath}: ${error.message}`);
+    }
+  }
 }
 ```
 
-### **Error Handling Pattern**
+### 4.4 Standardized Error Handling
+
+**Pattern to implement across all services:**
 ```javascript
-try {
-  return await this.serviceMethod(param);
-} catch (error) {
-  this.errorHandler.handle(error, {
-    operation: 'detailed operation name',
-    file: filePath,
-    fatal: false
-  });
+async methodName(params) {
+  try {
+    // Method logic
+    return result;
+  } catch (error) {
+    if (error.status === 404) {
+      this.logger.info(`Resource not found: ${params.resource}`);
+      return null;
+    }
+    throw new ServiceSpecificError('operation name', error);
+  }
 }
 ```
 
-### **Service Integration Pattern**
-```javascript
-// Use existing service instances from constructor
-const result = await this.existingService.method(param);
-// Follow existing error handling patterns
-// Return consistent data structures
+### Phase 4 Success Criteria:
+- [ ] Template caching reduces compilation time
+- [ ] Chart processing is more resilient to individual failures
+- [ ] Temporary files properly cleaned up
+- [ ] Consistent error handling patterns across all services
+- [ ] Improved workflow performance metrics
+
+---
+
+## Implementation Guidelines
+
+### **CRITICAL: Incremental Implementation with Workflow Testing**
+**ALL CHANGES MADE IN SMALL STEPS WITH IMMEDIATE TESTING**
+
+**Required Process:**
+1. **Show diff for ONE file** using `edit_file` with `dryRun: true`
+2. **Wait for approval** - Get explicit approval before implementing
+3. **Implement single file change** - Only after diff is reviewed and approved
+4. **User tests workflow** - Run chart.yml workflow to verify no breakage
+5. **Proceed to next file** - Only after successful workflow test
+6. **Never batch changes** - One file at a time, always
+
+**Example Process:**
+```
+1. "Here's the proposed change for File.js imports:"
+   [show diff with dryRun: true for File.js ONLY]
+2. "Do you approve this change?"
+3. [Wait for user approval]
+4. [Implement File.js change ONLY]
+5. "Change applied. Please test chart.yml workflow"
+6. [Wait for user to test and confirm workflow passes]
+7. "Ready for next file: Frontpage.js"
 ```
 
-## VERIFICATION CHECKLIST
+**NEVER implement multiple files without testing between each change**
 
-Before implementing any improvements:
+### Session Preparation Checklist:
+1. **Before each session:**
+   - Confirm current phase completion status
+   - Review specific files to be modified
+   - Understand dependencies between changes
 
-- [ ] **Pattern Analysis**: Identify exact existing pattern to follow
-- [ ] **Service Dependencies**: Verify no new service dependencies required
-- [ ] **Method Ordering**: Ensure proper alphabetical ordering maintained
-- [ ] **Error Handling**: Use established error types and patterns
-- [ ] **Testing**: Verify chart workflow executes successfully
-- [ ] **Documentation**: Update JSDoc following established format
-- [ ] **Integration**: Ensure no breaking changes to workflow
-- [ ] **Standards**: Follow all established coding guidelines
+2. **During each session:**
+   - Follow STRICT IMPLEMENTATION PROTOCOL
+   - **ALWAYS show diffs before implementing**
+   - Make minimal changes per file
+   - Test changes incrementally
+   - Document any deviations from plan
 
-## CONCLUSION
+3. **After each session:**
+   - Verify phase completion criteria
+   - Update progress in this document
+   - Note any issues for next session
 
-The chart.yml workflow implementation is functional and follows most established patterns correctly. The identified improvements focus on **code quality**, **maintainability**, and **architectural consistency** rather than fixing broken functionality.
+### Cross-Phase Dependencies:
+- **Phase 1 → Phase 2:** Method ordering must be complete before visibility changes
+- **Phase 2 → Phase 3:** Private methods established before complexity reduction
+- **Phase 3 → Phase 4:** Simplified code before optimization implementation
 
-**Key Benefits of Improvements**:
-- ✅ **Reduced complexity** through private method extraction
-- ✅ **Improved consistency** in service instantiation patterns
-- ✅ **Better maintainability** with simplified method bodies
-- ✅ **Enhanced debugging** through improved error context
-- ✅ **Clearer architecture** with proper public/private boundaries
+### Risk Mitigation:
+- **Phase 1 (LOW RISK):** Import/ordering changes only - no logic modification
+- **Phase 2 (MEDIUM RISK):** Method visibility changes - verify all callers updated
+- **Phase 3 (MEDIUM RISK):** Logic extraction - maintain exact same functionality
+- **Phase 4 (LOW RISK):** Performance additions - maintain backward compatibility
 
-**Priority Focus**: **Phase 3 (Complex Method Refactoring)** provides the highest impact for code maintainability, particularly the `Update.metadata()` method which contains the most complex logic in the chart workflow.
+### **MANDATORY: Diff Review Process**
+**Every code change MUST follow this process:**
+1. **Show diff with dryRun: true** before any implementation
+2. **Wait for explicit approval** from user
+3. **Implement only after approval**
+4. **Verify implementation** was applied correctly
 
-All improvements maintain the **STRICT IMPLEMENTATION PROTOCOL** with exact pattern matching and no unauthorized enhancements while enhancing the overall code quality and developer experience.
+**No exceptions - all changes require diff review and approval**
+
+### Success Validation:
+Each phase includes specific success criteria that must be met before proceeding to the next phase. The chart.yml workflow should continue functioning identically after each phase completion.
+
+---
+
+## Progress Tracking
+
+- [ ] **Phase 1 Complete:** Import organization and method ordering
+- [ ] **Phase 2 Complete:** Method visibility and access control  
+- [ ] **Phase 3 Complete:** Code complexity reduction
+- [ ] **Phase 4 Complete:** Performance optimization and workflow enhancement
+
+**Next Session Request Template:**
+```
+I will implement Phase 1 from /Users/floren/github/charts/.github/actions/chart.md following STRICT IMPLEMENTATION PROTOCOL.
+
+Phase 1 focuses on Critical Import and Method Organization with LOW RISK - import reordering and method positioning only, no functional changes.
+
+Please read /Users/floren/github/charts/.github/actions/chart.md and implement Phase 1.1 Import Organization Fixes for these files:
+- /Users/floren/github/charts/.github/actions/services/File.js
+- /Users/floren/github/charts/.github/actions/services/Frontpage.js  
+- /Users/floren/github/charts/.github/actions/services/chart/Update.js
+- /Users/floren/github/charts/.github/actions/services/helm/Docs.js
+- /Users/floren/github/charts/.github/actions/services/release/Publish.js
+
+Then implement Phase 1.2 Method Ordering Fix for:
+- /Users/floren/github/charts/.github/actions/services/github/Rest.js
+
+IMPORTANT: Show diffs for review before implementing any changes. Follow the exact patterns shown in chart.md. Make minimal changes per file.
+```
+
+**Next Session:** Phase 1 - Critical Import and Method Organization

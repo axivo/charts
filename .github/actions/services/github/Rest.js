@@ -9,19 +9,30 @@
 const fs = require('fs');
 const Api = require('./Api');
 const { GitHubApiError } = require('../../utils/errors');
+const GraphQL = require('./GraphQL');
 
 class Rest extends Api {
   /**
-   * Creates a label in a repository
+   * Creates a new Rest service instance
    * 
-   * @param {Object} params - Function parameters
-   * @param {string} params.owner - Repository owner
-   * @param {string} params.repo - Repository name
-   * @param {string} params.name - Label name
-   * @param {string} params.color - Label color (hex without #)
-   * @param {string} params.description - Label description
-   * @returns {Promise<Object>} - Created label
+   * @param {Object} params - Service parameters
    */
+  constructor(params) {
+    super(params);
+    this.graphqlService = new GraphQL(params);
+  }
+
+  /**
+  * Creates a label in a repository
+  *
+  * @param {Object} params - Function parameters
+  * @param {string} params.owner - Repository owner
+  * @param {string} params.repo - Repository name
+  * @param {string} params.name - Label name
+  * @param {string} params.color - Label color (hex without #)
+  * @param {string} params.description - Label description
+  * @returns {Promise<Object>} - Created label
+  */
   async createLabel({ owner, repo, name, color, description }) {
     const response = await this.execute('createLabel', 'issues', 'createLabel', {
       owner,
@@ -40,18 +51,18 @@ class Rest extends Api {
   }
 
   /**
-   * Creates a GitHub release
-   * 
-   * @param {Object} params - Function parameters
-   * @param {string} params.owner - Repository owner
-   * @param {string} params.repo - Repository name
-   * @param {string} params.tag - Release tag
-   * @param {string} params.name - Release name
-   * @param {string} params.body - Release body
-   * @param {boolean} params.draft - Whether the release is a draft
-   * @param {boolean} params.prerelease - Whether the release is a prerelease
-   * @returns {Promise<Object>} - Created release
-   */
+  * Creates a GitHub release
+  *
+  * @param {Object} params - Function parameters
+  * @param {string} params.owner - Repository owner
+  * @param {string} params.repo - Repository name
+  * @param {string} params.tag - Release tag
+  * @param {string} params.name - Release name
+  * @param {string} params.body - Release body
+  * @param {boolean} params.draft - Whether the release is a draft
+  * @param {boolean} params.prerelease - Whether the release is a prerelease
+  * @returns {Promise<Object>} - Created release
+  */
   async createRelease({ owner, repo, tag, name, body, draft = false, prerelease = false }) {
     const response = await this.execute('createRelease', 'repos', 'createRelease', {
       owner,
@@ -73,8 +84,84 @@ class Rest extends Api {
   }
 
   /**
+  * Deletes OCI package from GitHub Container Registry
+  * 
+  * @param {Object} params - Function parameters
+  * @param {string} params.owner - Repository owner
+  * @param {string} params.repo - Repository name
+  * @param {Object} params.chart - Chart object
+  * @param {string} params.chart.name - Chart name
+  * @param {string} params.chart.type - Chart type (application/library)
+   * @returns {Promise<boolean>} - True if deletion succeeded
+   */
+  async deleteOciPackage({ owner, repo, chart }) {
+    try {
+      this.logger.info(`Deleting OCI package for chart: ${chart.name} (${chart.type})`);
+      const ownerType = await this.graphqlService.getRepositoryType(owner);
+      const packageName = `${repo}/${chart.type}/${chart.name}`;
+      const ownerParam = ownerType === 'organization' ? { org: owner } : { username: owner };
+      const methodName = ownerType === 'organization' ? 'deletePackageForOrg' : 'deletePackageForUser';
+      await this.execute('deleteOciPackage', 'packages', methodName, {
+        package_type: 'container',
+        package_name: packageName,
+        ...ownerParam
+      });
+      this.logger.info(`Successfully deleted OCI package: ${packageName}`);
+      return true;
+    } catch (error) {
+      if (error.status === 404) {
+        this.logger.info(`OCI package not found: ${chart.name} (${chart.type})`);
+        return false;
+      }
+      this.errorHandler.handle(error, {
+        operation: `delete OCI package for ${chart.name}`,
+        fatal: false
+      });
+      return false;
+    }
+  }
+
+  /**
+   * Deletes all releases for a specific chart
+   *
+   * @param {string} chart - Chart name to delete releases for
+   * @returns {Promise<number>} - Count of deleted releases
+   */
+  async deleteReleases(chart) {
+    try {
+      this.logger.info(`Deleting releases for ${chart} chart...`);
+      const releases = await this.getReleaseIds(chart);
+      let deletedCount = 0;
+      for (const release of releases) {
+        try {
+          await this.execute('deleteRelease', 'repos', 'deleteRelease', {
+            owner: this.context.repo.owner,
+            repo: this.context.repo.repo,
+            release_id: release.id
+          });
+          await this.execute('deleteRef', 'git', 'deleteRef', {
+            owner: this.context.repo.owner,
+            repo: this.context.repo.repo,
+            ref: `tags/${release.tagName}`
+          });
+          deletedCount++;
+        } catch (error) {
+          this.errorHandler.handle(error, {
+            operation: `delete '${release.tagName}' release`,
+            fatal: false
+          });
+        }
+      }
+      this.logger.info(`Successfully deleted ${deletedCount} releases for ${chart} chart`);
+      return deletedCount;
+    } catch (error) {
+      throw new GitHubApiError('deleteReleases', error);
+    }
+  }
+
+  /**
    * Executes a REST API call with error handling
-   * 
+   *
    * @param {string} operationName - Name of the operation (for error reporting)
    * @param {string} namespace - REST API namespace (e.g., 'repos', 'actions')
    * @param {string} method - REST API method name (e.g., 'getWorkflowRun', 'createRelease')
@@ -90,14 +177,14 @@ class Rest extends Api {
   }
 
   /**
-   * Gets a label from a repository
-   * 
-   * @param {Object} params - Function parameters
-   * @param {string} params.owner - Repository owner
-   * @param {string} params.repo - Repository name
-   * @param {string} params.name - Label name
-   * @returns {Promise<Object|null>} - Label or null if not found
-   */
+  * Gets a label from a repository
+  *
+  * @param {Object} params - Function parameters
+  * @param {string} params.owner - Repository owner
+  * @param {string} params.repo - Repository name
+  * @param {string} params.name - Label name
+  * @returns {Promise<Object|null>} - Label or null if not found
+  */
   async getLabel({ owner, repo, name }) {
     try {
       const response = await this.execute('getLabel', 'issues', 'getLabel', {
@@ -121,8 +208,36 @@ class Rest extends Api {
   }
 
   /**
+  * Gets all release IDs for a specific chart
+  *
+  * @param {string} chart - Chart name to filter releases
+  * @returns {Promise<Array<Object>>} - Array of release objects
+  */
+  async getReleaseIds(chart) {
+    try {
+      this.logger.info(`Getting release IDs for chart: ${chart}`);
+      const releases = await this.paginate('repos', 'listReleases', {
+        owner: this.context.repo.owner,
+        repo: this.context.repo.repo
+      }, (data, currentResults = []) => {
+        const filteredReleases = data.filter(release =>
+          release.tag_name.startsWith(`${chart}-`)
+        );
+        return currentResults.concat(filteredReleases.map(release => ({
+          id: release.id,
+          tagName: release.tag_name
+        })));
+      });
+      this.logger.info(`Found ${releases.length} releases for ${chart}`);
+      return releases;
+    } catch (error) {
+      throw new GitHubApiError('getReleaseIds', error);
+    }
+  }
+
+  /**
    * Gets a release by tag
-   * 
+   *
    * @param {Object} params - Function parameters
    * @param {string} params.owner - Repository owner
    * @param {string} params.repo - Repository name

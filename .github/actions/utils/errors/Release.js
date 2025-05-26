@@ -12,12 +12,18 @@ class ReleaseError extends AppError {
   /**
    * Creates a new ReleaseError instance
    *
-   * @param {string} operation - The release operation that failed
-   * @param {Error} error - The original error
-   * @param {Object} [details] - Additional error details
+   * @param {string} operation - Release operation that failed
+   * @param {Error} originalError - Original error that was caught
+   * @param {Object} details - Additional error details
    */
-  constructor(operation, error, details) {
-    super('Release', operation, error, details);
+  constructor(operation, originalError, details = {}) {
+    super({
+      message: `Release operation failed: ${operation}`,
+      operation,
+      originalError
+    });
+    this.name = 'ReleaseError';
+    this.details = details;
   }
 }
 

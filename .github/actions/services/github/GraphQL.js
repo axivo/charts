@@ -210,6 +210,25 @@ class GraphQL extends Api {
   }
 
   /**
+   * Determines repository owner type for API routing
+   * 
+   * @param {string} owner - Repository owner
+   * @returns {Promise<string>} - 'organization' or 'user'
+   */
+  async getRepositoryType(owner) {
+    const query = `query GetOwnerType($owner: String!) {
+        repositoryOwner(login: $owner) {
+          __typename
+        }
+      }`;
+    const variables = { owner };
+    const response = await this.execute('getRepositoryType', query, variables);
+    const ownerType = response.repositoryOwner.__typename.toLowerCase();
+    this.logger.info(`Repository owner ${owner} is type: ${ownerType}`);
+    return ownerType;
+  }
+
+  /**
    * Helper method to paginate through GraphQL results
    * 
    * @param {string} query - GraphQL query
