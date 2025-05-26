@@ -131,10 +131,10 @@ class Chart extends Action {
   /**
    * Validates a chart for release
    * 
-   * @param {string} chartDir - Chart directory
+   * @param {string} directory - Chart directory
    * @returns {Promise<boolean>} - True if validation passed
    */
-  async validate(chartDir) {
+  async validate(directory) {
     try {
       const helmService = new Helm({
         github: this.github,
@@ -143,14 +143,13 @@ class Chart extends Action {
         exec: this.exec,
         config: this.config
       });
-      if (!await helmService.lint(chartDir, { strict: true })) {
+      if (!await helmService.lint(directory, { strict: true })) {
         return false;
       }
-      this.logger.info(`Chart validation passed for ${chartDir}`);
       return true;
     } catch (error) {
       this.errorHandler.handle(error, {
-        operation: `validate chart ${chartDir}`,
+        operation: `validate chart '${directory}' directory`,
         fatal: false
       });
       return false;
