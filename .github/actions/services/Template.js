@@ -19,7 +19,21 @@ class Template extends Action {
   constructor(params) {
     super(params);
     this.handlebars = Handlebars.create();
-    this.isEqual();
+  }
+
+  /**
+   * Registers helper for repository URL transformation
+   * 
+   * @private
+   * @param {string} repoUrl - Repository URL
+   */
+  #setRepoRawUrl(repoUrl) {
+    return this.execute('register setRepoRawUrl helper', () => {
+      this.handlebars.registerHelper('RepoRawURL', function () {
+        return String(repoUrl).replace('github.com', 'raw.githubusercontent.com');
+      });
+      this.logger.info('Successfully registered setRepoRawUrl helper');
+    });
   }
 
   /**
@@ -29,15 +43,7 @@ class Template extends Action {
    * @returns {Function} - Compiled template function
    */
   compile(template) {
-    try {
-      return this.execute('compile', () => this.handlebars.compile(template));
-    } catch (error) {
-      this.errorHandler.handle(error, {
-        operation: 'compile template',
-        fatal: false
-      });
-      return null;
-    }
+    return this.execute('compile template', () => this.handlebars.compile(template));
   }
 
   /**
@@ -65,32 +71,6 @@ class Template extends Action {
   }
 
   /**
-   * Registers helper for equality comparison
-   */
-  isEqual() {
-    this.execute('register isEqual helper', () => {
-      this.handlebars.registerHelper('isEqual', function (a, b) {
-        return a === b;
-      });
-      this.logger.info('Registered isEqual helper');
-    });
-  }
-
-  /**
-   * Registers helper for repository URL transformation
-   * 
-   * @param {string} repoUrl - Repository URL
-   */
-  setRepoRawUrl(repoUrl) {
-    this.execute('register repository raw URL helper', () => {
-      this.handlebars.registerHelper('RepoRawURL', function () {
-        return String(repoUrl).replace('github.com', 'raw.githubusercontent.com');
-      });
-      this.logger.info('Registered repository raw URL helper');
-    });
-  }
-
-  /**
    * Renders a template with provided context
    * 
    * @param {string} template - Template string to render
@@ -101,22 +81,16 @@ class Template extends Action {
    */
   render(template, context, options = {}) {
     try {
-      this.logger.info('Rendering template');
+      this.logger.info('Rendering template...');
       if (options.repoUrl) {
-        this.setRepoRawUrl(options.repoUrl);
+        this.#setRepoRawUrl(options.repoUrl);
       }
-      const compiledTemplate = this.compile(template);
-      if (!compiledTemplate) {
-        throw new Error('Failed to compile template');
-      }
+      const compiledTemplate = this.execute('compile template', () => this.handlebars.compile(template));
       const result = this.execute('render', () => compiledTemplate(context));
-      this.logger.info('Template rendered successfully');
+      this.logger.info('Successfully rendered template');
       return result;
     } catch (error) {
-      this.errorHandler.handle(error, {
-        operation: 'render template',
-        fatal: false
-      });
+      this.errorHandler.handle(error, { operation: 'render template', fatal: false });
       return null;
     }
   }
