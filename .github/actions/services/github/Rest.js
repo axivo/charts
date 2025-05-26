@@ -23,6 +23,34 @@ class Rest extends Api {
   }
 
   /**
+  * Gets all release IDs for a specific chart
+  *
+  * @param {string} chart - Chart name to filter releases
+  * @returns {Promise<Array<Object>>} - Array of release objects
+  */
+  async #getReleaseIds(chart) {
+    try {
+      this.logger.info(`Getting release IDs for '${chart}' chart...`);
+      const releases = await this.paginate('repos', 'listReleases', {
+        owner: this.context.repo.owner,
+        repo: this.context.repo.repo
+      }, (data, currentResults = []) => {
+        const filteredReleases = data.filter(release =>
+          release.tag_name.startsWith(`${chart}-`)
+        );
+        return currentResults.concat(filteredReleases.map(release => ({
+          id: release.id,
+          tagName: release.tag_name
+        })));
+      });
+      this.logger.info(`Found ${releases.length} releases for '${chart}' chart`);
+      return releases;
+    } catch (error) {
+      throw new GitHubApiError('getReleaseIds', error);
+    }
+  }
+
+  /**
   * Creates a label in a repository
   *
   * @param {Object} params - Function parameters
@@ -130,7 +158,7 @@ class Rest extends Api {
   async deleteReleases(chart) {
     try {
       this.logger.info(`Deleting releases for ${chart} chart...`);
-      const releases = await this.getReleaseIds(chart);
+      const releases = await this.#getReleaseIds(chart);
       let deletedCount = 0;
       for (const release of releases) {
         try {
@@ -204,34 +232,6 @@ class Rest extends Api {
         return null;
       }
       throw error;
-    }
-  }
-
-  /**
-  * Gets all release IDs for a specific chart
-  *
-  * @param {string} chart - Chart name to filter releases
-  * @returns {Promise<Array<Object>>} - Array of release objects
-  */
-  async getReleaseIds(chart) {
-    try {
-      this.logger.info(`Getting release IDs for chart: ${chart}`);
-      const releases = await this.paginate('repos', 'listReleases', {
-        owner: this.context.repo.owner,
-        repo: this.context.repo.repo
-      }, (data, currentResults = []) => {
-        const filteredReleases = data.filter(release =>
-          release.tag_name.startsWith(`${chart}-`)
-        );
-        return currentResults.concat(filteredReleases.map(release => ({
-          id: release.id,
-          tagName: release.tag_name
-        })));
-      });
-      this.logger.info(`Found ${releases.length} releases for ${chart}`);
-      return releases;
-    } catch (error) {
-      throw new GitHubApiError('getReleaseIds', error);
     }
   }
 

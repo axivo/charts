@@ -26,7 +26,7 @@ class Issue extends Action {
    * @param {Object} context - GitHub Actions context
    * @returns {Promise<boolean>} - True if issues detected
    */
-  async _validate(context) {
+  async #validate(context) {
     try {
       return false;
     } catch (error) {
@@ -94,7 +94,7 @@ class Issue extends Action {
    */
   async report(params) {
     try {
-      const hasIssues = await this._validate(params.context);
+      const hasIssues = await this.#validate(params.context);
       if (!hasIssues) {
         return null;
       }
