@@ -52,7 +52,6 @@ class Workflow extends Action {
   static async installHelmDocs(params) {
     const workflow = new Workflow(params);
     try {
-      workflow.logger.info('Installing helm-docs...');
       const docsService = new Docs({
         github: params.github,
         context: params.context,
@@ -61,7 +60,6 @@ class Workflow extends Action {
         config: params.config
       });
       await docsService.install(params.version);
-      workflow.logger.info('Helm-docs installation complete');
     } catch (error) {
       throw workflow.errorHandler.handle(error, { operation: 'install helm-docs' });
     }
