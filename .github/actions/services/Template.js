@@ -25,14 +25,14 @@ class Template extends Action {
    * Registers helper for repository URL transformation
    * 
    * @private
-   * @param {string} repoUrl - Repository URL
+   * @param {string} url - Repository URL
    */
-  #setRepoRawUrl(repoUrl) {
-    return this.execute('register setRepoRawUrl helper', () => {
+  #setRepoRawUrl(url) {
+    return this.execute('register RepoRawURL helper', () => {
       this.handlebars.registerHelper('RepoRawURL', function () {
-        return String(repoUrl).replace('github.com', 'raw.githubusercontent.com');
+        return String(url).replace('github.com', 'raw.githubusercontent.com');
       });
-      this.logger.info('Successfully registered setRepoRawUrl helper');
+      this.logger.info('Successfully registered RepoRawURL helper');
     });
   }
 
