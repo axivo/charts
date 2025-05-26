@@ -84,7 +84,8 @@ class Update extends Action {
    */
   async lock(charts) {
     if (!charts || !charts.length) return true;
-    this.logger.info(`Updating lock files for ${charts.length} charts`);
+    const word = charts.length === 1 ? 'chart' : 'charts';
+    this.logger.info(`Updating lock files for ${charts.length} ${word}`);
     const lockFiles = [];
     const updatePromises = charts.map(async (chartDir) => {
       try {
@@ -126,7 +127,8 @@ class Update extends Action {
    */
   async metadata(charts) {
     if (!charts || !charts.length) return true;
-    this.logger.info(`Updating metadata files for ${charts.length} charts`);
+    const word = charts.length === 1 ? 'chart' : 'charts';
+    this.logger.info(`Updating metadata files for ${charts.length} ${word}`);
     const metadataFiles = [];
     const updatePromises = charts.map(async (chartDir) => {
       try {
