@@ -28,6 +28,25 @@ class Update extends Action {
   }
 
   /**
+   * Commits files and returns results
+   * 
+   * @param {string} type - Type of files (application, dependency lock, metadata)
+   * @param {Array<string>} files - Files to commit
+   * @param {Array<boolean>} results - Update operation results
+   * @returns {Promise<boolean>} - True if all operations succeeded
+   */
+  async #commit(type, files, results) {
+    if (!files.length) {
+      this.logger.info(`No ${type} file changes to commit`);
+      return results.every(result => result === true);
+    }
+    const headRef = process.env.GITHUB_HEAD_REF;
+    const word = files.length === 1 ? 'file' : 'files';
+    await this.gitService.signedCommit(headRef, files, `chore(github-action): update ${type} ${word}`);
+    return results.every(result => result === true);
+  }
+
+  /**
    * Updates application files for charts
    * 
    * @param {Array<string>} charts - Chart directories to update
@@ -35,8 +54,9 @@ class Update extends Action {
    */
   async application(charts) {
     if (!charts || !charts.length) return true;
+    const type = 'application';
     const word = charts.length === 1 ? 'chart' : 'charts';
-    this.logger.info(`Updating application files for ${charts.length} ${word}...`);
+    this.logger.info(`Updating ${type} files for ${charts.length} ${word}...`);
     const appFiles = [];
     const updatePromises = charts.map(async (chartDir) => {
       try {
@@ -57,25 +77,18 @@ class Update extends Action {
         appConfig.spec.source.targetRevision = tagName;
         await this.fileService.writeYaml(appFilePath, appConfig);
         appFiles.push(appFilePath);
-        this.logger.info(`Successfully updated '${chartDir}' application file`);
+        this.logger.info(`Successfully updated '${chartDir}' ${type} file`);
         return true;
       } catch (error) {
         this.errorHandler.handle(error, {
-          operation: `update '${chartDir}' application file`,
+          operation: `update '${chartDir}' ${type} file`,
           fatal: false
         });
         return false;
       }
     });
     const results = await Promise.all(updatePromises);
-    if (appFiles.length) {
-      const headRef = process.env.GITHUB_HEAD_REF;
-      const word = appFiles.length === 1 ? 'file' : 'files';
-      await this.gitService.signedCommit(headRef, appFiles, `chore(github-action): update application ${word}`);
-    } else {
-      this.logger.info('No application file changes to commit');
-    }
-    return results.every(result => result === true);
+    return this.#commit(type, appFiles, results);
   }
 
   /**
@@ -86,8 +99,9 @@ class Update extends Action {
    */
   async lock(charts) {
     if (!charts || !charts.length) return true;
+    const type = 'dependency lock';
     const word = charts.length === 1 ? 'chart' : 'charts';
-    this.logger.info(`Updating lock files for ${charts.length} ${word}...`);
+    this.logger.info(`Updating ${type} files for ${charts.length} ${word}...`);
     const lockFiles = [];
     const updatePromises = charts.map(async (chartDir) => {
       try {
@@ -97,30 +111,23 @@ class Update extends Action {
         if (chart.dependencies?.length) {
           await this.helmService.updateDependencies(chartDir);
           lockFiles.push(chartLockPath);
-          this.logger.info(`Successfully updated '${chartDir}' lock file`);
+          this.logger.info(`Successfully updated '${chartDir}' ${type} file`);
         } else if (await this.fileService.exists(chartLockPath)) {
           await this.fileService.delete(chartLockPath);
           lockFiles.push(chartLockPath);
-          this.logger.info(`Successfully removed '${chartDir}' lock file`);
+          this.logger.info(`Successfully removed '${chartDir}' ${type} file`);
         }
         return true;
       } catch (error) {
         this.errorHandler.handle(error, {
-          operation: `update '${chartDir}' lock file`,
+          operation: `update '${chartDir}' ${type} file`,
           fatal: false
         });
         return false;
       }
     });
     const results = await Promise.all(updatePromises);
-    if (lockFiles.length) {
-      const headRef = process.env.GITHUB_HEAD_REF;
-      const word = lockFiles.length === 1 ? 'file' : 'files';
-      await this.gitService.signedCommit(headRef, lockFiles, `chore(github-action): update dependency lock ${word}`);
-    } else {
-      this.logger.info('No lock file changes to commit');
-    }
-    return results.every(result => result === true);
+    return this.#commit(type, lockFiles, results);
   }
 
   /**
@@ -131,8 +138,9 @@ class Update extends Action {
    */
   async metadata(charts) {
     if (!charts || !charts.length) return true;
+    const type = 'metadata';
     const word = charts.length === 1 ? 'chart' : 'charts';
-    this.logger.info(`Updating metadata files for ${charts.length} ${word}...`);
+    this.logger.info(`Updating ${type} files for ${charts.length} ${word}...`);
     const metadataFiles = [];
     const updatePromises = charts.map(async (chartDir) => {
       try {
@@ -175,25 +183,18 @@ class Update extends Action {
         }
         await this.fileService.writeYaml(metadataPath, index);
         metadataFiles.push(metadataPath);
-        this.logger.info(`Successfully updated '${chartDir}' metadata file`);
+        this.logger.info(`Successfully updated '${chartDir}' ${type} file`);
         return true;
       } catch (error) {
         this.errorHandler.handle(error, {
-          operation: `update '${chartDir}' metadata file`,
+          operation: `update '${chartDir}' ${type} file`,
           fatal: false
         });
         return false;
       }
     });
     const results = await Promise.all(updatePromises);
-    if (metadataFiles.length) {
-      const headRef = process.env.GITHUB_HEAD_REF;
-      const word = metadataFiles.length === 1 ? 'file' : 'files';
-      await this.gitService.signedCommit(headRef, metadataFiles, `chore(github-action): update metadata ${word}`);
-    } else {
-      this.logger.info('No metadata file changes to commit');
-    }
-    return results.every(result => result === true);
+    return this.#commit(type, metadataFiles, results);
   }
 }
 

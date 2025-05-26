@@ -110,9 +110,7 @@ class Helm extends Action {
    */
   async updateDependencies(directory) {
     try {
-      this.logger.info(`Updating '${directory}' chart dependencies...`);
       await this.execute(['dependency', 'update', directory]);
-      this.logger.info(`Successfully updated '${directory}' chart dependencies`);
       return true;
     } catch (error) {
       this.errorHandler.handle(error, {

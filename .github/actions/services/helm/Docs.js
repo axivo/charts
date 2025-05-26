@@ -45,7 +45,7 @@ class Docs extends Action {
       const filesOutput = await this.gitService.execute(['diff', '--name-only']);
       const files = filesOutput.split('\n').filter(Boolean);
       if (!files.length) {
-        this.logger.info('No file changes detected, documentation is up to date');
+        this.logger.info('No documentation file changes to commit');
         return { updated: 0, total: dirs ? dirs.length : 0 };
       }
       const result = await this.gitService.signedCommit(headRef, files, 'chore(github-action): update documentation');
