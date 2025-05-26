@@ -38,14 +38,12 @@ class Chart extends Action {
         this.logger.info('No charts found');
         return { charts: 0, updated: 0 };
       }
-      this.logger.info(`Found ${charts.total} charts`);
       const allCharts = [...charts.application, ...charts.library];
       await this.chartUpdate.application(allCharts);
       await this.chartUpdate.lock(allCharts);
       await this.chartUpdate.metadata(allCharts);
       await this.chartService.lint(allCharts);
       await this.docsService.generate(allCharts);
-      this.logger.info('Chart update complete');
       return { charts: charts.total, updated: charts.total };
     } catch (error) {
       throw this.errorHandler.handle(error, { operation: 'update charts' });

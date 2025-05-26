@@ -35,7 +35,8 @@ class Update extends Action {
    */
   async application(charts) {
     if (!charts || !charts.length) return true;
-    this.logger.info(`Updating application files for ${charts.length} charts`);
+    const word = charts.length === 1 ? 'chart' : 'charts';
+    this.logger.info(`Updating application files for ${charts.length} ${word}...`);
     const appFiles = [];
     const updatePromises = charts.map(async (chartDir) => {
       try {
@@ -56,11 +57,11 @@ class Update extends Action {
         appConfig.spec.source.targetRevision = tagName;
         await this.fileService.writeYaml(appFilePath, appConfig);
         appFiles.push(appFilePath);
-        this.logger.info(`Updated application file for ${chartDir}`);
+        this.logger.info(`Successfully updated application file for ${chartDir} directory`);
         return true;
       } catch (error) {
         this.errorHandler.handle(error, {
-          operation: `update application file for ${chartDir}`,
+          operation: `update application file for ${chartDir} directory`,
           fatal: false
         });
         return false;
