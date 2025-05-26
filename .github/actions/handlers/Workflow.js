@@ -152,7 +152,7 @@ class Workflow extends Action {
   static async updateCharts(params) {
     const workflow = new Workflow(params);
     try {
-      workflow.logger.info('Starting charts update process...');
+      workflow.logger.info('Starting the charts update process...');
       const chartHandler = new Chart({
         github: params.github,
         context: params.context,
