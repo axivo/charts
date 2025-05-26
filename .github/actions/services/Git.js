@@ -254,7 +254,6 @@ class Git extends Action {
       const stagedChanges = await this.getStagedChanges();
       const { additions, deletions } = stagedChanges;
       if (additions.length + deletions.length === 0) {
-        this.logger.info('No changes to commit');
         return { updated: 0 };
       }
       await this.graphqlService.createSignedCommit({

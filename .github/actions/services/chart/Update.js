@@ -72,12 +72,14 @@ class Update extends Action {
       const headRef = process.env.GITHUB_HEAD_REF;
       const word = appFiles.length === 1 ? 'file' : 'files';
       await this.gitService.signedCommit(headRef, appFiles, `chore(github-action): update application ${word}`);
+    } else {
+      this.logger.info('No application file changes to commit');
     }
     return results.every(result => result === true);
   }
 
   /**
-   * Updates lock files for charts
+   * Updates dependency lock files for charts
    * 
    * @param {Array<string>} charts - Chart directories to update
    * @returns {Promise<boolean>} - True if all lock files were updated successfully
@@ -115,6 +117,8 @@ class Update extends Action {
       const headRef = process.env.GITHUB_HEAD_REF;
       const word = lockFiles.length === 1 ? 'file' : 'files';
       await this.gitService.signedCommit(headRef, lockFiles, `chore(github-action): update dependency lock ${word}`);
+    } else {
+      this.logger.info('No lock file changes to commit');
     }
     return results.every(result => result === true);
   }
@@ -186,6 +190,8 @@ class Update extends Action {
       const headRef = process.env.GITHUB_HEAD_REF;
       const word = metadataFiles.length === 1 ? 'file' : 'files';
       await this.gitService.signedCommit(headRef, metadataFiles, `chore(github-action): update metadata ${word}`);
+    } else {
+      this.logger.info('No metadata file changes to commit');
     }
     return results.every(result => result === true);
   }
