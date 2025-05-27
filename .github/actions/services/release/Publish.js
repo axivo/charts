@@ -9,7 +9,6 @@
 const path = require('path');
 const yaml = require('js-yaml');
 const Action = require('../../core/Action');
-const { ReleaseError } = require('../../utils/errors');
 const File = require('../File');
 const GitHub = require('../github');
 const Helm = require('../helm');
@@ -41,22 +40,14 @@ class Publish extends Action {
     return this.execute('authenticate to OCI registry', async () => {
       const config = this.config.get();
       const ociRegistry = config.repository.oci.registry;
-      this.logger.info('Authenticating to OCI registry...');
-      try {
-        await this.exec.exec('helm', ['registry', 'login', ociRegistry, '-u', this.context.repo.owner, '--password-stdin'], {
-          input: Buffer.from(process.env['INPUT_GITHUB-TOKEN']),
-          silent: true
-        });
-        this.logger.info('Successfully authenticated to OCI registry');
-        return true;
-      } catch (authError) {
-        this.errorHandler.handle(authError, {
-          operation: 'authenticate to OCI registry',
-          fatal: false
-        });
+      const username = this.context.repo.owner;
+      const password = process.env['INPUT_GITHUB-TOKEN'];
+      if (!password) {
+        this.logger.warning('GitHub token not available for OCI authentication');
         return false;
       }
-    });
+      return await this.helmService.login({ registry: ociRegistry, username, password });
+    }, false);
   }
 
   /**
@@ -104,14 +95,15 @@ class Publish extends Action {
    *
    * @param {string} operation - Operation name
    * @param {Function} action - Action to execute
-   * @param {Object} details - Additional error details
-   * @returns {Promise<any>} Operation result
+   * @param {boolean} fatal - Whether errors should be fatal
+   * @returns {Promise<any>} Operation result or null on error
    */
-  async execute(operation, action, details) {
+  async execute(operation, action, fatal = true) {
     try {
       return await action();
     } catch (error) {
-      throw new ReleaseError(operation, error, details);
+      this.errorHandler.handle(error, { operation, fatal });
+      return null;
     }
   }
 
@@ -216,7 +208,7 @@ class Publish extends Action {
         Dependencies: (chart.metadata.dependencies || []).map(dependency => ({
           Name: dependency.name,
           Repository: dependency.repository,
-          Source: [this.context.payload.repository.html_url, 'blob', tagName, chart.type, chart.name, 'Chart.yaml'].join('/'),
+          Source: `${this.context.payload.repository.html_url}/blob/${tagName}/${chart.type}/${chart.name}/Chart.yaml`,
           Version: dependency.version
         })),
         Description: chart.metadata.description || '',
@@ -247,14 +239,13 @@ class Publish extends Action {
       }
       const config = this.config.get();
       const appType = config.repository.chart.type.application;
-      const libType = config.repository.chart.type.library;
       const word = packages.length === 1 ? 'release' : 'releases';
       this.logger.info(`Publishing ${packages.length} GitHub ${word}...`);
       const releases = [];
       for (const pkg of packages) {
         try {
           const { name, version } = this.packageService.parseInfo(pkg.source);
-          const type = pkg.type === libType ? 'library' : 'application';
+          const type = pkg.type === appType ? 'application' : 'library';
           const chartDir = path.join(config.repository.chart.type[type], name);
           const chartPath = path.join(packagesPath, pkg.type, pkg.source);
           const chartYamlPath = path.join(chartDir, 'Chart.yaml');
@@ -293,7 +284,7 @@ class Publish extends Action {
             name: tagName,
             body
           });
-          const assetName = [chart.type, 'tgz'].join('.');
+          const assetName = `${chart.type}.tgz`;
           const assetData = await this.fileService.readFile(chart.path);
           await this.restService.uploadReleaseAsset({
             releaseId: release.id,
@@ -315,8 +306,8 @@ class Publish extends Action {
         }
       }
       if (releases.length) {
-        const successWord = releases.length === 1 ? 'release' : 'releases';
-        this.logger.info(`Successfully published ${releases.length} GitHub ${successWord}`);
+        const keyword = releases.length === 1 ? 'release' : 'releases';
+        this.logger.info(`Successfully published ${releases.length} GitHub ${keyword}`);
       }
       return releases;
     }, { packagesCount: packages.length });
@@ -372,7 +363,7 @@ class Publish extends Action {
         try {
           this.logger.info(`Publishing '${pkg.source}' chart package to OCI registry...`);
           const chartPath = path.join(packagesPath, pkg.type, pkg.source);
-          const registry = ['oci:/', ociRegistry, this.context.payload.repository.full_name, pkg.type].join('/');
+          const registry = `oci://${ociRegistry}/${this.context.payload.repository.full_name}/${pkg.type}`;
           await this.exec.exec('helm', ['push', chartPath, registry], { silent: true });
           const { name, version } = this.packageService.parseInfo(pkg.source);
           published.push({

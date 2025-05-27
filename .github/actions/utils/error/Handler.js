@@ -2,11 +2,10 @@
  * Error handling class for standardized error management
  * 
  * @class ErrorHandler
- * @module utils/ErrorHandler
+ * @module utils/error/Handler
  * @author AXIVO
  * @license BSD-3-Clause
  */
-const { AppError } = require('./errors');
 
 class ErrorHandler {
   /**
@@ -80,7 +79,6 @@ class ErrorHandler {
     if (context.fatal !== false) {
       this.createAnnotation(errorInfo, 'error');
       this.core.setFailed(errorInfo.message);
-      throw new AppError(errorInfo);
     } else {
       this.createAnnotation(errorInfo, context.annotationType || 'warning');
       if (this.debug && errorInfo.stack) {

@@ -9,7 +9,7 @@
  * @author AXIVO
  * @license BSD-3-Clause
  */
-const { createErrorHandler, createErrorContext } = require('../utils/errorUtils');
+const { createErrorHandler, createErrorContext } = require('../utils/error');
 const Logger = require('./Logger');
 
 class Action {

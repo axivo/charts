@@ -8,7 +8,6 @@
  */
 const path = require('path');
 const Action = require('../../core/Action');
-const { ReleaseError } = require('../../utils/errors');
 const File = require('../File');
 const Helm = require('../helm');
 
@@ -55,14 +54,15 @@ class Package extends Action {
    *
    * @param {string} operation - Operation name
    * @param {Function} action - Action to execute
-   * @param {Object} details - Additional error details
-   * @returns {Promise<any>} Operation result
+   * @param {boolean} fatal - Whether errors should be fatal
+   * @returns {Promise<any>} Operation result or null on error
    */
-  async execute(operation, action, details) {
+  async execute(operation, action, fatal = true) {
     try {
       return await action();
     } catch (error) {
-      throw new ReleaseError(operation, error, details);
+      this.errorHandler.handle(error, { operation, fatal });
+      return null;
     }
   }
 

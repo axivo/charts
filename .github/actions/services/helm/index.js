@@ -39,6 +39,27 @@ class Helm extends Action {
   }
 
   /**
+   * Logs into an OCI registry
+   * 
+   * @param {Object} params - Login parameters
+   * @param {string} params.registry - OCI registry URL
+   * @param {string} params.username - Registry username
+   * @param {string} params.password - Registry password
+   * @returns {Promise<boolean>} - True if login was successful
+   */
+  async login({ registry, username, password }) {
+    return this.execute(`login to '${registry}' OCI registry`, async () => {
+      this.logger.info(`Logging into '${registry}' OCI registry...`);
+      await this.shellService.execute('helm', ['registry', 'login', registry, '-u', username, '--password-stdin'], {
+        input: Buffer.from(password),
+        silent: true
+      });
+      this.logger.info(`Successfully logged into '${registry}' OCI registry`);
+      return true;
+    }, false);
+  }
+
+  /**
    * Generates a Helm repository index file
    * 
    * @param {string} directory - Directory containing chart packages

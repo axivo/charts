@@ -8,12 +8,8 @@
  * @author AXIVO
  * @license BSD-3-Clause
  */
-const ErrorHandler = require('./ErrorHandler');
-const errors = require('./errors');
-const errorUtils = require('./errorUtils');
+const error = require('./error');
 
 module.exports = {
-  ErrorHandler,
-  errors,
-  errorUtils
+  error
 };
