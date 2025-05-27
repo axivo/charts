@@ -8,7 +8,6 @@
  */
 const Handlebars = require('handlebars');
 const Action = require('../core/Action');
-const { TemplateError } = require('../utils/errors');
 
 class Template extends Action {
   /**
@@ -51,13 +50,15 @@ class Template extends Action {
    * 
    * @param {string} operation - Operation name for error reporting
    * @param {Function} action - Function to execute
-   * @returns {any} - Result of the action
+   * @param {boolean} fatal - Whether errors should be fatal
+   * @returns {any} - Result of the action or null on error
    */
-  execute(operation, action) {
+  execute(operation, action, fatal = true) {
     try {
       return action();
     } catch (error) {
-      throw new TemplateError(operation, error);
+      this.errorHandler.handle(error, { operation, fatal });
+      return null;
     }
   }
 
@@ -80,19 +81,16 @@ class Template extends Action {
    * @returns {string} - Rendered template
    */
   render(template, context, options = {}) {
-    try {
+    return this.execute('render template', () => {
       this.logger.info('Rendering template...');
       if (options.repoUrl) {
         this.#setRepoRawUrl(options.repoUrl);
       }
       const compiledTemplate = this.execute('compile template', () => this.handlebars.compile(template));
-      const result = this.execute('render', () => compiledTemplate(context));
+      const result = this.execute('render compiled template', () => compiledTemplate(context));
       this.logger.info('Successfully rendered template');
       return result;
-    } catch (error) {
-      this.errorHandler.handle(error, { operation: 'render template', fatal: false });
-      return null;
-    }
+    }, false);
   }
 }
 

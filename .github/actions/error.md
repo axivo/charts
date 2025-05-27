@@ -275,31 +275,33 @@ async update() {
 
 ### 8. Shell Service (`/services/Shell.js`)
 
-**Current Status:** Uses ShellError
-**Update Required:** Replace with execute pattern
-
-**Implementation Steps:**
-1. Remove `const { ShellError } = require('../utils/errors');`
-2. Update execute method to standard pattern
-3. Determine fatal/non-fatal for each operation:
-   - **Fatal**: Required commands (helm, git)
-   - **Non-Fatal**: Cleanup commands, optional validation
-4. Delete `/utils/errors/Shell.js`
-5. Remove ShellError from `/utils/errors/index.js`
+**Current Status:** ✅ **COMPLETED - UNIFIED EXECUTE PATTERN**
+- Removed ShellError import
+- Updated execute() method to use errorHandler.handle() instead of throwing ShellError
+- Eliminated unnecessary throw/catch cycles for non-zero exit codes
+- Maintained existing command execution API with no breaking changes
+- Classified operations based on throwOnError option:
+  - **Fatal**: When throwOnError: true (default) - critical operations that must succeed
+  - **Non-Fatal**: When throwOnError: false - optional operations that can gracefully fail
+- Enhanced operation descriptions with command names in quotes
+- Direct error handling for both exceptions and command failures
+- Respects existing throwOnError parameter for backward compatibility
+- ShellError class deleted and removed from exports
+- Zero references to ShellError remain in codebase
 
 ### 9. Template Service (`/services/Template.js`)
 
-**Current Status:** Uses TemplateError
-**Update Required:** Replace with execute pattern
-
-**Implementation Steps:**
-1. Remove `const { TemplateError } = require('../utils/errors');`
-2. Update execute method to standard pattern
-3. Determine fatal/non-fatal for each operation:
-   - **Fatal**: Template compilation, rendering for required output
-   - **Non-Fatal**: Helper registration, optional operations
-4. Delete `/utils/errors/Template.js`
-5. Remove TemplateError from `/utils/errors/index.js`
+**Current Status:** ✅ **COMPLETED - UNIFIED EXECUTE PATTERN**
+- Removed TemplateError import
+- Updated execute() method to standard pattern with operation and fatal parameters
+- Converted render() method to use unified execute() pattern
+- Classified operations as fatal/non-fatal:
+  - **Fatal**: compile(), #setRepoRawUrl() (core template operations that must succeed)
+  - **Non-Fatal**: render() (template rendering is often supplementary)
+- Enhanced operation descriptions with specific template actions
+- Direct Handlebars API calls within execute() wrappers
+- TemplateError class deleted and removed from exports
+- Zero references to TemplateError remain in codebase
 
 ### 10. Release Services (`/services/release/`)
 
@@ -468,7 +470,7 @@ return this.execute('add user label', async () => {
 
 ## Current Progress
 
-**Services Converted: 7/11** ✅
+**Services Converted: 9/11** ✅
 - ✅ Label Service (template for others)
 - ✅ Chart Service
 - ✅ File Service
@@ -476,12 +478,12 @@ return this.execute('add user label', async () => {
 - ✅ GitHub API Services
 - ✅ Helm Service
 - ✅ Issue Service
-- ❌ Shell Service
-- ❌ Template Service
+- ✅ Shell Service
+- ✅ Template Service
 - ❌ Release Services
 - ❌ Frontpage Service
 
-**Error Classes Deleted: 7/11** ✅
+**Error Classes Deleted: 9/11** ✅
 - ✅ LabelError (file deleted, export removed)
 - ✅ ChartError
 - ✅ FileError (file deleted, export removed)
@@ -489,8 +491,8 @@ return this.execute('add user label', async () => {
 - ✅ GitHubApiError (never existed or already deleted)
 - ✅ HelmError (never existed or already deleted)
 - ✅ IssueError (file deleted, export removed)
-- ❌ ShellError
-- ❌ TemplateError
+- ✅ ShellError (file deleted, export removed)
+- ✅ TemplateError (file deleted, export removed)
 - ❌ ReleaseError
 - ❌ FrontpageError
 
