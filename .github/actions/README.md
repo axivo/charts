@@ -26,22 +26,50 @@ The codebase follows a modular, layered architecture designed for maintainabilit
 ├── core/                   # Base classes and utilities
 │   ├── Action.js           # Base Action class with lifecycle hooks
 │   ├── Configuration.js    # Configuration management class
-│   ├── Logger.js           # Standardized logging class
-│   └── index.js            # Core module exports
+│   ├── index.js            # Core module exports
+│   └── Logger.js           # Standardized logging class
 ├── handlers/               # High-level workflow orchestration
 │   ├── Chart.js            # Chart update handler
-│   ├── Workflow.js         # Common workflow operations
-│   └── release/            # Release-specific handlers
+│   ├── index.js            # Handlers module exports
+│   ├── release/            # Release-specific handlers
+│   │   ├── index.js        # Release handler with Local export
+│   │   └── Local.js        # Local development release handler
+│   └── Workflow.js         # Common workflow operations
 ├── services/               # Business logic services
 │   ├── chart/              # Chart-specific services
+│   │   ├── index.js        # Chart service with Update export
+│   │   └── Update.js       # Chart update operations service
+│   ├── File.js             # File system operations service
+│   ├── Frontpage.js        # Repository frontpage generation service
+│   ├── Git.js              # Git operations service
 │   ├── github/             # GitHub API services
+│   │   ├── Api.js          # Base GitHub API service
+│   │   ├── GraphQL.js      # GitHub GraphQL API service
+│   │   ├── index.js        # GitHub services module exports
+│   │   └── Rest.js         # GitHub REST API service
 │   ├── helm/               # Helm tool services
+│   │   ├── Docs.js         # Helm-docs operations service
+│   │   └── index.js        # Helm service
+│   ├── index.js            # Services module exports
+│   ├── Issue.js            # GitHub issue management service
+│   ├── Label.js            # Repository label management service
 │   ├── release/            # Release management services
-│   └── [service files]     # Individual service files
+│   │   ├── index.js        # Release service with Package/Publish exports
+│   │   ├── Package.js      # Chart packaging service
+│   │   └── Publish.js      # Release publishing service
+│   ├── Shell.js            # Shell command execution service
+│   └── Template.js         # Handlebars template rendering service
 ├── templates/              # Handlebars templates
-└── utils/                  # Utility classes and functions
-    ├── errors/             # Typed error classes
-    └── [utility files]    # Error handling utilities
+│   ├── config.yml          # Jekyll configuration template
+│   ├── head-custom.html    # Custom HTML head content template
+│   ├── index.md.hbs        # Repository frontpage template
+│   ├── layout.html         # Custom HTML layout template
+│   ├── redirect.html.hbs   # Chart redirection template
+│   ├── release.md.hbs      # GitHub release notes template
+│   └── workflow.md.hbs     # Workflow issue template
+├── utils/                  # Utility classes and functions
+│   └── Error.js            # Error handling utilities
+└── README.md               # This documentation file
 ```
 
 ### Architectural Principles

@@ -26,23 +26,6 @@ class Docs extends Action {
   }
 
   /**
-   * Executes a Helm docs operation with error handling
-   * 
-   * @param {string} operation - Operation name for error reporting
-   * @param {Function} action - Function to execute
-   * @param {boolean} fatal - Whether errors should be fatal
-   * @returns {Promise<any>} - Result of the operation or null on error
-   */
-  async execute(operation, action, fatal = true) {
-    try {
-      return await action();
-    } catch (error) {
-      this.errorHandler.handle(error, { operation, fatal });
-      return null;
-    }
-  }
-
-  /**
    * Generates documentation for charts
    * 
    * @param {Array<string>} directories - Chart directories to generate documentation for

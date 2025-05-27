@@ -10,23 +10,6 @@ const Action = require('../../core/Action');
 
 class Api extends Action {
   /**
-   * Executes a GitHub API operation with error handling
-   * 
-   * @param {string} operation - Operation name for error reporting
-   * @param {Function} action - Function to execute
-   * @param {boolean} fatal - Whether errors should be fatal
-   * @returns {Promise<any>} - Result of the operation or null on error
-   */
-  async execute(operation, action, fatal = true) {
-    try {
-      return await action();
-    } catch (error) {
-      this.errorHandler.handle(error, { operation, fatal });
-      return null;
-    }
-  }
-
-  /**
    * Formats a repository path from owner and repo
    * 
    * @param {string} owner - Repository owner

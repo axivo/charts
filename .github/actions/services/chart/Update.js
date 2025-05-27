@@ -127,7 +127,10 @@ class Update extends Action {
           this.logger.info(`Successfully updated '${chartDir}' ${type} file`);
           return true;
         } catch (error) {
-          this.errorHandler.handle(error, { operation: `update '${chartDir}' ${type} file`, fatal: false });
+          this.errorHandler.handle(error, {
+            operation: `update '${chartDir}' ${type} file`,
+            fatal: false
+          });
           return false;
         }
       });
@@ -136,22 +139,7 @@ class Update extends Action {
     });
   }
 
-  /**
-   * Executes a chart update operation with error handling
-   * 
-   * @param {string} operation - Operation name for error reporting
-   * @param {Function} action - Function to execute
-   * @param {boolean} fatal - Whether errors should be fatal
-   * @returns {Promise<any>} - Result of the operation or null on error
-   */
-  async execute(operation, action, fatal = true) {
-    try {
-      return await action();
-    } catch (error) {
-      this.errorHandler.handle(error, { operation, fatal });
-      return null;
-    }
-  }
+
 
   /**
    * Updates dependency lock files for charts
@@ -182,7 +170,10 @@ class Update extends Action {
           }
           return true;
         } catch (error) {
-          this.errorHandler.handle(error, { operation: `update '${chartDir}' ${type} file`, fatal: false });
+          this.errorHandler.handle(error, {
+            operation: `update '${chartDir}' ${type} file`,
+            fatal: false
+          });
           return false;
         }
       });
@@ -225,7 +216,10 @@ class Update extends Action {
           this.logger.info(`Successfully updated '${chartDir}' ${type} file`);
           return true;
         } catch (error) {
-          this.errorHandler.handle(error, { operation: `update '${chartDir}' ${type} file`, fatal: false });
+          this.errorHandler.handle(error, {
+            operation: `update '${chartDir}' ${type} file`,
+            fatal: false
+          });
           return false;
         }
       });

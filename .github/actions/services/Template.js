@@ -46,23 +46,6 @@ class Template extends Action {
   }
 
   /**
-   * Executes a template operation with error handling
-   * 
-   * @param {string} operation - Operation name for error reporting
-   * @param {Function} action - Function to execute
-   * @param {boolean} fatal - Whether errors should be fatal
-   * @returns {any} - Result of the action or null on error
-   */
-  execute(operation, action, fatal = true) {
-    try {
-      return action();
-    } catch (error) {
-      this.errorHandler.handle(error, { operation, fatal });
-      return null;
-    }
-  }
-
-  /**
    * Gets the configured Handlebars instance
    * 
    * @returns {Object} - Handlebars instance

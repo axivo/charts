@@ -65,23 +65,6 @@ class Label extends Action {
   }
 
   /**
-   * Executes a label operation with error handling
-   * 
-   * @param {string} operation - Operation name for error reporting
-   * @param {Function} action - Function to execute
-   * @param {boolean} fatal - Whether errors should be fatal
-   * @returns {Promise<any>} - Result of the operation or null on error
-   */
-  async execute(operation, action, fatal = true) {
-    try {
-      return await action();
-    } catch (error) {
-      this.errorHandler.handle(error, { operation, fatal });
-      return null;
-    }
-  }
-
-  /**
    * Update repository labels based on configuration
    * 
    * @returns {Promise<string[]>} Array of created label names

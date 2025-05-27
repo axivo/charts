@@ -38,7 +38,7 @@ class Workflow extends Action {
       await gitService.configure();
       workflow.logger.info('Repository configuration complete');
     } catch (error) {
-      throw workflow.errorHandler.handle(error, { operation: 'configure repository' });
+      workflow.errorHandler.handle(error, { operation: 'configure repository' });
     }
   }
 
@@ -61,7 +61,7 @@ class Workflow extends Action {
       });
       await docsService.install(params.version);
     } catch (error) {
-      throw workflow.errorHandler.handle(error, { operation: 'install helm-docs' });
+      workflow.errorHandler.handle(error, { operation: 'install helm-docs' });
     }
   }
 
@@ -85,7 +85,7 @@ class Workflow extends Action {
       await releaseHandler.process();
       workflow.logger.info('Chart release process complete');
     } catch (error) {
-      throw workflow.errorHandler.handle(error, { operation: 'process chart releases' });
+      workflow.errorHandler.handle(error, { operation: 'process chart releases' });
     }
   }
 
@@ -137,7 +137,7 @@ class Workflow extends Action {
       await frontpageService.setTheme();
       workflow.logger.info('Build environment setup complete');
     } catch (error) {
-      throw workflow.errorHandler.handle(error, { operation: 'setup build environment' });
+      workflow.errorHandler.handle(error, { operation: 'setup build environment' });
     }
   }
 
@@ -162,7 +162,7 @@ class Workflow extends Action {
       workflow.logger.info('Successfully completed the charts update process');
       return result;
     } catch (error) {
-      throw workflow.errorHandler.handle(error, { operation: 'update charts' });
+      workflow.errorHandler.handle(error, { operation: 'update charts' });
     }
   }
 

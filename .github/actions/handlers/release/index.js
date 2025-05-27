@@ -8,7 +8,6 @@
  */
 const Action = require('../../core/Action');
 const { File, GitHub, Release: ReleaseService } = require('../../services');
-const { ReleaseError } = require('../../utils/errors');
 
 class Release extends Action {
   /**
@@ -23,22 +22,6 @@ class Release extends Action {
     this.githubService = new GitHub.Rest(params);
     this.packageService = new ReleaseService.Package(params);
     this.publishService = new ReleaseService.Publish(params);
-  }
-
-  /**
-   * Executes a release operation with error handling
-   * 
-   * @param {string} operation - Operation name
-   * @param {Function} action - Action to execute
-   * @param {Object} details - Additional error details
-   * @returns {Promise<any>} Operation result
-   */
-  async execute(operation, action, details) {
-    try {
-      return await action();
-    } catch (error) {
-      throw new ReleaseError(operation, error, details);
-    }
   }
 
   /**

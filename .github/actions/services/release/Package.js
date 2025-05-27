@@ -50,23 +50,6 @@ class Package extends Action {
   }
 
   /**
-   * Executes a package operation with error handling
-   *
-   * @param {string} operation - Operation name
-   * @param {Function} action - Action to execute
-   * @param {boolean} fatal - Whether errors should be fatal
-   * @returns {Promise<any>} Operation result or null on error
-   */
-  async execute(operation, action, fatal = true) {
-    try {
-      return await action();
-    } catch (error) {
-      this.errorHandler.handle(error, { operation, fatal });
-      return null;
-    }
-  }
-
-  /**
    * Gets packaged charts from the package directory
    * 
    * @param {string} directory - Path to packages directory

@@ -31,7 +31,7 @@ class Chart extends Action {
    * @returns {Promise<Object>} - Update results
    */
   async process() {
-    try {
+    return this.execute('process charts', async () => {
       const files = Object.keys(await this.githubService.getUpdatedFiles({ context: this.context }));
       const charts = await this.chartService.find(files);
       if (charts.total === 0) {
@@ -45,18 +45,7 @@ class Chart extends Action {
       await this.chartService.lint(allCharts);
       await this.docsService.generate(allCharts);
       return { charts: charts.total, updated: charts.total };
-    } catch (error) {
-      throw this.errorHandler.handle(error, { operation: 'update charts' });
-    }
-  }
-
-  /**
-   * Required run method
-   * 
-   * @returns {Promise<Object>} - Process results
-   */
-  async run() {
-    return this.process();
+    });
   }
 }
 

@@ -73,23 +73,6 @@ class Git extends Action {
   }
 
   /**
-   * Executes a git operation
-   * 
-   * @param {string} operation - Git operation to perform
-   * @param {function} action - Async function to execute
-   * @param {boolean} [fatal=true] - Whether errors should be fatal
-   * @returns {Promise<any>} - Operation result
-   */
-  async execute(operation, action, fatal = true) {
-    try {
-      return await action();
-    } catch (error) {
-      this.errorHandler.handle(error, { operation, fatal });
-      return null;
-    }
-  }
-
-  /**
    * Fetches from a remote
    * 
    * @param {string} remote - Remote name

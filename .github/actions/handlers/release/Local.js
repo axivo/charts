@@ -9,7 +9,6 @@
 const path = require('path');
 const Action = require('../../core/Action');
 const { File, GitHub, Helm, Release: ReleaseService } = require('../../services');
-const { ReleaseError } = require('../../utils/errors');
 
 class Local extends Action {
   /**
@@ -24,22 +23,6 @@ class Local extends Action {
     this.helmService = new Helm(params);
     this.releaseService = new ReleaseService(params);
     this.packageService = new ReleaseService.Package(params);
-  }
-
-  /**
-   * Executes a release operation with error handling
-   * 
-   * @param {string} operation - Operation name
-   * @param {Function} action - Action to execute
-   * @param {Object} details - Additional error details
-   * @returns {Promise<any>} Operation result
-   */
-  async execute(operation, action, details) {
-    try {
-      return await action();
-    } catch (error) {
-      throw new ReleaseError(operation, error, details);
-    }
   }
 
   /**

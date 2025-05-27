@@ -55,23 +55,6 @@ class Chart extends Action {
   }
 
   /**
-   * Executes a chart operation with error handling
-   * 
-   * @param {string} operation - Operation name for error reporting
-   * @param {Function} action - Function to execute
-   * @param {boolean} fatal - Whether errors should be fatal
-   * @returns {Promise<any>} - Result of the operation or null on error
-   */
-  async execute(operation, action, fatal = true) {
-    try {
-      return await action();
-    } catch (error) {
-      this.errorHandler.handle(error, { operation, fatal });
-      return null;
-    }
-  }
-
-  /**
    * Finds charts affected by file changes
    * 
    * @param {Array<string>} files - List of changed files to check

@@ -70,23 +70,6 @@ class File extends Action {
   }
 
   /**
-   * Executes a file system operation
-   * 
-   * @param {string} operation - File operation to perform
-   * @param {function} action - Async function to execute
-   * @param {boolean} [fatal=true] - Whether errors should be fatal
-   * @returns {Promise<any>} - Operation result
-   */
-  async execute(operation, action, fatal = true) {
-    try {
-      return await action();
-    } catch (error) {
-      this.errorHandler.handle(error, { operation, fatal });
-      return null;
-    }
-  }
-
-  /**
    * Checks if a file exists without throwing exceptions
    * 
    * @param {string} file - File to check
