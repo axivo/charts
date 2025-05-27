@@ -7,8 +7,6 @@
  */
 const AppError = require('./App');
 const FrontpageError = require('./Frontpage');
-const HelmError = require('./Helm');
-const IssueError = require('./Issue');
 const ReleaseError = require('./Release');
 const ShellError = require('./Shell');
 const TemplateError = require('./Template');
@@ -16,8 +14,6 @@ const TemplateError = require('./Template');
 module.exports = {
   AppError,
   FrontpageError,
-  HelmError,
-  IssueError,
   ReleaseError,
   ShellError,
   TemplateError

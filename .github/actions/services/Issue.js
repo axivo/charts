@@ -7,7 +7,6 @@
  * @license BSD-3-Clause
  */
 const Action = require('../core/Action');
-const { IssueError } = require('../utils/errors');
 
 class Issue extends Action {
   /**
@@ -48,7 +47,7 @@ class Issue extends Action {
    * @returns {Promise<Object|null>} - Created issue data or null on failure
    */
   async create(params) {
-    return this.execute('create issue', async () => {
+    return this.execute(`create issue: '${params.title}'`, async () => {
       this.logger.info(`Creating issue: ${params.title}`);
       const response = await this.github.rest.issues.create({
         owner: this.context.repo.owner,
@@ -64,7 +63,7 @@ class Issue extends Action {
         title: response.data.title,
         url: response.data.html_url
       };
-    });
+    }, false);
   }
 
   /**
@@ -72,13 +71,15 @@ class Issue extends Action {
    * 
    * @param {string} operation - Operation name for error reporting
    * @param {Function} action - Function to execute
-   * @returns {Promise<any>} - Result of the operation
+   * @param {boolean} fatal - Whether errors should be fatal
+   * @returns {Promise<any>} - Result of the operation or null on error
    */
-  async execute(operation, action) {
+  async execute(operation, action, fatal = true) {
     try {
       return await action();
     } catch (error) {
-      throw new IssueError(operation, error);
+      this.errorHandler.handle(error, { operation, fatal });
+      return null;
     }
   }
 
@@ -93,7 +94,7 @@ class Issue extends Action {
    * @returns {Promise<Object|null>} - Created issue data or null on failure
    */
   async report(params) {
-    try {
+    return this.execute('report workflow issue', async () => {
       const hasIssues = await this.#validate(params.context);
       if (!hasIssues) {
         return null;
@@ -124,13 +125,7 @@ class Issue extends Action {
         body: issueBody,
         labels: labelNames
       });
-    } catch (error) {
-      this.errorHandler.handle(error, {
-        operation: 'report workflow issue',
-        fatal: false
-      });
-      return null;
-    }
+    }, false);
   }
 }
 

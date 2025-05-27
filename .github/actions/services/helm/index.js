@@ -8,7 +8,6 @@
  */
 const path = require('path');
 const Action = require('../../core/Action');
-const { HelmError } = require('../../utils/errors');
 const Shell = require('../Shell');
 
 class Helm extends Action {
@@ -23,18 +22,19 @@ class Helm extends Action {
   }
 
   /**
-   * Executes a Helm command
+   * Executes a Helm operation with error handling
    * 
-   * @param {string[]} args - Command arguments
-   * @param {Object} options - Execution options
-   * @param {boolean} options.silent - Whether to suppress command output
-   * @returns {Promise<string>} - Command output
+   * @param {string} operation - Operation name for error reporting
+   * @param {Function} action - Function to execute
+   * @param {boolean} fatal - Whether errors should be fatal
+   * @returns {Promise<any>} - Result of the operation or null on error
    */
-  async execute(args, options = {}) {
+  async execute(operation, action, fatal = true) {
     try {
-      return await this.shellService.execute('helm', args, options);
+      return await action();
     } catch (error) {
-      throw new HelmError(`helm ${args[0]}`, error);
+      this.errorHandler.handle(error, { operation, fatal });
+      return null;
     }
   }
 
@@ -55,7 +55,9 @@ class Helm extends Action {
       if (options.merge) args.push('--merge', options.merge);
       if (options.generateMetadata) args.push('--generate-metadata');
       this.logger.info(`Generating index file for '${directory}' directory...`);
-      await this.execute(args);
+      await this.execute('generate index file', async () => {
+        return await this.shellService.execute('helm', args);
+      });
       this.logger.info(`Successfully generated index file for ${directory} directory`);
       return true;
     } catch (error) {
@@ -82,7 +84,9 @@ class Helm extends Action {
       if (options.version) args.push('--version', options.version);
       if (options.appVersion) args.push('--app-version', options.appVersion);
       this.logger.info(`Packaging chart to '${directory}' directory...`);
-      const output = await this.execute(args, { output: true });
+      const output = await this.execute('package chart', async () => {
+        return await this.shellService.execute('helm', args, { output: true });
+      });
       const lines = output.split('\n');
       let packagePath = null;
       for (const line of lines) {
@@ -110,7 +114,9 @@ class Helm extends Action {
    */
   async updateDependencies(directory) {
     try {
-      await this.execute(['dependency', 'update', directory]);
+      await this.execute('update dependencies', async () => {
+        return await this.shellService.execute('helm', ['dependency', 'update', directory]);
+      });
       return true;
     } catch (error) {
       this.errorHandler.handle(error, {

@@ -10,7 +10,6 @@ const fs = require('fs/promises');
 const os = require('os');
 const path = require('path');
 const Action = require('../../core/Action');
-const { HelmError } = require('../../utils/errors');
 const Git = require('../Git');
 const Shell = require('../Shell');
 
@@ -27,13 +26,30 @@ class Docs extends Action {
   }
 
   /**
+   * Executes a Helm docs operation with error handling
+   * 
+   * @param {string} operation - Operation name for error reporting
+   * @param {Function} action - Function to execute
+   * @param {boolean} fatal - Whether errors should be fatal
+   * @returns {Promise<any>} - Result of the operation or null on error
+   */
+  async execute(operation, action, fatal = true) {
+    try {
+      return await action();
+    } catch (error) {
+      this.errorHandler.handle(error, { operation, fatal });
+      return null;
+    }
+  }
+
+  /**
    * Generates documentation for charts
    * 
    * @param {Array<string>} directories - Chart directories to generate documentation for
    * @returns {Promise<Object>} - Documentation generation results
    */
   async generate(directories) {
-    try {
+    return this.execute('generate documentation', async () => {
       const headRef = process.env.GITHUB_HEAD_REF;
       this.logger.info('Generating documentation with helm-docs...');
       if (!directories || !directories.length) {
@@ -50,10 +66,7 @@ class Docs extends Action {
       }
       const result = await this.gitService.signedCommit(headRef, files, 'chore(github-action): update documentation');
       return { updated: result.updated, total: directories ? directories.length : 0 };
-    } catch (error) {
-      this.errorHandler.handle(error, { operation: 'generate documentation', fatal: false });
-      return { updated: 0, total: directories ? directories.length : 0 };
-    }
+    }, false);
   }
 
   /**
@@ -63,7 +76,7 @@ class Docs extends Action {
    * @returns {Promise<boolean>} - True if installation succeeded
    */
   async install(version) {
-    try {
+    return this.execute('install helm-docs', async () => {
       const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'helm-docs-'));
       const packageFile = `helm-docs_${version}_Linux_x86_64.deb`;
       const packageBaseUrl = 'https://github.com/norwoodj/helm-docs/releases/download';
@@ -74,10 +87,7 @@ class Docs extends Action {
       await this.shellService.execute('sudo', ['apt-get', '-y', 'install', packagePath]);
       this.logger.info('Successfully installed helm-docs');
       return true;
-    } catch (error) {
-      this.errorHandler.handle(error, { operation: 'install helm-docs' });
-      return false;
-    }
+    });
   }
 }
 
