@@ -65,7 +65,7 @@ class Helm extends Action {
       this.logger.info(`Successfully generated index file for ${directory} directory`);
       return true;
     } catch (error) {
-      this.errorHandler.handle(error, {
+      this.actionError.handle(error, {
         operation: `generate index file for '${directory}' directory`,
         fatal: false
       });
@@ -102,7 +102,7 @@ class Helm extends Action {
       this.logger.info(`Successfully packaged chart to '${packagePath}' directory`);
       return packagePath;
     } catch (error) {
-      this.errorHandler.handle(error, {
+      this.actionError.handle(error, {
         operation: `package chart to '${directory}' directory`,
         fatal: false
       });
@@ -123,7 +123,7 @@ class Helm extends Action {
       });
       return true;
     } catch (error) {
-      this.errorHandler.handle(error, {
+      this.actionError.handle(error, {
         operation: `update '${directory}' chart dependencies`,
         fatal: false
       });

@@ -41,7 +41,7 @@ class Release extends Action {
           await this.githubService.deleteReleases(chart);
           return true;
         } catch (error) {
-          this.errorHandler.handle(error, {
+          this.actionError.handle(error, {
             operation: `delete releases for '${filePath}' chart`,
             fatal: false
           });

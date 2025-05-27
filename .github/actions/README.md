@@ -26,6 +26,7 @@ The codebase follows a modular, layered architecture designed for maintainabilit
 ├── core/                   # Base classes and utilities
 │   ├── Action.js           # Base Action class with lifecycle hooks
 │   ├── Configuration.js    # Configuration management class
+│   ├── Error.js            # Error reporter class
 │   ├── index.js            # Core module exports
 │   └── Logger.js           # Standardized logging class
 ├── handlers/               # High-level workflow orchestration
@@ -67,8 +68,6 @@ The codebase follows a modular, layered architecture designed for maintainabilit
 │   ├── redirect.html.hbs   # Chart redirection template
 │   ├── release.md.hbs      # GitHub release notes template
 │   └── workflow.md.hbs     # Workflow issue template
-├── utils/                  # Utility classes and functions
-│   └── Error.js            # Error handling utilities
 └── README.md               # This documentation file
 ```
 

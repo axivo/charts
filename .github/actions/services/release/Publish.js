@@ -82,7 +82,7 @@ class Publish extends Action {
       await this.fileService.writeFile(redirectPath, redirectHtml);
       return true;
     } catch (error) {
-      this.errorHandler.handle(error, {
+      this.actionError.handle(error, {
         operation: `generate index for '${chart.type}/${path.basename(chart.dir)}'`,
         fatal: false
       });
@@ -108,7 +108,7 @@ class Publish extends Action {
           type: type
         })));
       } catch (error) {
-        this.errorHandler.handle(error, {
+        this.actionError.handle(error, {
           operation: `list ${type} directory`,
           fatal: false
         });
@@ -145,7 +145,7 @@ class Publish extends Action {
             await this.fileService.createDirectory(outputDir);
             return await this.createIndex(chart, outputDir);
           } catch (error) {
-            this.errorHandler.handle(error, {
+            this.actionError.handle(error, {
               operation: `create output directory for ${chart.dir}`,
               fatal: false
             });
@@ -159,7 +159,7 @@ class Publish extends Action {
         }
         return successCount;
       } catch (error) {
-        this.errorHandler.handle(error, {
+        this.actionError.handle(error, {
           operation: 'generate chart indexes',
           fatal: false
         });
@@ -240,7 +240,7 @@ class Publish extends Action {
             metadata = yaml.load(chartYamlContent);
             this.logger.info(`Successfully loaded '${chartDir}' chart metadata`);
           } catch (error) {
-            this.errorHandler.handle(error, {
+            this.actionError.handle(error, {
               operation: `load '${chartDir}' chart metadata`,
               fatal: false
             });
@@ -282,7 +282,7 @@ class Publish extends Action {
             releaseId: release.id
           });
         } catch (error) {
-          this.errorHandler.handle(error, {
+          this.actionError.handle(error, {
             operation: `process '${pkg.source}' package`,
             fatal: false
           });
@@ -332,7 +332,7 @@ class Publish extends Action {
             this.logger.info(`Deleted existing OCI package for ${name}`);
           }
         } catch (error) {
-          this.errorHandler.handle(error, {
+          this.actionError.handle(error, {
             operation: `delete existing OCI package for ${pkg.source}`,
             fatal: false
           });
@@ -356,7 +356,7 @@ class Publish extends Action {
             registry
           });
         } catch (error) {
-          this.errorHandler.handle(error, {
+          this.actionError.handle(error, {
             operation: `push '${pkg.source}' package`,
             fatal: false
           });

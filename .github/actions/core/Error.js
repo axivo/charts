@@ -1,15 +1,15 @@
 /**
  * Error handling class for standardized error management
  * 
- * @class ErrorHandler
- * @module utils/error/Handler
+ * @class ActionError
+ * @module core
  * @author AXIVO
  * @license BSD-3-Clause
  */
 
-class ErrorHandler {
+class ActionError {
   /**
-   * Creates a new ErrorHandler instance
+   * Creates a new ActionError instance
    * 
    * @param {Object} core - GitHub Actions Core API for logging
    */
@@ -62,7 +62,7 @@ class ErrorHandler {
   }
 
   /**
-   * Handles errors in a standardized way
+   * Reports errors in a standardized way
    * 
    * @param {Error} error - The error object that was caught
    * @param {Object} context - Error context information
@@ -74,7 +74,7 @@ class ErrorHandler {
    * @param {number} [context.col] - Related column number
    * @returns {string} - The formatted error message
    */
-  handle(error, context) {
+  report(error, context) {
     const errorInfo = this.extractErrorInfo(error, context);
     if (context.fatal !== false) {
       this.createAnnotation(errorInfo, 'error');
@@ -91,4 +91,4 @@ class ErrorHandler {
   }
 }
 
-module.exports = ErrorHandler;
+module.exports = ActionError;

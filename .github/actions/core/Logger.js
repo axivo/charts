@@ -27,7 +27,7 @@ class Logger {
     this.startTime = process.hrtime();
     this.levelPriority = { debug: 0, info: 1, warning: 2, error: 3 };
   }
-  
+
   /**
    * Determines if a log level should be displayed
    * 
@@ -37,7 +37,7 @@ class Logger {
   allowLevel(level) {
     return this.levelPriority[level] >= this.levelPriority[this.level];
   }
-  
+
   /**
    * Logs a debug message
    * 
@@ -48,7 +48,7 @@ class Logger {
     if (!this.allowLevel('debug')) return;
     this.log(message, { level: 'debug', ...meta });
   }
-  
+
   /**
    * Logs an error message
    * 
@@ -72,7 +72,7 @@ class Logger {
       this.core.error(formattedMessage);
     }
   }
-  
+
   /**
    * Formats a log message with metadata
    * 
@@ -97,7 +97,7 @@ class Logger {
     }
     return `${parts.join(' ')} ${message}`;
   }
-  
+
   /**
    * Gets the elapsed time since logger creation
    * 
@@ -107,7 +107,7 @@ class Logger {
     const hrtime = process.hrtime(this.startTime);
     return Math.round(hrtime[0] * 1000 + hrtime[1] / 1000000);
   }
-  
+
   /**
    * Groups log messages together
    * 
@@ -122,7 +122,7 @@ class Logger {
       this.core.endGroup();
     }
   }
-  
+
   /**
    * Logs an info message
    * 
@@ -134,7 +134,7 @@ class Logger {
     const logMeta = { level: 'info', ...meta };
     this.core.info(this.formatMessage(message, logMeta));
   }
-  
+
   /**
    * Logs a message with arbitrary level
    * 
@@ -144,7 +144,7 @@ class Logger {
   log(message, meta = {}) {
     const level = meta.level || 'info';
     switch (level) {
-      case 'debug': 
+      case 'debug':
         if (process.env.ACTIONS_RUNNER_DEBUG) {
           this.core.debug(this.formatMessage(message, meta));
         }
@@ -160,7 +160,7 @@ class Logger {
         break;
     }
   }
-  
+
   /**
    * Sets the minimum log level
    * 
@@ -171,7 +171,7 @@ class Logger {
       this.level = level;
     }
   }
-  
+
   /**
    * Starts a timer for performance measurement
    * 
@@ -187,7 +187,7 @@ class Logger {
       return elapsed;
     };
   }
-  
+
   /**
    * Logs a warning message
    * 

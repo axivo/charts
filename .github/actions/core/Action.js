@@ -9,7 +9,7 @@
  * @author AXIVO
  * @license BSD-3-Clause
  */
-const ErrorHandler = require('../utils/Error');
+const ActionError = require('./Error');
 const Logger = require('./Logger');
 
 class Action {
@@ -24,12 +24,12 @@ class Action {
    * @param {Object} params.config - Configuration instance
    */
   constructor({ core, github, context, exec, config }) {
-    this.core = core;
-    this.github = github;
-    this.context = context;
-    this.exec = exec;
+    this.actionError = new ActionError(core);
     this.config = config;
-    this.errorHandler = new ErrorHandler(core);
+    this.context = context;
+    this.core = core;
+    this.exec = exec;
+    this.github = github;
     this.logger = new Logger(core, { context: this.constructor.name });
   }
 
@@ -45,7 +45,7 @@ class Action {
     try {
       return await action();
     } catch (error) {
-      this.errorHandler.handle(error, {
+      this.actionError.report(error, {
         operation,
         fatal
       });

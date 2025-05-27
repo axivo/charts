@@ -48,7 +48,7 @@ class Rest extends Api {
       this.logger.info(`Found ${releases.length} ${word} for '${chart}' chart`);
       return releases;
     } catch (error) {
-      this.errorHandler.handle(error, {
+      this.actionError.handle(error, {
         operation: 'get release IDs',
         fatal: false
       });
@@ -154,7 +154,7 @@ class Rest extends Api {
         this.logger.info(`OCI package not found for '${chartName}' chart`);
         return false;
       }
-      this.errorHandler.handle(error, {
+      this.actionError.handle(error, {
         operation: `delete OCI package for '${chartName}' chart`,
         fatal: false
       });
@@ -191,7 +191,7 @@ class Rest extends Api {
           });
           deletedCount++;
         } catch (error) {
-          this.errorHandler.handle(error, {
+          this.actionError.handle(error, {
             operation: `delete '${release.tagName}' release`,
             fatal: false
           });
@@ -201,7 +201,7 @@ class Rest extends Api {
       this.logger.info(`Successfully deleted ${deletedCount} ${word} for ${chart} chart`);
       return deletedCount;
     } catch (error) {
-      this.errorHandler.handle(error, {
+      this.actionError.handle(error, {
         operation: 'delete releases',
         fatal: true
       });
@@ -309,7 +309,7 @@ class Rest extends Api {
           return fileMap;
       }
     } catch (error) {
-      this.errorHandler.handle(error, {
+      this.actionError.handle(error, {
         operation: 'get updated files',
         fatal: false
       });

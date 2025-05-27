@@ -127,7 +127,7 @@ class Update extends Action {
           this.logger.info(`Successfully updated '${chartDir}' ${type} file`);
           return true;
         } catch (error) {
-          this.errorHandler.handle(error, {
+          this.actionError.handle(error, {
             operation: `update '${chartDir}' ${type} file`,
             fatal: false
           });
@@ -171,7 +171,7 @@ class Update extends Action {
           }
           return true;
         } catch (error) {
-          this.errorHandler.handle(error, {
+          this.actionError.handle(error, {
             operation: `update '${chartDir}' ${type} file`,
             fatal: false
           });
@@ -217,7 +217,7 @@ class Update extends Action {
           this.logger.info(`Successfully updated '${chartDir}' ${type} file`);
           return true;
         } catch (error) {
-          this.errorHandler.handle(error, {
+          this.actionError.handle(error, {
             operation: `update '${chartDir}' ${type} file`,
             fatal: false
           });

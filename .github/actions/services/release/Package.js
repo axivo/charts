@@ -73,7 +73,7 @@ class Package extends Action {
             );
           }
         } catch (error) {
-          this.errorHandler.handle(error, {
+          this.actionError.handle(error, {
             operation: `read ${type} packages directory`,
             fatal: false
           });
@@ -114,7 +114,7 @@ class Package extends Action {
             type: isAppChartType ? 'application' : 'library'
           };
         } catch (error) {
-          this.errorHandler.handle(error, {
+          this.actionError.handle(error, {
             operation: `package ${chartDir} chart`,
             fatal: false
           });

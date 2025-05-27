@@ -29,7 +29,7 @@ class Issue extends Action {
     try {
       return false;
     } catch (error) {
-      this.errorHandler.handle(error, {
+      this.actionError.handle(error, {
         operation: 'validate workflow status',
         fatal: false
       });
