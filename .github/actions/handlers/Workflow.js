@@ -178,7 +178,7 @@ class Workflow extends Action {
       workflow.logger.info('Updating repository issue labels...');
       const labelService = new Label(params);
       const result = await labelService.update();
-      workflow.logger.info('Issue labels update complete');
+      workflow.logger.info('Repository issue labels update complete');
       return result;
     } catch (error) {
       throw workflow.errorHandler.handle(error, { operation: 'update issue labels', fatal: false });

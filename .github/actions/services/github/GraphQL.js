@@ -7,7 +7,6 @@
  * @license BSD-3-Clause
  */
 const Api = require('./Api');
-const { GitHubApiError } = require('../../utils/errors');
 
 class GraphQL extends Api {
   /**
@@ -57,29 +56,15 @@ class GraphQL extends Api {
         fileChanges
       }
     };
-    const response = await this.execute('createSignedCommit', query, variables);
+    const response = await this.execute('createSignedCommit', async () => {
+      return await this.github.graphql(query, variables);
+    });
     const commit = response.createCommitOnBranch.commit;
     this.logger.info(`Created signed commit: ${commit.oid}`);
     return {
       url: commit.url,
       oid: commit.oid
     };
-  }
-
-  /**
-   * Executes a GraphQL query with error handling
-   * 
-   * @param {string} operationName - Name of the operation (for error reporting)
-   * @param {string} query - GraphQL query
-   * @param {Object} variables - Query variables
-   * @returns {Promise<Object>} - Query response
-   */
-  async execute(operationName, query, variables) {
-    try {
-      return await this.github.graphql(query, variables);
-    } catch (error) {
-      throw new GitHubApiError(operationName, error);
-    }
   }
 
   /**
@@ -124,14 +109,16 @@ class GraphQL extends Api {
           }
         }
       }`;
-    const issues = await this.paginate(query,
-      this.setVariables({ owner, repo }, {
-        chartLabel: chartName,
-        typeLabel: chartType
-      }),
-      (data) => data.repository.issues,
-      (issue) => issue.closedAt && new Date(issue.closedAt) > sinceDate
-    );
+    const issues = await this.execute('getReleaseIssues', async () => {
+      return await this.paginate(query,
+        this.setVariables({ owner, repo }, {
+          chartLabel: chartName,
+          typeLabel: chartType
+        }),
+        (data) => data.repository.issues,
+        (issue) => issue.closedAt && new Date(issue.closedAt) > sinceDate
+      );
+    }, false);
     this.logger.info(`Found ${issues.length} issues for ${chartName} (${chartType}) since ${sinceDate.toISOString()}`);
     return this.transform(issues, issue => ({
       number: issue.number,
@@ -185,12 +172,14 @@ class GraphQL extends Api {
           }
         }
       }`;
-    const releases = await this.paginate(query,
-      this.setVariables({ owner, repo }),
-      (data) => data.repository.releases,
-      () => true,
-      limit
-    );
+    const releases = await this.execute('getReleases', async () => {
+      return await this.paginate(query,
+        this.setVariables({ owner, repo }),
+        (data) => data.repository.releases,
+        () => true,
+        limit
+      );
+    }, false);
     this.logger.info(`Found ${releases.length} releases in ${owner}/${repo}`);
     return this.transform(releases, release => ({
       id: release.id,
@@ -222,7 +211,9 @@ class GraphQL extends Api {
         }
       }`;
     const variables = { owner };
-    const response = await this.execute('getRepositoryType', query, variables);
+    const response = await this.execute('getRepositoryType', async () => {
+      return await this.github.graphql(query, variables);
+    });
     const ownerType = response.repositoryOwner.__typename.toLowerCase();
     this.logger.info(`Repository owner ${owner} is type: ${ownerType}`);
     return ownerType;
@@ -244,7 +235,9 @@ class GraphQL extends Api {
     let cursor = null;
     while (hasNextPage && results.length < limit) {
       const currentVars = { ...variables, cursor };
-      const response = await this.execute('paginate', query, currentVars);
+      const response = await this.execute('paginate', async () => {
+        return await this.github.graphql(query, currentVars);
+      });
       const data = extractor(response);
       if (!data || !data.nodes || !data.pageInfo) {
         throw new Error('Invalid GraphQL response structure');
