@@ -694,7 +694,7 @@ module.exports = {
      * @type {boolean}
      * @default false
      */
-    debug: false,
+    debug: true,
 
     /**
      * Documentation generation configuration

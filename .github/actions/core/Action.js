@@ -37,15 +37,6 @@ class Action {
     if (this.config.get('workflow.debug')) {
       this.actionError.setHandler();
     }
-    setTimeout(() => {
-      process.emitWarning('Test deprecation warning for debug implementation', 'DeprecationWarning');
-    }, 500);
-    setTimeout(() => {
-      Promise.reject(new Error('Test unhandled promise rejection'));
-    }, 750);
-    setTimeout(() => {
-      throw new Error('Test uncaught exception for debug implementation');
-    }, 1000);
   }
 
   /**

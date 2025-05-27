@@ -19,7 +19,7 @@ class Configuration {
     this.config = initialConfig;
     this.cache = new Map();
   }
-  
+
   /**
    * Clears the configuration cache
    * 
@@ -37,7 +37,7 @@ class Configuration {
       }
     }
   }
-  
+
   /**
    * Gets a configuration value using dot notation
    * 
@@ -61,7 +61,7 @@ class Configuration {
     this.cache.set(path, current);
     return current;
   }
-  
+
   /**
    * Sets a configuration value using dot notation
    * 
@@ -81,7 +81,7 @@ class Configuration {
     current[lastPart] = value;
     this.clearCache(path);
   }
-  
+
   /**
    * Validates the configuration
    * 

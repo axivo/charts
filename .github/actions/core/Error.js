@@ -82,17 +82,13 @@ class ActionError {
       this.core.setFailed(errorInfo.message);
     } else {
       this.createAnnotation(errorInfo, context.annotationType || 'warning');
-      if (this.config.get('workflow.debug') && errorInfo.stack) {
-        this.core.warning(`${errorInfo.message}\n\nStack trace:\n${errorInfo.stack}`);
-      } else {
-        this.core.warning(errorInfo.message);
-      }
+      this.core.warning(errorInfo.message);
     }
     return errorInfo.message;
   }
 
   /**
-   * Sets up global error handlers for uncaught exceptions and unhandled rejections
+   * Sets up global error handler for uncaught exceptions, unhandled rejections and warnings
    */
   setHandler() {
     process.on('uncaughtException', (error) => {
