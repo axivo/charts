@@ -171,20 +171,17 @@ class Git extends Action {
   async getStatus() {
     return this.execute('get git status', async () => {
       const result = await this.shellService.execute('git', ['status', '--porcelain'], { output: true });
-      const modified = [];
-      const untracked = [];
-      const staged = [];
+      const status = { deleted: [], modified: [], untracked: [] };
       if (result) {
-        result.split('\n').forEach(line => {
-          if (!line) return;
-          const status = line.substring(0, 2);
+        result.split('\n').filter(Boolean).forEach(line => {
+          const statusCode = line.substring(0, 2);
           const file = line.substring(3);
-          if (status.includes('M')) modified.push(file);
-          if (status.includes('?')) untracked.push(file);
-          if (status.includes('A') || status.includes('R') || status.includes('C')) staged.push(file);
+          if (statusCode.includes('D')) status.deleted.push(file);
+          else if (['A', 'C', 'M', 'R'].some(filter => statusCode.includes(filter))) status.modified.push(file);
+          else status.untracked.push(file);
         });
       }
-      return { modified, untracked, staged };
+      return status;
     }, false);
   }
 

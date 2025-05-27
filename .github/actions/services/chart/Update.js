@@ -139,8 +139,6 @@ class Update extends Action {
     });
   }
 
-
-
   /**
    * Updates dependency lock files for charts
    * 
@@ -161,8 +159,11 @@ class Update extends Action {
           const chart = await this.fileService.readYaml(chartYamlPath);
           if (chart.dependencies?.length) {
             await this.helmService.updateDependencies(chartDir);
-            files.push(chartLockPath);
-            this.logger.info(`Successfully updated '${chartDir}' ${type} file`);
+            const status = await this.gitService.getStatus();
+            if (status.modified.includes(chartLockPath)) {
+              files.push(chartLockPath);
+              this.logger.info(`Successfully updated '${chartDir}' ${type} file`);
+            }
           } else if (await this.fileService.exists(chartLockPath)) {
             await this.fileService.delete(chartLockPath);
             files.push(chartLockPath);
