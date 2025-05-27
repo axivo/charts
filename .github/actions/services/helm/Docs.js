@@ -42,8 +42,8 @@ class Docs extends Action {
         const dirsList = directories.join(',');
         await this.shellService.execute('helm-docs', ['-g', dirsList, '-l', this.config.get('workflow.docs.logLevel')]);
       }
-      const filesOutput = await this.gitService.execute(['diff', '--name-only']);
-      const files = filesOutput.split('\n').filter(Boolean);
+      const changesResult = await this.gitService.getChanges();
+      const files = changesResult ? changesResult.files : [];
       if (!files.length) {
         this.logger.info('No documentation file changes to commit');
         return { updated: 0, total: directories ? directories.length : 0 };
