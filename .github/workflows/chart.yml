@@ -27,9 +27,6 @@ jobs:
   update:
     name: Updates
     runs-on: ubuntu-latest
-    env:
-      ACTIONS_STEP_DEBUG: true
-      NODE_OPTIONS: "--trace-warnings"
     timeout-minutes: 10
     steps:
       - name: Checkout repository

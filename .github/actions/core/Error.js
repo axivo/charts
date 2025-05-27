@@ -12,10 +12,11 @@ class ActionError {
    * Creates a new ActionError instance
    * 
    * @param {Object} core - GitHub Actions Core API for logging
+   * @param {Object} config - Configuration instance
    */
-  constructor(core) {
+  constructor(core, config) {
     this.core = core;
-    this.debug = process.env.ACTIONS_STEP_DEBUG === 'true';
+    this.config = config;
   }
 
   /**
@@ -81,13 +82,30 @@ class ActionError {
       this.core.setFailed(errorInfo.message);
     } else {
       this.createAnnotation(errorInfo, context.annotationType || 'warning');
-      if (this.debug && errorInfo.stack) {
+      if (this.config.get('workflow.debug') && errorInfo.stack) {
         this.core.warning(`${errorInfo.message}\n\nStack trace:\n${errorInfo.stack}`);
       } else {
         this.core.warning(errorInfo.message);
       }
     }
     return errorInfo.message;
+  }
+
+  /**
+   * Sets up global error handlers for uncaught exceptions and unhandled rejections
+   */
+  setHandler() {
+    process.on('uncaughtException', (error) => {
+      console.error(error);
+      process.exit(1);
+    });
+    process.on('unhandledRejection', (reason) => {
+      console.error('Unhandled promise rejection:', reason);
+      process.exit(1);
+    });
+    process.on('warning', (warning) => {
+      console.warn(warning.stack);
+    });
   }
 }
 

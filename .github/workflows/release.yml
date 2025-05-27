@@ -29,9 +29,6 @@ jobs:
   distribution:
     name: Distribution
     runs-on: ubuntu-latest
-    env:
-      ACTIONS_STEP_DEBUG: true
-      NODE_OPTIONS: "--trace-warnings"
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}

@@ -682,6 +682,21 @@ module.exports = {
    */
   workflow: {
     /**
+     * Whether to enable debug mode for workflows
+     * 
+     * Controls debug features across the workflow system including:
+     * - Stack traces in error output and GitHub annotations
+     * - Timestamps in log messages for detailed timing information
+     * 
+     * When enabled, detailed debugging information will be displayed.
+     * When disabled, only basic messages are shown for cleaner output.
+     * 
+     * @type {boolean}
+     * @default false
+     */
+    debug: true,
+
+    /**
      * Documentation generation configuration
      * 
      * Contains settings for controlling documentation generation behavior,
