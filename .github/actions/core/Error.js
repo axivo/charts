@@ -8,6 +8,8 @@
  */
 
 class ActionError {
+  static handler = false;
+
   /**
    * Creates a new ActionError instance
    * 
@@ -91,6 +93,10 @@ class ActionError {
    * Sets up global error handler for uncaught exceptions, unhandled rejections and warnings
    */
   setHandler() {
+    if (ActionError.handler) {
+      return;
+    }
+    ActionError.handler = true;
     process.on('uncaughtException', (error) => {
       console.error(error);
       process.exit(1);
