@@ -13,29 +13,11 @@ class Configuration {
   /**
    * Creates a new Configuration instance
    * 
-   * @param {Object} initialConfig - Initial configuration object
+   * @param {Object} settings - Configuration settings object
    */
-  constructor(initialConfig) {
-    this.config = initialConfig;
+  constructor(settings) {
     this.cache = new Map();
-  }
-
-  /**
-   * Clears the configuration cache
-   * 
-   * @param {string|null} path - Path to clear or null for all cache
-   */
-  clearCache(path = null) {
-    if (path === null) {
-      this.cache.clear();
-      return;
-    }
-    const pathPrefix = `${path}.`;
-    for (const [key] of this.cache) {
-      if (key === path || key.startsWith(pathPrefix)) {
-        this.cache.delete(key);
-      }
-    }
+    this.config = settings;
   }
 
   /**
@@ -60,49 +42,6 @@ class Configuration {
     }
     this.cache.set(path, current);
     return current;
-  }
-
-  /**
-   * Sets a configuration value using dot notation
-   * 
-   * @param {string} path - Dot notation path to set
-   * @param {*} value - Value to set
-   */
-  set(path, value) {
-    const parts = path.split('.');
-    const lastPart = parts.pop();
-    let current = this.config;
-    for (const part of parts) {
-      if (!(part in current) || typeof current[part] !== 'object') {
-        current[part] = {};
-      }
-      current = current[part];
-    }
-    current[lastPart] = value;
-    this.clearCache(path);
-  }
-
-  /**
-   * Validates the configuration
-   * 
-   * @throws {Error} If configuration is invalid
-   */
-  validate() {
-    const required = [
-      'repository.user.email',
-      'repository.user.name',
-      'repository.url',
-      'repository.release.template'
-    ];
-    const errors = [];
-    for (const path of required) {
-      if (!this.get(path)) {
-        errors.push(`Missing required config: ${path}`);
-      }
-    }
-    if (errors.length) {
-      throw new Error(`Invalid configuration: ${errors.join(', ')}`);
-    }
   }
 }
 
