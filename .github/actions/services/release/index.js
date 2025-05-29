@@ -62,9 +62,8 @@ class Release extends Action {
   async find(files) {
     return this.execute('find charts', async () => {
       this.logger.info('Finding release-eligible charts...');
-      const config = this.config.get();
-      const appDir = config.repository.chart.type.application;
-      const libDir = config.repository.chart.type.library;
+      const appDir = this.config.get('repository.chart.type.application');
+      const libDir = this.config.get('repository.chart.type.library');
       const fileList = Object.keys(files);
       const application = [];
       const library = [];
@@ -102,7 +101,6 @@ class Release extends Action {
   async validate(directory) {
     return this.execute('validate chart', async () => {
       this.logger.info(`Validating chart: ${directory}`);
-      const config = this.config.get();
       const chartYamlPath = path.join(directory, 'Chart.yaml');
       try {
         await this.fileService.exists(chartYamlPath);

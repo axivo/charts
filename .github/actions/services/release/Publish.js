@@ -38,8 +38,7 @@ class Publish extends Action {
    */
   async authenticate() {
     return this.execute('authenticate to OCI registry', async () => {
-      const config = this.config.get();
-      const ociRegistry = config.repository.oci.registry;
+      const ociRegistry = this.config.get('repository.oci.registry');
       const username = this.context.repo.owner;
       const password = process.env['INPUT_GITHUB-TOKEN'];
       if (!password) {
@@ -59,7 +58,6 @@ class Publish extends Action {
    */
   async createIndex(chart, outputDir) {
     try {
-      const config = this.config.get();
       const chartName = path.basename(chart.dir);
       const metadataPath = path.join(chart.dir, 'metadata.yaml');
       const metadataExists = await this.fileService.exists(metadataPath);
@@ -70,10 +68,10 @@ class Publish extends Action {
       const indexPath = path.join(outputDir, 'index.yaml');
       await this.fileService.copyFile(metadataPath, indexPath);
       this.logger.info(`Generated index for '${chart.type}/${chartName}'`);
-      const redirectTemplate = config.repository.chart.redirect.template;
+      const redirectTemplate = this.config.get('repository.chart.redirect.template');
       const redirectContent = await this.fileService.readFile(redirectTemplate);
       const redirectContext = {
-        RepoURL: config.repository.url,
+        RepoURL: this.config.get('repository.url'),
         Type: chart.type,
         Name: chartName
       };
@@ -98,7 +96,6 @@ class Publish extends Action {
    */
   async find(type) {
     return this.execute('find available charts', async () => {
-      const config = this.config.get();
       const results = [];
       try {
         const dirs = await this.fileService.listDirectory(type);
@@ -125,14 +122,13 @@ class Publish extends Action {
   async generateIndexes() {
     return this.execute('generate chart indexes', async () => {
       try {
-        const config = this.config.get();
-        if (!config.repository.chart.packages.enabled) {
+        if (!this.config.get('repository.chart.packages.enabled')) {
           this.logger.info('Chart indexes generation is disabled');
           return 0;
         }
         this.logger.info('Generating chart indexes...');
-        const appType = config.repository.chart.type.application;
-        const libType = config.repository.chart.type.library;
+        const appType = this.config.get('repository.chart.type.application');
+        const libType = this.config.get('repository.chart.type.library');
         const chartDirs = [].concat(
           ...(await Promise.all([
             this.find(appType),
@@ -177,12 +173,11 @@ class Publish extends Action {
   async generateContent(chart) {
     return this.execute('generate release content', async () => {
       this.logger.info(`Generating release content for '${chart.type}/${chart.name}' chart...`);
-      const config = this.config.get();
-      const releaseTemplate = config.repository.release.template;
+      const releaseTemplate = this.config.get('repository.release.template');
       await this.fileService.validateFile(releaseTemplate);
       const templateContent = await this.fileService.readFile(releaseTemplate);
       const issues = await this.graphqlService.getReleaseIssues(chart);
-      const tagName = config.repository.release.title
+      const tagName = this.config.get('repository.release.title')
         .replace('{{ .Name }}', chart.name)
         .replace('{{ .Version }}', chart.version);
       const templateContext = {
@@ -195,7 +190,7 @@ class Publish extends Action {
           Version: dependency.version
         })),
         Description: chart.metadata.description || '',
-        Icon: chart.icon ? config.repository.chart.icon : null,
+        Icon: chart.icon ? this.config.get('repository.chart.icon') : null,
         Issues: issues.length ? issues : null,
         KubeVersion: chart.metadata.kubeVersion || '',
         Name: chart.name,
@@ -220,8 +215,7 @@ class Publish extends Action {
         this.logger.info('No packages to publish to GitHub');
         return [];
       }
-      const config = this.config.get();
-      const appType = config.repository.chart.type.application;
+      const appType = this.config.get('repository.chart.type.application');
       const word = packages.length === 1 ? 'release' : 'releases';
       this.logger.info(`Publishing ${packages.length} GitHub ${word}...`);
       const releases = [];
@@ -229,10 +223,10 @@ class Publish extends Action {
         try {
           const { name, version } = this.packageService.parseInfo(pkg.source);
           const type = pkg.type === appType ? 'application' : 'library';
-          const chartDir = path.join(config.repository.chart.type[type], name);
+          const chartDir = path.join(this.config.get(`repository.chart.type.${type}`), name);
           const chartPath = path.join(packagesPath, pkg.type, pkg.source);
           const chartYamlPath = path.join(chartDir, 'Chart.yaml');
-          const iconPath = path.join(chartDir, config.repository.chart.icon);
+          const iconPath = path.join(chartDir, this.config.get('repository.chart.icon'));
           const iconExists = await this.fileService.exists(iconPath);
           let metadata = {};
           try {
@@ -253,7 +247,7 @@ class Publish extends Action {
             type,
             version
           };
-          const tagName = config.repository.release.title
+          const tagName = this.config.get('repository.release.title')
             .replace('{{ .Name }}', chart.name)
             .replace('{{ .Version }}', chart.version);
           this.logger.info(`Processing '${tagName}' repository release...`);
@@ -305,8 +299,7 @@ class Publish extends Action {
    */
   async oci(packages, packagesPath) {
     return this.execute('publish to OCI registry', async () => {
-      const config = this.config.get();
-      if (!config.repository.oci.packages.enabled) {
+      if (!this.config.get('repository.oci.packages.enabled')) {
         this.logger.info('Publishing of OCI packages is disabled');
         return [];
       }
@@ -338,7 +331,7 @@ class Publish extends Action {
           });
         }
       }
-      const ociRegistry = config.repository.oci.registry;
+      const ociRegistry = this.config.get('repository.oci.registry');
       const word = packages.length === 1 ? 'package' : 'packages';
       this.logger.info(`Publishing ${packages.length} OCI ${word}...`);
       const published = [];

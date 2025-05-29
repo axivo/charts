@@ -30,10 +30,9 @@ class Package extends Action {
    */
   async createDirectories() {
     return this.execute('create package directories', async () => {
-      const config = this.config.get();
-      const packagesPath = config.repository.release.packages;
-      const appChartType = config.repository.chart.type.application;
-      const libChartType = config.repository.chart.type.library;
+      const packagesPath = this.config.get('repository.release.packages');
+      const appChartType = this.config.get('repository.chart.type.application');
+      const libChartType = this.config.get('repository.chart.type.library');
       this.logger.info(`Creating ${packagesPath} directory...`);
       await this.fileService.createDirectory(packagesPath);
       const appPackagesDir = path.join(packagesPath, appChartType);
@@ -57,9 +56,8 @@ class Package extends Action {
    */
   async get(directory) {
     return this.execute('get packages', async () => {
-      const config = this.config.get();
-      const appType = config.repository.chart.type.application;
-      const libType = config.repository.chart.type.library;
+      const appType = this.config.get('repository.chart.type.application');
+      const libType = this.config.get('repository.chart.type.library');
       const appPackagesDir = path.join(directory, appType);
       const libPackagesDir = path.join(directory, libType);
       let packages = [];
@@ -96,8 +94,7 @@ class Package extends Action {
         return [];
       }
       const dirs = await this.createDirectories();
-      const config = this.config.get();
-      const appChartType = config.repository.chart.type.application;
+      const appChartType = this.config.get('repository.chart.type.application');
       const chartDirs = [...charts.application, ...charts.library];
       this.logger.info(`Packaging ${chartDirs.length} charts...`);
       const results = await Promise.all(chartDirs.map(async (chartDir) => {

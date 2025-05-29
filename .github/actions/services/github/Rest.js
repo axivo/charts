@@ -295,8 +295,6 @@ class Rest extends Api {
             data.forEach(file => { updatedMap[file.filename] = file.status; });
             return updatedMap;
           });
-        case 'workflow_dispatch':
-          return fileMap;
         default:
           const response = await this.execute('compareCommits', async () => {
             return await this.github.rest.repos.compareCommits({
@@ -425,8 +423,6 @@ class Rest extends Api {
           this.logger.warning('Pull request data missing from context');
           return { valid: false, reason: 'missing_pull_request_data' };
         }
-        break;
-      case 'workflow_dispatch':
         break;
       default:
         if (!context.payload.before || !context.payload.after) {
