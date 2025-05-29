@@ -31,42 +31,21 @@ class Chart extends Action {
    * @returns {Promise<Object>} - Update results
    */
   async process() {
-    try {
+    return this.execute('process charts', async () => {
       const files = Object.keys(await this.githubService.getUpdatedFiles({ context: this.context }));
       const charts = await this.chartService.find(files);
       if (charts.total === 0) {
         this.logger.info('No charts found');
         return { charts: 0, updated: 0 };
       }
-      this.logger.info(`Found ${charts.total} charts`);
       const allCharts = [...charts.application, ...charts.library];
       await this.chartUpdate.application(allCharts);
       await this.chartUpdate.lock(allCharts);
       await this.chartUpdate.metadata(allCharts);
       await this.chartService.lint(allCharts);
       await this.docsService.generate(allCharts);
-      const modifiedFiles = await this.fileService.filter(allCharts);
-      if (modifiedFiles.length) {
-        await this.gitService.add(modifiedFiles);
-        await this.gitService.commit('Update charts', { signoff: true });
-        this.logger.info(`Committed ${modifiedFiles.length} modified files`);
-      } else {
-        this.logger.info('No files were modified');
-      }
-      this.logger.info('Chart update complete');
       return { charts: charts.total, updated: charts.total };
-    } catch (error) {
-      throw this.errorHandler.handle(error, { operation: 'update charts' });
-    }
-  }
-
-  /**
-   * Required run method
-   * 
-   * @returns {Promise<Object>} - Process results
-   */
-  async run() {
-    return this.process();
+    });
   }
 }
 

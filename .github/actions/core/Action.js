@@ -1,7 +1,7 @@
 /**
  * Base Action class for GitHub Actions
  * 
- * Provides dependency injection, context management, and lifecycle hooks
+ * Provides dependency injection, context management, and error handling
  * for implementing GitHub Actions functionality.
  * 
  * @class Action
@@ -9,7 +9,7 @@
  * @author AXIVO
  * @license BSD-3-Clause
  */
-const { createErrorHandler, createErrorContext } = require('../utils/errorUtils');
+const ActionError = require('./Error');
 const Logger = require('./Logger');
 
 class Action {
@@ -24,113 +24,39 @@ class Action {
    * @param {Object} params.config - Configuration instance
    */
   constructor({ core, github, context, exec, config }) {
-    this.core = core;
-    this.github = github;
-    this.context = context;
-    this.exec = exec;
+    this.actionError = new ActionError(core, config);
     this.config = config;
-    this.errorHandler = createErrorHandler(core);
-    this.logger = new Logger(core, { context: this.constructor.name });
-    this.initialized = false;
-  }
-
-  /**
-   * Hook that runs after execution
-   * 
-   * @param {any} result - Result from the run method
-   * @returns {Promise<void>}
-   */
-  async afterExecute(result) {
-    return;
-  }
-
-  /**
-   * Hook that runs after initialization
-   * 
-   * @returns {Promise<void>}
-   */
-  async afterInitialize() {
-    return;
-  }
-
-  /**
-   * Hook that runs before execution
-   * 
-   * @returns {Promise<void>}
-   */
-  async beforeExecute() {
-    return;
-  }
-
-  /**
-   * Hook that runs before initialization
-   * 
-   * @returns {Promise<void>}
-   */
-  async beforeInitialize() {
-    return;
-  }
-
-  /**
-   * Executes the action logic
-   * 
-   * @returns {Promise<any>} - Action result
-   */
-  async execute() {
-    try {
-      if (!this.initialized) {
-        await this.initialize();
-      }
-      const timer = this.logger.startTimer('Action execution');
-      this.logger.info('Starting action execution');
-      await this.beforeExecute();
-      const result = await this.run();
-      await this.afterExecute(result);
-      this.logger.info('Action execution completed', { elapsed: true });
-      timer();
-      return result;
-    } catch (error) {
-      this.errorHandler.handle(error, createErrorContext('execute action'));
+    this.context = context;
+    this.core = core;
+    this.exec = exec;
+    this.github = github;
+    this.logger = new Logger(core, {
+      context: this.constructor.name,
+      timestamp: this.config.get('workflow.debug')
+    });
+    if (this.config.get('workflow.debug')) {
+      this.actionError.setHandler();
     }
   }
 
   /**
-   * Helper method to handle errors
+   * Executes an operation with error handling
    * 
-   * @param {Error} error - The error object
-   * @param {string} operation - Operation that failed
-   * @param {Object} options - Additional error context
-   * @returns {string} - Formatted error message
+   * @param {string} operation - Operation name for error reporting
+   * @param {Function} action - Function to execute
+   * @param {boolean} fatal - Whether errors should be fatal
+   * @returns {Promise<any>} - Result of the operation or null on error
    */
-  handleError(error, operation, options = {}) {
-    return this.errorHandler.handle(error, createErrorContext(operation, options));
-  }
-
-  /**
-   * Initializes the action and its dependencies
-   * 
-   * @returns {Promise<void>}
-   */
-  async initialize() {
+  async execute(operation, action, fatal = true) {
     try {
-      this.logger.info('Initializing action');
-      await this.beforeInitialize();
-      this.initialized = true;
-      await this.afterInitialize();
-      this.logger.info('Action initialized successfully');
+      return await action();
     } catch (error) {
-      this.errorHandler.handle(error, createErrorContext('initialize action'));
+      this.actionError.report(error, {
+        operation,
+        fatal
+      });
+      return null;
     }
-  }
-
-  /**
-   * Main action implementation
-   * 
-   * @abstract
-   * @returns {Promise<any>} - Action result
-   */
-  async run() {
-    throw new Error('Action.run() must be implemented by subclass');
   }
 }
 

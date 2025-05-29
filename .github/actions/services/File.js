@@ -11,7 +11,6 @@ const path = require('path');
 const glob = require('glob');
 const yaml = require('js-yaml');
 const Action = require('../core/Action');
-const { FileError } = require('../utils/errors');
 
 class File extends Action {
   /**
@@ -24,95 +23,61 @@ class File extends Action {
    * @returns {Promise<void>}
    */
   async copy(source, destination, options = {}) {
-    try {
+    return this.execute(`copy '${source}' file to '${destination}'`, async () => {
       await this.createDir(path.dirname(destination), { silent: true });
       if (!options.overwrite && await this.exists(destination)) {
-        throw new Error(`File already exists: ${destination}`);
+        this.logger.warning(`File '${destination}' already exists`);
+        return null;
       }
       await fs.copyFile(source, destination);
-      this.logger.info(`Copied ${source} to ${destination}`);
-    } catch (error) {
-      this.errorHandler.handle(error, {
-        operation: `copy file from ${source} to ${destination}`,
-        file: source
-      });
-    }
+      this.logger.info(`Successfully copied '${source}' file to '${destination}'`);
+    });
   }
 
   /**
    * Creates a directory
    * 
-   * @param {string} dirPath - Directory path to create
+   * @param {string} directory - Directory to create
    * @param {Object} options - Directory creation options
    * @param {boolean} options.recursive - Whether to create parent directories
    * @param {boolean} options.silent - Whether to suppress log messages
    * @returns {Promise<void>}
    */
-  async createDir(dirPath, options = {}) {
-    try {
-      await fs.mkdir(dirPath, { recursive: options.recursive ?? true });
+  async createDir(directory, options = {}) {
+    return this.execute(`create '${directory}' directory`, async () => {
+      await fs.mkdir(directory, { recursive: options.recursive ?? true });
       if (!options.silent) {
-        this.logger.info(`Created directory: ${dirPath}`);
+        this.logger.info(`Successfully created '${directory}' directory`);
       }
-    } catch (error) {
-      if (error.code !== 'EEXIST') {
-        this.errorHandler.handle(error, {
-          operation: `create directory ${dirPath}`,
-          file: dirPath
-        });
-      } else if (!options.silent) {
-        this.logger.info(`Directory already exists: ${dirPath}`);
-      }
-    }
+    }, false);
   }
 
   /**
    * Deletes a file
    * 
-   * @param {string} filePath - Path to file to delete
+   * @param {string} file - File to delete
    * @returns {Promise<void>}
    */
-  async delete(filePath) {
-    try {
-      if (!await this.exists(filePath)) {
-        this.logger.info(`File does not exist: ${filePath}`);
+  async delete(file) {
+    return this.execute(`delete '${file}' file`, async () => {
+      if (!await this.exists(file)) {
+        this.logger.info(`File '${file}' not found`);
         return;
       }
-      await fs.unlink(filePath);
-      this.logger.info(`Deleted file: ${filePath}`);
-    } catch (error) {
-      this.errorHandler.handle(error, {
-        operation: `delete file ${filePath}`,
-        file: filePath
-      });
-    }
-  }
-
-  /**
-   * Executes a file system operation
-   * 
-   * @param {string} operation - File operation to perform
-   * @param {function} action - Async function to execute
-   * @param {string} [filePath] - Path to the file involved in the operation
-   * @returns {Promise<any>} - Operation result
-   */
-  async execute(operation, action, filePath) {
-    try {
-      return await action();
-    } catch (error) {
-      throw new FileError(operation, error, filePath);
-    }
+      await fs.unlink(file);
+      this.logger.info(`Successfully deleted '${file}' file`);
+    }, false);
   }
 
   /**
    * Checks if a file exists without throwing exceptions
    * 
-   * @param {string} filePath - Path to the file to check
+   * @param {string} file - File to check
    * @returns {Promise<boolean>} - True if file exists, false otherwise
    */
-  async exists(filePath) {
+  async exists(file) {
     try {
-      await fs.access(filePath);
+      await fs.access(file);
       return true;
     } catch {
       return false;
@@ -120,15 +85,15 @@ class File extends Action {
   }
 
   /**
-   * Extracts path from file path based on pattern
+   * Extracts path from file, based on pattern
    * 
-   * @param {string} filePath - File path
+   * @param {string} file - File name
    * @param {string} pattern - Path pattern
    * @returns {string|null} - Extracted path or null if no match
    */
-  extractPath(filePath, pattern) {
-    if (filePath.startsWith(pattern + '/')) {
-      const segments = filePath.split('/');
+  extractPath(file, pattern) {
+    if (file.startsWith(pattern + '/')) {
+      const segments = file.split('/');
       if (segments.length >= 3) {
         return path.join(segments[0], segments[1]);
       }
@@ -139,26 +104,26 @@ class File extends Action {
   /**
    * Filters paths to only include existing files
    * 
-   * @param {Array<string>} dirs - Directories
+   * @param {Array<string>} directories - List of directories to check
    * @param {Array<string>} [fileTypes] - File types to filter (default: standard chart files)
    * @returns {Promise<Array<string>>} - List of existing files
    */
-  async filter(dirs, fileTypes) {
+  async filter(directories, fileTypes) {
     const defaultFileTypes = [
-      'Chart.yaml',
-      'Chart.lock',
-      'values.yaml',
       'application.yaml',
-      'metadata.yaml'
+      'Chart.lock',
+      'Chart.yaml',
+      'metadata.yaml',
+      'values.yaml'
     ];
     const types = fileTypes || defaultFileTypes;
-    const filePaths = dirs.flatMap(dir =>
+    const files = directories.flatMap(dir =>
       types.map(type => `${dir}/${type}`)
     );
     const existingFiles = [];
-    for (const filePath of filePaths) {
-      if (await this.exists(filePath)) {
-        existingFiles.push(filePath);
+    for (const file of files) {
+      if (await this.exists(file)) {
+        existingFiles.push(file);
       }
     }
     return existingFiles;
@@ -167,7 +132,7 @@ class File extends Action {
   /**
    * Filters path by pattern
    * 
-   * @param {Array<string>} files - List of file paths to check
+   * @param {Array<string>} files - List of files to check
    * @param {Object} patterns - Object mapping types to path patterns
    * @returns {Set<string>} - Set of type:path strings
    */
@@ -192,30 +157,29 @@ class File extends Action {
    * @returns {Promise<string[]>} - Array of matching file paths
    */
   async find(pattern, options = {}) {
-    return new Promise((resolve, reject) => {
-      glob(pattern, options, (err, files) => {
-        if (err) {
-          this.errorHandler.handle(err, {
-            operation: `find files matching ${pattern}`,
-            fatal: false
-          });
-          return reject(err);
-        }
-        this.logger.info(`Found ${files.length} files matching ${pattern}`);
-        resolve(files);
+    return this.execute(`find files matching '${pattern}' pattern`, async () => {
+      return new Promise((resolve, reject) => {
+        glob(pattern, options, (err, files) => {
+          if (err) {
+            return reject(err);
+          }
+          const word = files.length === 1 ? 'file' : 'files';
+          this.logger.info(`Found ${files.length} ${word} matching '${pattern}' pattern`);
+          resolve(files);
+        });
       });
-    });
+    }, false);
   }
 
   /**
    * Gets file stats
    * 
-   * @param {string} filePath - Path to file
+   * @param {string} file - File name
    * @returns {Promise<Object>} - File stats
    */
-  async getStats(filePath) {
-    try {
-      const stats = await fs.stat(filePath);
+  async getStats(file) {
+    return this.execute(`get '${file}' stats`, async () => {
+      const stats = await fs.stat(file);
       return {
         size: stats.size,
         created: stats.birthtime,
@@ -223,30 +187,23 @@ class File extends Action {
         isDirectory: stats.isDirectory(),
         isFile: stats.isFile()
       };
-    } catch (error) {
-      this.errorHandler.handle(error, {
-        operation: `get stats for ${filePath}`,
-        file: filePath,
-        fatal: false
-      });
-      return null;
-    }
+    }, false);
   }
 
   /**
    * Lists files in a directory
    * 
-   * @param {string} dirPath - Directory path
+   * @param {string} directory - Directory name
    * @param {Object} options - List options
    * @param {boolean} options.recursive - Whether to list files recursively
    * @returns {Promise<string[]>} - Array of file paths
    */
-  async listDir(dirPath, options = {}) {
-    try {
-      const entries = await fs.readdir(dirPath, { withFileTypes: true });
+  async listDir(directory, options = {}) {
+    return this.execute(`list '${directory}' directory`, async () => {
+      const entries = await fs.readdir(directory, { withFileTypes: true });
       let files = [];
       for (const entry of entries) {
-        const entryPath = path.join(dirPath, entry.name);
+        const entryPath = path.join(directory, entry.name);
         if (entry.isDirectory() && options.recursive) {
           const subDirFiles = await this.listDir(entryPath, options);
           files = files.concat(subDirFiles);
@@ -255,91 +212,75 @@ class File extends Action {
         }
       }
       return files;
-    } catch (error) {
-      this.errorHandler.handle(error, {
-        operation: `list directory ${dirPath}`,
-        file: dirPath,
-        fatal: false
-      });
-      return [];
-    }
+    }, false);
   }
 
   /**
    * Reads a file
    * 
-   * @param {string} filePath - Path to file to read
+   * @param {string} file - File to read
    * @param {Object} options - Read options
    * @param {string} options.encoding - File encoding
    * @returns {Promise<string|Buffer>} - File contents
    */
-  async read(filePath, options = {}) {
-    return this.execute('read file', async () => {
-      if (!await this.exists(filePath)) {
-        throw new Error(`File does not exist: ${filePath}`);
+  async read(file, options = {}) {
+    return this.execute(`read '${file}' file`, async () => {
+      if (!await this.exists(file)) {
+        this.logger.warning(`File '${file}' not found`);
+        return null;
       }
-      return await fs.readFile(filePath, options.encoding || 'utf8');
-    }, filePath);
+      return await fs.readFile(file, options.encoding || 'utf8');
+    });
   }
 
   /**
    * Reads a YAML file
    * 
-   * @param {string} filePath - Path to YAML file
+   * @param {string} file - YAML file to read
    * @returns {Promise<Object>} - Parsed YAML object
    */
-  async readYaml(filePath) {
-    try {
-      const content = await this.read(filePath);
+  async readYaml(file) {
+    return this.execute(`read '${file}' YAML file`, async () => {
+      const content = await this.read(file);
       return yaml.load(content);
-    } catch (error) {
-      this.errorHandler.handle(error, {
-        operation: `read YAML file ${filePath}`,
-        file: filePath
-      });
-    }
+    });
   }
 
   /**
    * Writes a file
    * 
-   * @param {string} filePath - Path to file to write
+   * @param {string} file - File to write
    * @param {string|Buffer} content - Content to write
    * @param {Object} options - Write options
    * @param {boolean} options.createDir - Whether to create parent directories
    * @returns {Promise<void>}
    */
-  async write(filePath, content, options = {}) {
-    return this.execute('write file', async () => {
+  async write(file, content, options = {}) {
+    return this.execute(`write '${file}' file`, async () => {
       if (options.createDir !== false) {
-        await this.createDir(path.dirname(filePath), { silent: true });
+        await this.createDir(path.dirname(file), { silent: true });
       }
-      await fs.writeFile(filePath, content);
-      this.logger.info(`Wrote file: ${filePath}`);
-    }, filePath);
+      await fs.writeFile(file, content);
+      this.logger.info(`Successfully wrote '${file}' file`);
+    });
   }
 
   /**
    * Writes a YAML file
    * 
-   * @param {string} filePath - Path to YAML file
-   * @param {Object} data - Data to write
+   * @param {string} file - YAML file to write
+   * @param {Object} content - Content to write
    * @param {Object} options - Write options
    * @param {boolean} options.pretty - Whether to pretty-print YAML
    * @returns {Promise<void>}
    */
-  async writeYaml(filePath, data, options = {}) {
-    try {
-      const content = yaml.dump(data, {
+  async writeYaml(file, content, options = {}) {
+    return this.execute(`write '${file}' YAML file`, async () => {
+      const data = yaml.dump(content, {
         lineWidth: options.pretty === false ? -1 : 80
       });
-      await this.write(filePath, content, options);
-    } catch (error) {
-      this.errorHandler.handle(error, {
-        operation: `write YAML file ${filePath}`,
-        file: filePath
-      });
-    }
+      await this.write(file, data, options);
+    });
   }
 }
 

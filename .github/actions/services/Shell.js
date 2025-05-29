@@ -7,7 +7,6 @@
  * @license BSD-3-Clause
  */
 const Action = require('../core/Action');
-const { ShellError } = require('../utils/errors');
 
 class Shell extends Action {
   /**
@@ -32,22 +31,19 @@ class Shell extends Action {
    * @returns {Promise<string|Object>} - Command output or result object
    */
   async execute(command, args, options = {}) {
+    const {
+      silent = true,
+      output = false,
+      throwOnError = true,
+      returnFullResult = false,
+      ...execOptions
+    } = options;
     try {
-      const {
-        silent = true,
-        output = false,
-        throwOnError = true,
-        returnFullResult = false,
-        ...execOptions
-      } = options;
       if (output) {
         const result = await this.exec.getExecOutput(command, args, {
           silent,
           ...execOptions
         });
-        if (throwOnError && result.exitCode !== 0) {
-          throw new Error(`Command failed: ${command} ${args.join(' ')}\n${result.stderr}`);
-        }
         return returnFullResult ? {
           stdout: result.stdout.trim(),
           stderr: result.stderr.trim(),
@@ -61,7 +57,11 @@ class Shell extends Action {
         return '';
       }
     } catch (error) {
-      throw new ShellError(`shell ${command}`, error);
+      this.actionError.handle(error, {
+        operation: `execute '${command}' command`,
+        fatal: throwOnError
+      });
+      return null;
     }
   }
 }

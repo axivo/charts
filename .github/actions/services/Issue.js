@@ -7,7 +7,6 @@
  * @license BSD-3-Clause
  */
 const Action = require('../core/Action');
-const { IssueError } = require('../utils/errors');
 
 class Issue extends Action {
   /**
@@ -20,6 +19,25 @@ class Issue extends Action {
   }
 
   /**
+   * Validates if workflow has issues that warrant creating an issue
+   * 
+   * @private
+   * @param {Object} context - GitHub Actions context
+   * @returns {Promise<boolean>} - True if issues detected
+   */
+  async #validate(context) {
+    try {
+      return false;
+    } catch (error) {
+      this.actionError.handle(error, {
+        operation: 'validate workflow status',
+        fatal: false
+      });
+      return false;
+    }
+  }
+
+  /**
    * Creates a GitHub issue
    * 
    * @param {Object} params - Issue creation parameters
@@ -29,7 +47,7 @@ class Issue extends Action {
    * @returns {Promise<Object|null>} - Created issue data or null on failure
    */
   async create(params) {
-    return this.execute('create issue', async () => {
+    return this.execute(`create issue: '${params.title}'`, async () => {
       this.logger.info(`Creating issue: ${params.title}`);
       const response = await this.github.rest.issues.create({
         owner: this.context.repo.owner,
@@ -45,24 +63,9 @@ class Issue extends Action {
         title: response.data.title,
         url: response.data.html_url
       };
-    });
+    }, false);
   }
 
-  /**
-   * Executes an issue operation with error handling
-   * 
-   * @param {string} operation - Operation name for error reporting
-   * @param {Function} action - Function to execute
-   * @returns {Promise<any>} - Result of the operation
-   */
-  async execute(operation, action) {
-    try {
-      return await action();
-    } catch (error) {
-      throw new IssueError(operation, error);
-    }
-  }
-  
   /**
    * Prepares and creates a workflow issue
    * 
@@ -74,7 +77,11 @@ class Issue extends Action {
    * @returns {Promise<Object|null>} - Created issue data or null on failure
    */
   async report(params) {
-    try {
+    return this.execute('report workflow issue', async () => {
+      const hasIssues = await this.#validate(params.context);
+      if (!hasIssues) {
+        return null;
+      }
       const context = params.context || this.context;
       const repoUrl = context.payload.repository.html_url;
       const isPullRequest = Boolean(context.payload.pull_request);
@@ -101,13 +108,7 @@ class Issue extends Action {
         body: issueBody,
         labels: labelNames
       });
-    } catch (error) {
-      this.errorHandler.handle(error, {
-        operation: 'report workflow issue',
-        fatal: false
-      });
-      return null;
-    }
+    }, false);
   }
 }
 

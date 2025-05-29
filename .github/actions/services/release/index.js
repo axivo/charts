@@ -8,8 +8,8 @@
  */
 const path = require('path');
 const Action = require('../../core/Action');
-const { File, GitHub } = require('../');
-const { ReleaseError } = require('../../utils/errors');
+const File = require('../File');
+const GitHub = require('../github');
 
 class Release extends Action {
   /**
@@ -41,7 +41,7 @@ class Release extends Action {
           await this.githubService.deleteReleases(chart);
           return true;
         } catch (error) {
-          this.errorHandler.handle(error, {
+          this.actionError.handle(error, {
             operation: `delete releases for '${filePath}' chart`,
             fatal: false
           });
@@ -51,22 +51,6 @@ class Release extends Action {
       const deletedCount = results.filter(Boolean).length;
       return deletedCount;
     }, { deletedCount: files.length });
-  }
-
-  /**
-   * Executes a release operation with error handling
-   * 
-   * @param {string} operation - Operation name
-   * @param {Function} action - Action to execute
-   * @param {Object} details - Additional error details
-   * @returns {Promise<any>} Operation result
-   */
-  async execute(operation, action, details) {
-    try {
-      return await action();
-    } catch (error) {
-      throw new ReleaseError(operation, error, details);
-    }
   }
 
   /**

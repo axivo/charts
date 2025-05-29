@@ -9,10 +9,9 @@
 const Action = require('../core/Action');
 const Chart = require('./Chart');
 const config = require('../config');
-const Issue = require('./Issue');
 const Release = require('./release');
 const Frontpage = require('../services/Frontpage');
-const { Git, Helm } = require('../services');
+const { Docs, File, Git, Issue, Label, Template } = require('../services');
 
 class Workflow extends Action {
   /**
@@ -39,7 +38,7 @@ class Workflow extends Action {
       await gitService.configure();
       workflow.logger.info('Repository configuration complete');
     } catch (error) {
-      throw workflow.errorHandler.handle(error, { operation: 'configure repository' });
+      workflow.errorHandler.handle(error, { operation: 'configure repository' });
     }
   }
 
@@ -53,8 +52,7 @@ class Workflow extends Action {
   static async installHelmDocs(params) {
     const workflow = new Workflow(params);
     try {
-      workflow.logger.info('Installing helm-docs...');
-      const docsService = new Helm.Docs({
+      const docsService = new Docs({
         github: params.github,
         context: params.context,
         core: params.core,
@@ -62,9 +60,8 @@ class Workflow extends Action {
         config: params.config
       });
       await docsService.install(params.version);
-      workflow.logger.info('Helm-docs installation complete');
     } catch (error) {
-      throw workflow.errorHandler.handle(error, { operation: 'install helm-docs' });
+      workflow.errorHandler.handle(error, { operation: 'install helm-docs' });
     }
   }
 
@@ -88,7 +85,7 @@ class Workflow extends Action {
       await releaseHandler.process();
       workflow.logger.info('Chart release process complete');
     } catch (error) {
-      throw workflow.errorHandler.handle(error, { operation: 'process chart releases' });
+      workflow.errorHandler.handle(error, { operation: 'process chart releases' });
     }
   }
 
@@ -102,22 +99,26 @@ class Workflow extends Action {
     const workflow = new Workflow(params);
     try {
       workflow.logger.info('Checking for workflow issues...');
-      const issueHandler = new Issue({
-        github: params.github,
-        context: params.context,
-        core: params.core,
-        exec: params.exec,
-        config: params.config
-      });
-      const result = await issueHandler.report();
-      if (result.created) {
-        workflow.logger.info('Workflow issue reported successfully');
+      const issueService = new Issue(params);
+      const templateService = new Template(params);
+      const labelService = new Label(params);
+      const fileService = new File(params);
+      if (workflow.config.get('issue.createLabels') === true && params.context.workflow === 'Chart') {
+        workflow.logger.warning('Set "createLabels: false" in config.js after initial setup, to optimize workflow performance.');
+      }
+      const templatePath = workflow.config.get('workflow.template');
+      const templateContent = await fileService.read(templatePath);
+      const issue = await issueService.report({ context: params.context, templateContent, templateService, labelService });
+      if (issue) {
+        workflow.logger.info('Successfully reported workflow issue');
+        return { created: true, issue };
       } else {
         workflow.logger.info('No workflow issues to report');
+        return { created: false };
       }
-      return result;
     } catch (error) {
-      throw workflow.errorHandler.handle(error, { operation: 'report workflow issue' });
+      workflow.errorHandler.handle(error, { operation: 'report workflow issue', fatal: false });
+      return { created: false, error: error.message };
     }
   }
 
@@ -136,7 +137,7 @@ class Workflow extends Action {
       await frontpageService.setTheme();
       workflow.logger.info('Build environment setup complete');
     } catch (error) {
-      throw workflow.errorHandler.handle(error, { operation: 'setup build environment' });
+      workflow.errorHandler.handle(error, { operation: 'setup build environment' });
     }
   }
 
@@ -149,7 +150,7 @@ class Workflow extends Action {
   static async updateCharts(params) {
     const workflow = new Workflow(params);
     try {
-      workflow.logger.info('Starting chart update process...');
+      workflow.logger.info('Starting the charts update process...');
       const chartHandler = new Chart({
         github: params.github,
         context: params.context,
@@ -158,10 +159,10 @@ class Workflow extends Action {
         config: params.config
       });
       const result = await chartHandler.process();
-      workflow.logger.info('Chart update process complete');
+      workflow.logger.info('Successfully completed the charts update process');
       return result;
     } catch (error) {
-      throw workflow.errorHandler.handle(error, { operation: 'update charts' });
+      workflow.errorHandler.handle(error, { operation: 'update charts' });
     }
   }
 
@@ -175,18 +176,12 @@ class Workflow extends Action {
     const workflow = new Workflow(params);
     try {
       workflow.logger.info('Updating repository issue labels...');
-      const issueHandler = new Issue({
-        github: params.github,
-        context: params.context,
-        core: params.core,
-        exec: params.exec,
-        config: params.config
-      });
-      const result = await issueHandler.updateLabels();
-      workflow.logger.info('Issue labels update complete');
+      const labelService = new Label(params);
+      const result = await labelService.update();
+      workflow.logger.info('Repository issue labels update complete');
       return result;
     } catch (error) {
-      throw workflow.errorHandler.handle(error, { operation: 'update issue labels' });
+      throw workflow.errorHandler.handle(error, { operation: 'update issue labels', fatal: false });
     }
   }
 }

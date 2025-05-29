@@ -9,9 +9,11 @@
 const path = require('path');
 const yaml = require('js-yaml');
 const Action = require('../../core/Action');
-const { File, Helm, GitHub, Template } = require('../');
+const File = require('../File');
+const GitHub = require('../github');
+const Helm = require('../helm');
 const Package = require('./Package');
-const { ReleaseError } = require('../../utils/errors');
+const Template = require('../Template');
 
 class Publish extends Action {
   /**
@@ -38,22 +40,14 @@ class Publish extends Action {
     return this.execute('authenticate to OCI registry', async () => {
       const config = this.config.get();
       const ociRegistry = config.repository.oci.registry;
-      this.logger.info('Authenticating to OCI registry...');
-      try {
-        await this.exec.exec('helm', ['registry', 'login', ociRegistry, '-u', this.context.repo.owner, '--password-stdin'], {
-          input: Buffer.from(process.env['INPUT_GITHUB-TOKEN']),
-          silent: true
-        });
-        this.logger.info('Successfully authenticated to OCI registry');
-        return true;
-      } catch (authError) {
-        this.errorHandler.handle(authError, {
-          operation: 'authenticate to OCI registry',
-          fatal: false
-        });
+      const username = this.context.repo.owner;
+      const password = process.env['INPUT_GITHUB-TOKEN'];
+      if (!password) {
+        this.logger.warning('GitHub token not available for OCI authentication');
         return false;
       }
-    });
+      return await this.helmService.login({ registry: ociRegistry, username, password });
+    }, false);
   }
 
   /**
@@ -88,27 +82,11 @@ class Publish extends Action {
       await this.fileService.writeFile(redirectPath, redirectHtml);
       return true;
     } catch (error) {
-      this.errorHandler.handle(error, {
+      this.actionError.handle(error, {
         operation: `generate index for '${chart.type}/${path.basename(chart.dir)}'`,
         fatal: false
       });
       return false;
-    }
-  }
-
-  /**
-   * Executes a publish operation with error handling
-   *
-   * @param {string} operation - Operation name
-   * @param {Function} action - Action to execute
-   * @param {Object} details - Additional error details
-   * @returns {Promise<any>} Operation result
-   */
-  async execute(operation, action, details) {
-    try {
-      return await action();
-    } catch (error) {
-      throw new ReleaseError(operation, error, details);
     }
   }
 
@@ -130,7 +108,7 @@ class Publish extends Action {
           type: type
         })));
       } catch (error) {
-        this.errorHandler.handle(error, {
+        this.actionError.handle(error, {
           operation: `list ${type} directory`,
           fatal: false
         });
@@ -167,7 +145,7 @@ class Publish extends Action {
             await this.fileService.createDirectory(outputDir);
             return await this.createIndex(chart, outputDir);
           } catch (error) {
-            this.errorHandler.handle(error, {
+            this.actionError.handle(error, {
               operation: `create output directory for ${chart.dir}`,
               fatal: false
             });
@@ -181,7 +159,7 @@ class Publish extends Action {
         }
         return successCount;
       } catch (error) {
-        this.errorHandler.handle(error, {
+        this.actionError.handle(error, {
           operation: 'generate chart indexes',
           fatal: false
         });
@@ -213,7 +191,7 @@ class Publish extends Action {
         Dependencies: (chart.metadata.dependencies || []).map(dependency => ({
           Name: dependency.name,
           Repository: dependency.repository,
-          Source: [this.context.payload.repository.html_url, 'blob', tagName, chart.type, chart.name, 'Chart.yaml'].join('/'),
+          Source: `${this.context.payload.repository.html_url}/blob/${tagName}/${chart.type}/${chart.name}/Chart.yaml`,
           Version: dependency.version
         })),
         Description: chart.metadata.description || '',
@@ -244,14 +222,13 @@ class Publish extends Action {
       }
       const config = this.config.get();
       const appType = config.repository.chart.type.application;
-      const libType = config.repository.chart.type.library;
       const word = packages.length === 1 ? 'release' : 'releases';
       this.logger.info(`Publishing ${packages.length} GitHub ${word}...`);
       const releases = [];
       for (const pkg of packages) {
         try {
           const { name, version } = this.packageService.parseInfo(pkg.source);
-          const type = pkg.type === libType ? 'library' : 'application';
+          const type = pkg.type === appType ? 'application' : 'library';
           const chartDir = path.join(config.repository.chart.type[type], name);
           const chartPath = path.join(packagesPath, pkg.type, pkg.source);
           const chartYamlPath = path.join(chartDir, 'Chart.yaml');
@@ -263,7 +240,7 @@ class Publish extends Action {
             metadata = yaml.load(chartYamlContent);
             this.logger.info(`Successfully loaded '${chartDir}' chart metadata`);
           } catch (error) {
-            this.errorHandler.handle(error, {
+            this.actionError.handle(error, {
               operation: `load '${chartDir}' chart metadata`,
               fatal: false
             });
@@ -290,7 +267,7 @@ class Publish extends Action {
             name: tagName,
             body
           });
-          const assetName = [chart.type, 'tgz'].join('.');
+          const assetName = `${chart.type}.tgz`;
           const assetData = await this.fileService.readFile(chart.path);
           await this.restService.uploadReleaseAsset({
             releaseId: release.id,
@@ -305,15 +282,15 @@ class Publish extends Action {
             releaseId: release.id
           });
         } catch (error) {
-          this.errorHandler.handle(error, {
+          this.actionError.handle(error, {
             operation: `process '${pkg.source}' package`,
             fatal: false
           });
         }
       }
       if (releases.length) {
-        const successWord = releases.length === 1 ? 'release' : 'releases';
-        this.logger.info(`Successfully published ${releases.length} GitHub ${successWord}`);
+        const keyword = releases.length === 1 ? 'release' : 'releases';
+        this.logger.info(`Successfully published ${releases.length} GitHub ${keyword}`);
       }
       return releases;
     }, { packagesCount: packages.length });
@@ -342,6 +319,25 @@ class Publish extends Action {
         this.logger.warning('OCI authentication failed, skipping OCI publishing');
         return [];
       }
+      this.logger.info('Cleaning up existing OCI packages...');
+      for (const pkg of packages) {
+        try {
+          const { name } = this.packageService.parseInfo(pkg.source);
+          const deleted = await this.restService.deleteOciPackage({
+            owner: this.context.repo.owner,
+            repo: this.context.repo.repo,
+            chart: { name, type: pkg.type }
+          });
+          if (deleted) {
+            this.logger.info(`Deleted existing OCI package for ${name}`);
+          }
+        } catch (error) {
+          this.actionError.handle(error, {
+            operation: `delete existing OCI package for ${pkg.source}`,
+            fatal: false
+          });
+        }
+      }
       const ociRegistry = config.repository.oci.registry;
       const word = packages.length === 1 ? 'package' : 'packages';
       this.logger.info(`Publishing ${packages.length} OCI ${word}...`);
@@ -350,7 +346,7 @@ class Publish extends Action {
         try {
           this.logger.info(`Publishing '${pkg.source}' chart package to OCI registry...`);
           const chartPath = path.join(packagesPath, pkg.type, pkg.source);
-          const registry = ['oci:/', ociRegistry, this.context.payload.repository.full_name, pkg.type].join('/');
+          const registry = `oci://${ociRegistry}/${this.context.payload.repository.full_name}/${pkg.type}`;
           await this.exec.exec('helm', ['push', chartPath, registry], { silent: true });
           const { name, version } = this.packageService.parseInfo(pkg.source);
           published.push({
@@ -360,7 +356,7 @@ class Publish extends Action {
             registry
           });
         } catch (error) {
-          this.errorHandler.handle(error, {
+          this.actionError.handle(error, {
             operation: `push '${pkg.source}' package`,
             fatal: false
           });

@@ -8,8 +8,10 @@
  */
 const path = require('path');
 const Action = require('../../core/Action');
+const File = require('../File');
+const Helm = require('../helm');
+const Shell = require('../Shell');
 const Update = require('./Update');
-const { File, Helm } = require('../');
 
 class Chart extends Action {
   /**
@@ -18,8 +20,8 @@ class Chart extends Action {
    * @returns {Promise<Object>} - Object containing application and library chart paths
    */
   async discover() {
-    const charts = { application: [], library: [], total: 0 };
-    try {
+    return this.execute('discover charts', async () => {
+      const charts = { application: [], library: [], total: 0 };
       const fileService = new File({
         github: this.github,
         context: this.context,
@@ -48,13 +50,8 @@ class Chart extends Action {
       }
       const word = charts.total === 1 ? 'chart' : 'charts';
       this.logger.info(`Discovered ${charts.total} ${word} in repository`);
-    } catch (error) {
-      this.errorHandler.handle(error, {
-        operation: 'discover charts',
-        fatal: false
-      });
-    }
-    return charts;
+      return charts;
+    }, false);
   }
 
   /**
@@ -64,8 +61,8 @@ class Chart extends Action {
    * @returns {Promise<Object>} - Object containing application and library chart paths
    */
   async find(files) {
-    const charts = { application: [], library: [], total: 0 };
-    try {
+    return this.execute('find modified charts', async () => {
+      const charts = { application: [], library: [], total: 0 };
       const fileService = new File({
         github: this.github,
         context: this.context,
@@ -87,47 +84,42 @@ class Chart extends Action {
         const word = charts.total === 1 ? 'chart' : 'charts';
         this.logger.info(`Found ${charts.total} modified ${word}`);
       }
-    } catch (error) {
-      this.errorHandler.handle(error, {
-        operation: 'find modified charts',
-        fatal: false
-      });
-    }
-    return charts;
+      return charts;
+    }, false);
   }
 
   /**
    * Lints multiple charts
    * 
-   * @param {Array<string>} charts - Chart directories to lint
+   * @param {Array<string>} charts - Charts to lint
    * @returns {Promise<boolean>} - True if all charts passed linting
    */
   async lint(charts) {
     if (!charts || !charts.length) return true;
-    this.logger.info(`Linting ${charts.length} charts`);
-    let success = true;
-    for (const chartDir of charts) {
-      const helmService = new Helm({
+    return this.execute('lint charts', async () => {
+      const word = charts.length === 1 ? 'chart' : 'charts';
+      this.logger.info(`Linting ${charts.length} ${word}...`);
+      const shellService = new Shell({
         github: this.github,
         context: this.context,
         core: this.core,
         exec: this.exec,
         config: this.config
       });
-      const result = await helmService.lint(chartDir, { strict: true });
-      if (!result) success = false;
-    }
-    return success;
+      await shellService.execute('ct', ['lint', '--charts', charts.join(','), '--skip-helm-dependencies']);
+      this.logger.info(`Successfully linted ${charts.length} ${word}`);
+      return true;
+    }, false);
   }
 
   /**
    * Validates a chart for release
    * 
-   * @param {string} chartDir - Chart directory
+   * @param {string} directory - Chart directory
    * @returns {Promise<boolean>} - True if validation passed
    */
-  async validate(chartDir) {
-    try {
+  async validate(directory) {
+    return this.execute('validate chart', async () => {
       const helmService = new Helm({
         github: this.github,
         context: this.context,
@@ -135,18 +127,11 @@ class Chart extends Action {
         exec: this.exec,
         config: this.config
       });
-      if (!await helmService.lint(chartDir, { strict: true })) {
+      if (!await helmService.lint(directory, { strict: true })) {
         return false;
       }
-      this.logger.info(`Chart validation passed for ${chartDir}`);
       return true;
-    } catch (error) {
-      this.errorHandler.handle(error, {
-        operation: `validate chart ${chartDir}`,
-        fatal: false
-      });
-      return false;
-    }
+    }, false);
   }
 }
 

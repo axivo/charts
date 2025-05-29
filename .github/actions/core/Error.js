@@ -1,21 +1,24 @@
 /**
  * Error handling class for standardized error management
  * 
- * @class ErrorHandler
- * @module utils/ErrorHandler
+ * @class ActionError
+ * @module core
  * @author AXIVO
  * @license BSD-3-Clause
  */
-const { AppError } = require('./errors');
 
-class ErrorHandler {
+class ActionError {
+  static handler = false;
+
   /**
-   * Creates a new ErrorHandler instance
+   * Creates a new ActionError instance
    * 
    * @param {Object} core - GitHub Actions Core API for logging
+   * @param {Object} config - Configuration instance
    */
-  constructor(core) {
+  constructor(core, config) {
     this.core = core;
+    this.config = config;
   }
 
   /**
@@ -62,7 +65,7 @@ class ErrorHandler {
   }
 
   /**
-   * Handles errors in a standardized way
+   * Reports errors in a standardized way
    * 
    * @param {Error} error - The error object that was caught
    * @param {Object} context - Error context information
@@ -74,18 +77,38 @@ class ErrorHandler {
    * @param {number} [context.col] - Related column number
    * @returns {string} - The formatted error message
    */
-  handle(error, context) {
+  report(error, context) {
     const errorInfo = this.extractErrorInfo(error, context);
     if (context.fatal !== false) {
       this.createAnnotation(errorInfo, 'error');
       this.core.setFailed(errorInfo.message);
-      throw new AppError(errorInfo);
     } else {
       this.createAnnotation(errorInfo, context.annotationType || 'warning');
       this.core.warning(errorInfo.message);
     }
     return errorInfo.message;
   }
+
+  /**
+   * Sets up global error handler for uncaught exceptions, unhandled rejections and warnings
+   */
+  setHandler() {
+    if (ActionError.handler) {
+      return;
+    }
+    ActionError.handler = true;
+    process.on('uncaughtException', (error) => {
+      console.error(error);
+      process.exit(1);
+    });
+    process.on('unhandledRejection', (reason) => {
+      console.error('Unhandled promise rejection:', reason);
+      process.exit(1);
+    });
+    process.on('warning', (warning) => {
+      console.warn(warning.stack);
+    });
+  }
 }
 
-module.exports = ErrorHandler;
+module.exports = ActionError;

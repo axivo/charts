@@ -8,8 +8,8 @@
  */
 const path = require('path');
 const Action = require('../../core/Action');
-const { File, Helm } = require('../');
-const { ReleaseError } = require('../../utils/errors');
+const File = require('../File');
+const Helm = require('../helm');
 
 class Package extends Action {
   /**
@@ -50,22 +50,6 @@ class Package extends Action {
   }
 
   /**
-   * Executes a package operation with error handling
-   *
-   * @param {string} operation - Operation name
-   * @param {Function} action - Action to execute
-   * @param {Object} details - Additional error details
-   * @returns {Promise<any>} Operation result
-   */
-  async execute(operation, action, details) {
-    try {
-      return await action();
-    } catch (error) {
-      throw new ReleaseError(operation, error, details);
-    }
-  }
-
-  /**
    * Gets packaged charts from the package directory
    * 
    * @param {string} directory - Path to packages directory
@@ -89,7 +73,7 @@ class Package extends Action {
             );
           }
         } catch (error) {
-          this.errorHandler.handle(error, {
+          this.actionError.handle(error, {
             operation: `read ${type} packages directory`,
             fatal: false
           });
@@ -130,7 +114,7 @@ class Package extends Action {
             type: isAppChartType ? 'application' : 'library'
           };
         } catch (error) {
-          this.errorHandler.handle(error, {
+          this.actionError.handle(error, {
             operation: `package ${chartDir} chart`,
             fatal: false
           });
