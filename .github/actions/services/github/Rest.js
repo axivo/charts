@@ -295,6 +295,8 @@ class Rest extends Api {
             data.forEach(file => { updatedMap[file.filename] = file.status; });
             return updatedMap;
           });
+        case 'workflow_dispatch':
+          return fileMap;
         default:
           const response = await this.execute('compareCommits', async () => {
             return await this.github.rest.repos.compareCommits({
