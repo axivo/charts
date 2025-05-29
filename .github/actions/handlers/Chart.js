@@ -35,7 +35,7 @@ class Chart extends Action {
       const files = Object.keys(await this.githubService.getUpdatedFiles({ context: this.context }));
       const charts = await this.chartService.find(files);
       if (charts.total === 0) {
-        this.logger.info('No charts found');
+        this.logger.info('No chart updates found');
         return { charts: 0, updated: 0 };
       }
       const allCharts = [...charts.application, ...charts.library];
