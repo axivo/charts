@@ -424,6 +424,8 @@ class Rest extends Api {
           return { valid: false, reason: 'missing_pull_request_data' };
         }
         break;
+      case 'workflow_dispatch':
+        break;
       default:
         if (!context.payload.before || !context.payload.after) {
           this.logger.warning('Commit data missing from context');
