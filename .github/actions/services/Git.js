@@ -258,13 +258,14 @@ class Git extends Action {
         return { updated: 0 };
       }
       await this.graphqlService.createSignedCommit({
-        owner: this.context.repo.owner,
-        repo: this.context.repo.repo,
-        branchName: headRef,
-        expectedHeadOid: currentHead,
-        additions,
-        deletions,
-        commitMessage: message
+        context: this.context,
+        commit: {
+          branch: headRef,
+          oid: currentHead,
+          additions,
+          deletions,
+          message
+        }
       });
       this.logger.info(`Successfully committed ${files.length} ${word}`);
       return { updated: files.length };

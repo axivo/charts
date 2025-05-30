@@ -7,6 +7,7 @@
  * @license BSD-3-Clause
  */
 const Action = require('../core/Action');
+const Rest = require('./github/Rest');
 
 class Issue extends Action {
   /**
@@ -27,8 +28,34 @@ class Issue extends Action {
    */
   async #validate(context) {
     try {
-      return false;
+      let hasFailures = false;
+      const restService = new Rest({
+        github: this.github,
+        context: context,
+        core: this.core,
+        exec: this.exec,
+        config: this.config
+      });
+      const jobs = await restService.listJobs(context);
+      for (const job of jobs) {
+        if (job.steps) {
+          const failedSteps = job.steps.filter(step => step.conclusion !== 'success');
+          if (failedSteps.length) {
+            hasFailures = true;
+            break;
+          }
+        }
+      }
+      const logsResponse = await this.github.rest.actions.downloadWorkflowRunLogs({
+        owner: context.repo.owner,
+        repo: context.repo.repo,
+        run_id: parseInt(context.runId, 10)
+      });
+      const regex = /(^|:)warning:/i;
+      const hasWarnings = regex.test(logsResponse.data);
+      return hasFailures || hasWarnings;
     } catch (error) {
+      if (error.status === 404) return false;
       this.actionError.handle(error, {
         operation: 'validate workflow status',
         fatal: false
