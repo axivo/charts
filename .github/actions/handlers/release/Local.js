@@ -45,10 +45,9 @@ class Local extends Action {
         deleted: charts.deleted.length
       };
       let packages = [];
-      if (charts.total > 0) {
+      if (charts.total) {
         const packaged = await this.packageService.package(charts);
-        const config = this.config.get();
-        const packagesDir = config.repository.release.packages;
+        const packagesDir = this.config.get('repository.release.packages');
         packages = await this.packageService.get(packagesDir);
       }
       if (charts.deleted.length) {

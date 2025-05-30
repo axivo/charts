@@ -36,9 +36,20 @@ class Release extends Action {
       this.logger.info(`Deleting ${files.length} chart ${word}...`);
       const results = await Promise.all(files.map(async (filePath) => {
         try {
+          const appType = this.config.get('repository.chart.type.application');
           const chartPath = path.dirname(filePath);
-          const chart = path.basename(chartPath);
-          await this.githubService.deleteReleases(chart);
+          const type = chartPath.startsWith(appType) ? 'application' : 'library';
+          const name = path.basename(chartPath);
+          if (this.config.get('repository.chart.packages.enabled')) {
+            await this.githubService.deleteReleases(name);
+          }
+          if (this.config.get('repository.oci.packages.enabled')) {
+            await this.githubService.deleteOciPackage({
+              owner: this.context.repo.owner,
+              repo: this.context.repo.repo,
+              chart: { name, type }
+            });
+          }
           return true;
         } catch (error) {
           this.actionError.handle(error, {

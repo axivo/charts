@@ -29,12 +29,9 @@ class Chart extends Action {
         exec: this.exec,
         config: this.config
       });
-      const config = this.config.get();
-      const appType = config.repository.chart.type.application;
-      const libType = config.repository.chart.type.library;
       const types = [
-        { name: 'application', path: appType },
-        { name: 'library', path: libType }
+        { name: 'application', path: this.config.get('repository.chart.type.application') },
+        { name: 'library', path: this.config.get('repository.chart.type.library') }
       ];
       for (const type of types) {
         const dirs = await fileService.listDir(type.path);

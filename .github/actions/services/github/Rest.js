@@ -345,6 +345,38 @@ class Rest extends Api {
   }
 
   /**
+   * Lists jobs for a workflow run
+   * 
+   * @param {Object} context - GitHub Actions context
+   * @param {number} context.runId - Workflow run ID
+   * @param {Object} context.repo - Repository information
+   * @param {string} context.repo.owner - Repository owner
+   * @param {string} context.repo.repo - Repository name
+   * @returns {Promise<Array<Object>>} - Array of job objects with steps
+   */
+  async listJobs(context) {
+    const result = [];
+    try {
+      const response = await this.execute('listJobs', async () => {
+        return await this.github.rest.actions.listJobsForWorkflowRun({
+          owner: context.repo.owner,
+          repo: context.repo.repo,
+          run_id: context.runId
+        });
+      });
+      if (response?.data?.jobs) result.push(...response.data.jobs);
+      return result;
+    } catch (error) {
+      if (error.status === 404) return result;
+      this.actionError.handle(error, {
+        operation: 'list jobs',
+        fatal: false
+      });
+      return result;
+    }
+  }
+
+  /**
    * Paginates through REST API results
    * 
    * @param {string} namespace - REST API namespace (e.g., 'repos', 'pulls')

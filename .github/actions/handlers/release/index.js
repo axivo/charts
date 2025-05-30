@@ -44,24 +44,19 @@ class Release extends Action {
         deleted: charts.deleted.length
       };
       let packages = [];
-      if (charts.total > 0) {
+      const packagesDir = this.config.get('repository.release.packages');
+      if (charts.total) {
         await this.packageService.package(charts);
-        const config = this.config.get();
-        const packagesDir = config.repository.release.packages;
         packages = await this.packageService.get(packagesDir);
       }
-      if (charts.deleted.length) {
-        await this.releaseService.delete(charts.deleted);
-      }
-      const config = this.config.get();
-      const packagesDir = config.repository.release.packages;
-      if (packages.length > 0) {
+      if (charts.deleted.length) await this.releaseService.delete(charts.deleted);
+      if (packages.length) {
         const releases = await this.publishService.github(packages, packagesDir);
         result.published = releases.length;
-        if (config.repository.chart.packages.enabled) {
+        if (this.config.get('repository.chart.packages.enabled')) {
           await this.publishService.generateIndexes();
         }
-        if (config.repository.oci.packages.enabled) {
+        if (this.config.get('repository.oci.packages.enabled')) {
           await this.publishService.oci(packages, packagesDir);
         }
       } else {
