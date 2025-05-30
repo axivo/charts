@@ -176,7 +176,14 @@ class Publish extends Action {
       const releaseTemplate = this.config.get('repository.release.template');
       await this.fileService.validateFile(releaseTemplate);
       const templateContent = await this.fileService.readFile(releaseTemplate);
-      const issues = await this.graphqlService.getReleaseIssues(chart);
+      const issues = await this.graphqlService.getReleaseIssues({
+        context: this.context,
+        chart: {
+          name: chart.name,
+          type: chart.type
+        },
+        since: chart.since
+      });
       const tagName = this.config.get('repository.release.title')
         .replace('{{ .Name }}', chart.name)
         .replace('{{ .Version }}', chart.version);

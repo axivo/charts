@@ -315,11 +315,6 @@ The functionality has been fully migrated and is now operational:
 New classes/methods:
 - Rest.createRelease() - Primary implementation with enhanced parameter structure
 - Publish.github() - Integrates createRelease for chart publishing workflow
-**SEARCH VERIFICATION COMPLETED:**
-✅ Searched all 47 files in /Users/floren/github/charts/.github/actions/
-✅ Found these related methods: Rest.createRelease(), Publish.github(), Rest.getReleaseByTag(), Rest.uploadReleaseAsset(), GraphQL.getReleases(), Template.render()
-✅ Confirmed no duplicate functionality exists
-✅ Verified no similar implementations present
 **EXISTING METHODS ANALYSIS:**
 - Rest.createRelease(): Full GitHub release creation with enhanced parameter structure (owner, repo, tag, name, body, draft, prerelease)
 - Publish.github(): Uses Rest.createRelease() internally for chart release publishing with template rendering
@@ -350,10 +345,40 @@ The functionality has been fully migrated and is operational:
 
 #### createSignedCommit
 New classes/methods:
-- GraphQL.createSignedCommit()
-Status: Needs Review
+- GraphQL.createSignedCommit() - Primary signed commit implementation via GitHub GraphQL API
+- Git.signedCommit() - High-level wrapper that uses GraphQL.createSignedCommit() internally
+- Chart.Update.#commit() - Uses Git.signedCommit() for chart file commits
+**EXISTING METHODS ANALYSIS:**
+- GraphQL.createSignedCommit(): Full GitHub GraphQL signed commit with file changes (additions/deletions arrays), branch targeting, expected HEAD OID validation
+- Git.signedCommit(): High-level interface that handles staging, fetching, switching branches, and calls GraphQL.createSignedCommit()
+- Chart.Update.#commit(): Calls Git.signedCommit() for chart file commits with proper commit messages
+**CONCLUSION:** Based on complete search, functionality is fully present and operational
+Status: ✅ **COMPLETE** - Signed commit functionality fully migrated with architectural improvements
 Technical Details:
-Needs Review
+The functionality has been fully migrated and is operational:
+**MIGRATION COMPLETE:**
+1. ✅ **Full API compatibility** - Same GitHub GraphQL API calls (createCommitOnBranch mutation)
+2. ✅ **Enhanced parameter structure** - Uses {context, commit: {branch, oid, additions, deletions, message}}
+3. ✅ **Improved error handling** - Uses execute() pattern with proper error context and typed errors
+4. ✅ **Active integration** - Used by Git.signedCommit() and Chart update operations
+5. ✅ **Standardized returns** - Returns {url, oid} object structure
+**ARCHITECTURAL IMPROVEMENTS:**
+- Object-oriented design with GraphQL service separation
+- Better integration with Git operations (fetch, switch, staging)
+- Enhanced error reporting with operation context
+- Seamless integration into chart update workflow
+**FUNCTIONALITY MAPPING:**
+- OLD: createSignedCommit({github, context, core, owner, repo, branchName, expectedHeadOid, additions, deletions, commitMessage})
+- NEW: GraphQL.createSignedCommit({context, commit: {branch, oid, additions, deletions, message}})
+- Integration: Git.signedCommit(branch, files, message) -> handles staging and calls GraphQL service
+**IMPLEMENTATION UPDATED:**
+✅ **Parameter structure corrected** - Now uses {context, commit} pattern consistent with Rest.js methods
+✅ **Consistent codebase patterns** - Follows same {context, dataObject} structure as all Rest API methods
+✅ **Enhanced maintainability** - Grouped commit parameters into logical object structure
+✅ **Try-catch error handling added** - Proper error handling with specific operation context
+✅ **Query formatting improved** - Uses standard multi-line GraphQL query format
+✅ **Removed unnecessary abstraction** - Eliminated getPath() method, uses direct template literals
+✅ **Enhanced error logging** - Specific error messages with branch context for better debugging
 
 #### deleteOciPackage
 New classes/methods:

@@ -320,11 +320,11 @@ class Rest extends Api {
    * @returns {Promise<Object>} - Map of files to their statuses
    */
   async getUpdatedFiles({ context }) {
-    const fileMap = {};
+    const result = {};
     try {
-      const result = this.validateContextPayload(context);
-      if (!result.valid) return fileMap;
-      const eventName = result.eventName;
+      const payload = this.validateContextPayload(context);
+      if (!payload.valid) return result;
+      const eventName = payload.eventName;
       switch (eventName) {
         case 'pull_request':
           return await this.paginate('pulls', 'listFiles', {
@@ -345,16 +345,16 @@ class Rest extends Api {
               head: context.payload.after
             });
           });
-          response.data.files.forEach(file => { fileMap[file.filename] = file.status; });
-          this.logger.info(`Found ${Object.keys(fileMap).length} files in ${eventName} event`);
-          return fileMap;
+          response.data.files.forEach(file => { result[file.filename] = file.status; });
+          this.logger.info(`Found ${Object.keys(result).length} files in ${eventName} event`);
+          return result;
       }
     } catch (error) {
       this.actionError.handle(error, {
         operation: 'get updated files',
         fatal: false
       });
-      return fileMap;
+      return result;
     }
   }
 
