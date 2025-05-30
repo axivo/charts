@@ -34,9 +34,9 @@ class Local extends Action {
     return this.execute('process local releases', async () => {
       this.logger.info('Starting local chart release process...');
       const files = await this.githubService.getUpdatedFiles();
-      const charts = await this.releaseService.find(files);
+      const charts = await this.releaseService.find({ files });
       if (!charts.total && !charts.deleted.length) {
-        this.logger.info(`No ${charts.word} chart releases found`);
+        this.logger.info('No chart releases found');
         return { processed: 0, published: 0 };
       }
       const result = {
@@ -51,7 +51,10 @@ class Local extends Action {
         packages = await this.packageService.get(packagesDir);
       }
       if (charts.deleted.length) {
-        await this.releaseService.delete(charts.deleted);
+        await this.releaseService.delete({ 
+          context: this.context, 
+          files: charts.deleted 
+        });
       }
       this.logger.info('Successfully completed the local chart release process');
       return result;

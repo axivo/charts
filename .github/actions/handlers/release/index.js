@@ -33,9 +33,9 @@ class Release extends Action {
     return this.execute('process releases', async () => {
       this.logger.info('Starting chart release process...');
       const files = await this.githubService.getUpdatedFiles({ context: this.context });
-      const charts = await this.releaseService.find(files);
+      const charts = await this.releaseService.find({ files });
       if (!charts.total && !charts.deleted.length) {
-        this.logger.info(`No ${charts.word} chart releases found`);
+        this.logger.info('No chart releases found');
         return { processed: 0, published: 0 };
       }
       const result = {
@@ -49,7 +49,10 @@ class Release extends Action {
         await this.packageService.package(charts);
         packages = await this.packageService.get(packagesDir);
       }
-      if (charts.deleted.length) await this.releaseService.delete(charts.deleted);
+      if (charts.deleted.length) await this.releaseService.delete({ 
+        context: this.context, 
+        files: charts.deleted 
+      });
       if (packages.length) {
         const releases = await this.publishService.github(packages, packagesDir);
         result.published = releases.length;
