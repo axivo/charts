@@ -24,14 +24,15 @@ class Rest extends Api {
   /**
   * Gets all release IDs for a specific chart
   *
-  * @param {string} chart - Chart name to filter releases
   * @param {Object} context - GitHub Actions context
+  * @param {string} chart - Chart name to filter releases
   * @returns {Promise<Array<Object>>} - Array of release objects
   */
-  async #getReleaseIds(chart, context) {
+  async #getReleaseIds(context, chart) {
+    let result = [];
     try {
       this.logger.info(`Getting release IDs for '${chart}' chart...`);
-      const releases = await this.execute('listReleases', async () => {
+      result = await this.execute('listReleases', async () => {
         return await this.paginate('repos', 'listReleases', {
           owner: context.repo.owner,
           repo: context.repo.repo
@@ -45,15 +46,15 @@ class Rest extends Api {
           })));
         });
       });
-      const word = releases.length === 1 ? 'release' : 'releases';
-      this.logger.info(`Found ${releases.length} ${word} for '${chart}' chart`);
-      return releases;
+      const word = result.length === 1 ? 'release' : 'releases';
+      this.logger.info(`Found ${result.length} ${word} for '${chart}' chart`);
+      return result;
     } catch (error) {
       this.actionError.handle(error, {
         operation: 'get release IDs',
         fatal: false
       });
-      return [];
+      return result;
     }
   }
 
@@ -193,8 +194,7 @@ class Rest extends Api {
     let result = 0;
     try {
       this.logger.info(`Deleting releases for ${chart} chart...`);
-      const releases = await this.#getReleaseIds(chart, context);
-      let deletedCount = 0;
+      const releases = await this.#getReleaseIds(context, chart);
       for (const release of releases) {
         try {
           await this.execute('deleteRelease', async () => {
@@ -211,7 +211,7 @@ class Rest extends Api {
               ref: `tags/${release.tagName}`
             });
           });
-          deletedCount++;
+          result++;
         } catch (error) {
           this.actionError.handle(error, {
             operation: `delete '${release.tagName}' release`,
@@ -219,9 +219,9 @@ class Rest extends Api {
           });
         }
       }
-      const word = deletedCount === 1 ? 'release' : 'releases';
-      this.logger.info(`Successfully deleted ${deletedCount} ${word} for ${chart} chart`);
-      return deletedCount;
+      const word = result === 1 ? 'release' : 'releases';
+      this.logger.info(`Successfully deleted ${result} ${word} for ${chart} chart`);
+      return result;
     } catch (error) {
       this.actionError.handle(error, {
         operation: `delete releases for '${chart}' chart`,
@@ -320,7 +320,7 @@ class Rest extends Api {
    * @returns {Promise<Object>} - Map of files to their statuses
    */
   async getUpdatedFiles({ context }) {
-    const result = {};
+    let result = {};
     try {
       const payload = this.validateContextPayload(context);
       if (!payload.valid) return result;
@@ -332,9 +332,9 @@ class Rest extends Api {
             repo: context.repo.repo,
             pull_number: context.payload.pull_request.number
           }, (data, currentMap = {}) => {
-            const updatedMap = { ...currentMap };
-            data.forEach(file => { updatedMap[file.filename] = file.status; });
-            return updatedMap;
+            result = { ...currentMap };
+            data.forEach(file => { result[file.filename] = file.status; });
+            return result;
           });
         default:
           const response = await this.execute('compareCommits', async () => {
