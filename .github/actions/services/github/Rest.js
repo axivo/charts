@@ -25,15 +25,16 @@ class Rest extends Api {
   * Gets all release IDs for a specific chart
   *
   * @param {string} chart - Chart name to filter releases
+  * @param {Object} context - GitHub Actions context
   * @returns {Promise<Array<Object>>} - Array of release objects
   */
-  async #getReleaseIds(chart) {
+  async #getReleaseIds(chart, context) {
     try {
       this.logger.info(`Getting release IDs for '${chart}' chart...`);
       const releases = await this.execute('listReleases', async () => {
         return await this.paginate('repos', 'listReleases', {
-          owner: this.context.repo.owner,
-          repo: this.context.repo.repo
+          owner: context.repo.owner,
+          repo: context.repo.repo
         }, (data, currentResults = []) => {
           const filteredReleases = data.filter(release =>
             release.tag_name.startsWith(`${chart}-`)
@@ -60,85 +61,106 @@ class Rest extends Api {
   * Creates a label in a repository
   *
   * @param {Object} params - Function parameters
-  * @param {string} params.owner - Repository owner
-  * @param {string} params.repo - Repository name
-  * @param {string} params.name - Label name
-  * @param {string} params.color - Label color (hex without #)
-  * @param {string} params.description - Label description
+  * @param {Object} params.context - GitHub Actions context
+  * @param {Object} params.label - Label configuration
+  * @param {string} params.label.name - Label name
+  * @param {string} params.label.color - Label color (hex without #)
+  * @param {string} params.label.description - Label description
   * @returns {Promise<Object>} - Created label
   */
-  async createLabel({ owner, repo, name, color, description }) {
-    const response = await this.execute('createLabel', async () => {
-      return await this.github.rest.issues.createLabel({
-        owner,
-        repo,
-        name,
-        color,
-        description
+  async createLabel({ context, label }) {
+    let result = {};
+    const { name, color, description } = label;
+    try {
+      const response = await this.execute('createLabel', async () => {
+        return await this.github.rest.issues.createLabel({
+          owner: context.repo.owner,
+          repo: context.repo.repo,
+          name,
+          color,
+          description
+        });
       });
-    });
-    this.logger.info(`Successfully created '${name}' label`);
-    return {
-      id: response.data.id,
-      name: response.data.name,
-      color: response.data.color,
-      description: response.data.description
-    };
+      this.logger.info(`Successfully created '${name}' label`);
+      result = {
+        id: response.data.id,
+        name: response.data.name,
+        color: response.data.color,
+        description: response.data.description
+      };
+      return result;
+    } catch (error) {
+      this.actionError.handle(error, {
+        operation: `create '${name}' label`,
+        fatal: false
+      });
+      return result;
+    }
   }
 
   /**
   * Creates a GitHub release
   *
   * @param {Object} params - Function parameters
-  * @param {string} params.owner - Repository owner
-  * @param {string} params.repo - Repository name
-  * @param {string} params.tag - Release tag
-  * @param {string} params.name - Release name
-  * @param {string} params.body - Release body
-  * @param {boolean} params.draft - Whether the release is a draft
-  * @param {boolean} params.prerelease - Whether the release is a prerelease
+  * @param {Object} params.context - GitHub Actions context
+  * @param {Object} params.release - Release configuration
+  * @param {string} params.release.tag - Release tag
+  * @param {string} params.release.name - Release name
+  * @param {string} params.release.body - Release body
+  * @param {boolean} [params.release.draft=false] - Whether the release is a draft
+  * @param {boolean} [params.release.prerelease=false] - Whether the release is a prerelease
   * @returns {Promise<Object>} - Created release
   */
-  async createRelease({ owner, repo, tag, name, body, draft = false, prerelease = false }) {
-    const response = await this.execute('createRelease', async () => {
-      return await this.github.rest.repos.createRelease({
-        owner,
-        repo,
-        tag_name: tag,
-        name,
-        body,
-        draft,
-        prerelease
+  async createRelease({ context, release }) {
+    let result = {};
+    const { tag, name, body, draft = false, prerelease = false } = release;
+    try {
+      const response = await this.execute('createRelease', async () => {
+        return await this.github.rest.repos.createRelease({
+          owner: context.repo.owner,
+          repo: context.repo.repo,
+          tag_name: tag,
+          name,
+          body,
+          draft,
+          prerelease
+        });
       });
-    });
-    this.logger.info(`Successfully created '${response.data.name}' release`);
-    return {
-      id: response.data.id,
-      htmlUrl: response.data.html_url,
-      uploadUrl: response.data.upload_url,
-      tagName: response.data.tag_name,
-      name: response.data.name
-    };
+      this.logger.info(`Successfully created '${response.data.name}' release`);
+      result = {
+        id: response.data.id,
+        htmlUrl: response.data.html_url,
+        uploadUrl: response.data.upload_url,
+        tagName: response.data.tag_name,
+        name: response.data.name
+      };
+      return result;
+    } catch (error) {
+      this.actionError.handle(error, {
+        operation: `create '${name}' release`,
+        fatal: true
+      });
+      return result;
+    }
   }
 
   /**
   * Deletes OCI package from GitHub Container Registry
   * 
   * @param {Object} params - Function parameters
-  * @param {string} params.owner - Repository owner
-  * @param {string} params.repo - Repository name
+  * @param {Object} params.context - GitHub Actions context
   * @param {Object} params.chart - Chart object
   * @param {string} params.chart.name - Chart name
   * @param {string} params.chart.type - Chart type (application/library)
    * @returns {Promise<boolean>} - True if deletion succeeded
    */
-  async deleteOciPackage({ owner, repo, chart }) {
+  async deleteOciPackage({ context, chart }) {
     const chartName = `${chart.type}/${chart.name}`;
     try {
       this.logger.info(`Deleting OCI package for '${chartName}' chart...`);
-      const ownerType = await this.graphqlService.getRepositoryType(owner);
-      const packageName = `${repo}/${chartName}`;
-      const ownerParam = ownerType === 'organization' ? { org: owner } : { username: owner };
+      const ownerType = await this.graphqlService.getRepositoryType(context.repo.owner);
+      const packageName = `${context.repo.repo}/${chartName}`;
+      const ownerParam = ownerType === 'organization' ? { org: context.repo.owner } : { username: context.repo.owner };
       const methodName = ownerType === 'organization' ? 'deletePackageForOrg' : 'deletePackageForUser';
       await this.execute('deleteOciPackage', async () => {
         return await this.github.rest.packages[methodName]({
@@ -150,10 +172,7 @@ class Rest extends Api {
       this.logger.info(`Successfully deleted '${packageName}' OCI package`);
       return true;
     } catch (error) {
-      if (error.status === 404) {
-        this.logger.info(`OCI package not found for '${chartName}' chart`);
-        return false;
-      }
+      if (error.status === 404) return false;
       this.actionError.handle(error, {
         operation: `delete OCI package for '${chartName}' chart`,
         fatal: false
@@ -165,27 +184,30 @@ class Rest extends Api {
   /**
    * Deletes all releases for a specific chart
    *
-   * @param {string} chart - Chart name to delete releases for
+   * @param {Object} params - Function parameters
+   * @param {Object} params.context - GitHub Actions context
+   * @param {string} params.chart - Chart name to delete releases for
    * @returns {Promise<number>} - Count of deleted releases
    */
-  async deleteReleases(chart) {
+  async deleteReleases({ context, chart }) {
+    let result = 0;
     try {
       this.logger.info(`Deleting releases for ${chart} chart...`);
-      const releases = await this.#getReleaseIds(chart);
+      const releases = await this.#getReleaseIds(chart, context);
       let deletedCount = 0;
       for (const release of releases) {
         try {
           await this.execute('deleteRelease', async () => {
             return await this.github.rest.repos.deleteRelease({
-              owner: this.context.repo.owner,
-              repo: this.context.repo.repo,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
               release_id: release.id
             });
           });
           await this.execute('deleteRef', async () => {
             return await this.github.rest.git.deleteRef({
-              owner: this.context.repo.owner,
-              repo: this.context.repo.repo,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
               ref: `tags/${release.tagName}`
             });
           });
@@ -202,9 +224,10 @@ class Rest extends Api {
       return deletedCount;
     } catch (error) {
       this.actionError.handle(error, {
-        operation: 'delete releases',
-        fatal: true
+        operation: `delete releases for '${chart}' chart`,
+        fatal: false
       });
+      return result;
     }
   }
 
@@ -212,63 +235,81 @@ class Rest extends Api {
   * Gets a label from a repository
   *
   * @param {Object} params - Function parameters
-  * @param {string} params.owner - Repository owner
-  * @param {string} params.repo - Repository name
+  * @param {Object} params.context - GitHub Actions context
   * @param {string} params.name - Label name
   * @returns {Promise<Object|null>} - Label or null if not found
   */
-  async getLabel({ owner, repo, name }) {
-    const response = await this.execute('getLabel', async () => {
-      return await this.github.rest.issues.getLabel({
-        owner,
-        repo,
-        name
+  async getLabel({ context, name }) {
+    let result = null;
+    try {
+      const response = await this.execute('getLabel', async () => {
+        return await this.github.rest.issues.getLabel({
+          owner: context.repo.owner,
+          repo: context.repo.repo,
+          name
+        });
+      }, false);
+      if (!response) {
+        this.logger.info(`Label '${name}' not found`);
+        return result;
+      }
+      result = {
+        id: response.data.id,
+        name: response.data.name,
+        color: response.data.color,
+        description: response.data.description
+      };
+      return result;
+    } catch (error) {
+      this.actionError.handle(error, {
+        operation: `get '${name}' label`,
+        fatal: false
       });
-    }, false);
-    if (!response) {
-      this.logger.info(`Label '${name}' not found`);
-      return null;
+      return result;
     }
-    return {
-      id: response.data.id,
-      name: response.data.name,
-      color: response.data.color,
-      description: response.data.description
-    };
   }
 
   /**
    * Gets a release by tag
    *
    * @param {Object} params - Function parameters
-   * @param {string} params.owner - Repository owner
-   * @param {string} params.repo - Repository name
+   * @param {Object} params.context - GitHub Actions context
    * @param {string} params.tag - Release tag
    * @returns {Promise<Object|null>} - Release or null if not found
    */
-  async getReleaseByTag({ owner, repo, tag }) {
-    const response = await this.execute('getReleaseByTag', async () => {
-      return await this.github.rest.repos.getReleaseByTag({
-        owner,
-        repo,
-        tag
+  async getReleaseByTag({ context, tag }) {
+    let result = null;
+    try {
+      const response = await this.execute('getReleaseByTag', async () => {
+        return await this.github.rest.repos.getReleaseByTag({
+          owner: context.repo.owner,
+          repo: context.repo.repo,
+          tag
+        });
+      }, false);
+      if (!response) {
+        this.logger.info(`Release with '${tag}' tag not found`);
+        return result;
+      }
+      result = {
+        id: response.data.id,
+        htmlUrl: response.data.html_url,
+        uploadUrl: response.data.upload_url,
+        tagName: response.data.tag_name,
+        name: response.data.name,
+        body: response.data.body,
+        createdAt: response.data.created_at,
+        draft: response.data.draft,
+        prerelease: response.data.prerelease
+      };
+      return result;
+    } catch (error) {
+      this.actionError.handle(error, {
+        operation: `get release by '${tag}' tag`,
+        fatal: false
       });
-    }, false);
-    if (!response) {
-      this.logger.info(`Release with '${tag}' tag not found`);
-      return null;
+      return result;
     }
-    return {
-      id: response.data.id,
-      htmlUrl: response.data.html_url,
-      uploadUrl: response.data.upload_url,
-      tagName: response.data.tag_name,
-      name: response.data.name,
-      body: response.data.body,
-      createdAt: response.data.created_at,
-      draft: response.data.draft,
-      prerelease: response.data.prerelease
-    };
   }
 
   /**
@@ -321,27 +362,36 @@ class Rest extends Api {
    * Gets workflow run data
    * 
    * @param {Object} params - Function parameters
-   * @param {string} params.owner - Repository owner
-   * @param {string} params.repo - Repository name
-   * @param {number} params.runId - Workflow run ID
+   * @param {Object} params.context - GitHub Actions context
+   * @param {number} params.id - Workflow run ID
    * @returns {Promise<Object>} - Workflow run data
    */
-  async getWorkflowRun({ owner, repo, runId }) {
-    const response = await this.execute('getWorkflowRun', async () => {
-      return await this.github.rest.actions.getWorkflowRun({
-        owner,
-        repo,
-        run_id: runId
+  async getWorkflowRun({ context, id }) {
+    let result = {};
+    try {
+      const response = await this.execute('getWorkflowRun', async () => {
+        return await this.github.rest.actions.getWorkflowRun({
+          owner: context.repo.owner,
+          repo: context.repo.repo,
+          run_id: id
+        });
       });
-    });
-    return {
-      id: response.data.id,
-      status: response.data.status,
-      conclusion: response.data.conclusion,
-      url: response.data.html_url,
-      createdAt: response.data.created_at,
-      updatedAt: response.data.updated_at
-    };
+      result = {
+        id: response.data.id,
+        status: response.data.status,
+        conclusion: response.data.conclusion,
+        url: response.data.html_url,
+        createdAt: response.data.created_at,
+        updatedAt: response.data.updated_at
+      };
+      return result;
+    } catch (error) {
+      this.actionError.handle(error, {
+        operation: `get workflow run '${id}' ID`,
+        fatal: false
+      });
+      return result;
+    }
   }
 
   /**
@@ -410,35 +460,47 @@ class Rest extends Api {
    * Uploads an asset to a release
    * 
    * @param {Object} params - Function parameters
-   * @param {string} params.owner - Repository owner
-   * @param {string} params.repo - Repository name
-   * @param {number} params.releaseId - Release ID
-   * @param {string} params.assetPath - Path to asset file
-   * @param {string} params.assetName - Asset name
-   * @param {string} params.contentType - Asset content type
+   * @param {Object} params.context - GitHub Actions context
+   * @param {Object} params.asset - Asset configuration
+   * @param {number} params.asset.releaseId - Release ID
+   * @param {string} [params.asset.assetPath] - Path to asset file
+   * @param {Buffer|string} [params.asset.assetData] - Asset data (alternative to assetPath)
+   * @param {string} params.asset.assetName - Asset name
+   * @param {string} [params.asset.contentType] - Asset content type
    * @returns {Promise<Object>} - Uploaded asset
    */
-  async uploadReleaseAsset({ owner, repo, releaseId, assetPath, assetName, contentType }) {
-    const data = fs.readFileSync(assetPath);
-    const response = await this.execute('uploadReleaseAsset', async () => {
-      return await this.github.rest.repos.uploadReleaseAsset({
-        owner,
-        repo,
-        release_id: releaseId,
-        name: assetName,
-        data,
-        headers: {
-          'content-type': contentType || 'application/octet-stream',
-          'content-length': data.length
-        }
+  async uploadReleaseAsset({ context, asset }) {
+    let result = {};
+    const { releaseId, assetPath, assetData, assetName, contentType } = asset;
+    try {
+      const data = assetData || fs.readFileSync(assetPath);
+      const response = await this.execute('uploadReleaseAsset', async () => {
+        return await this.github.rest.repos.uploadReleaseAsset({
+          owner: context.repo.owner,
+          repo: context.repo.repo,
+          release_id: releaseId,
+          name: assetName,
+          data,
+          headers: {
+            'content-type': contentType || 'application/octet-stream',
+            'content-length': data.length
+          }
+        });
       });
-    });
-    return {
-      id: response.data.id,
-      name: response.data.name,
-      url: response.data.browser_download_url,
-      size: response.data.size
-    };
+      result = {
+        id: response.data.id,
+        name: response.data.name,
+        url: response.data.browser_download_url,
+        size: response.data.size
+      };
+      return result;
+    } catch (error) {
+      this.actionError.handle(error, {
+        operation: `upload '${assetName}' asset to release ${releaseId}`,
+        fatal: true
+      });
+      return result;
+    }
   }
 
   /**

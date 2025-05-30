@@ -41,12 +41,14 @@ class Release extends Action {
           const type = chartPath.startsWith(appType) ? 'application' : 'library';
           const name = path.basename(chartPath);
           if (this.config.get('repository.chart.packages.enabled')) {
-            await this.githubService.deleteReleases(name);
+            await this.githubService.deleteReleases({
+              context: this.context,
+              chart: name
+            });
           }
           if (this.config.get('repository.oci.packages.enabled')) {
             await this.githubService.deleteOciPackage({
-              owner: this.context.repo.owner,
-              repo: this.context.repo.repo,
+              context: this.context,
               chart: { name, type }
             });
           }

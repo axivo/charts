@@ -7,6 +7,7 @@
  * @license BSD-3-Clause
  */
 const Action = require('../core/Action');
+const GitHub = require('./github');
 
 class Label extends Action {
   /**
@@ -16,6 +17,7 @@ class Label extends Action {
    */
   constructor(params) {
     super(params);
+    this.restService = new GitHub.Rest(params);
   }
 
   /**
@@ -35,31 +37,32 @@ class Label extends Action {
         this.logger.warning(`Label configuration not found for '${name}'`);
         return false;
       }
-      const githubRest = this.github.rest || this.github;
       try {
-        await githubRest.issues.getLabel({
-          owner: this.context.repo.owner,
-          repo: this.context.repo.repo,
-          name: name
+        const existingLabel = await this.restService.getLabel({
+          context: this.context,
+          name
         });
-        return true;
-      } catch (error) {
-        if (error.status === 404) {
-          if (!this.config.get('issue.createLabels')) {
-            this.logger.warning(`Label '${name}' not found and createLabels is disabled`);
-            return false;
-          }
-          await githubRest.issues.createLabel({
-            owner: this.context.repo.owner,
-            repo: this.context.repo.repo,
-            name: name,
+        if (existingLabel) return true;
+        if (!this.config.get('issue.createLabels')) {
+          this.logger.warning(`Label '${name}' not found and createLabels is disabled`);
+          return false;
+        }
+        await this.restService.createLabel({
+          context: this.context,
+          label: {
+            name,
             color: labelConfig.color,
             description: labelConfig.description
-          });
-          this.logger.info(`Successfully created '${name}' label`);
-          return true;
-        }
-        throw error;
+          }
+        });
+        this.logger.info(`Successfully created '${name}' label`);
+        return true;
+      } catch (error) {
+        this.actionError.handle(error, {
+          operation: `add '${name}' label`,
+          fatal: false
+        });
+        return false;
       }
     }, false);
   }

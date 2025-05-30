@@ -251,22 +251,32 @@ class Publish extends Action {
             .replace('{{ .Name }}', chart.name)
             .replace('{{ .Version }}', chart.version);
           this.logger.info(`Processing '${tagName}' repository release...`);
-          const existingRelease = await this.restService.getReleaseByTag(tagName);
+          const existingRelease = await this.restService.getReleaseByTag({
+            context: this.context,
+            tag: tagName
+          });
           if (existingRelease) {
             this.logger.info(`Release '${tagName}' already exists, skipping`);
             continue;
           }
           const body = await this.generateContent(chart);
           const release = await this.restService.createRelease({
-            name: tagName,
-            body
+            context: this.context,
+            release: {
+              tag: tagName,
+              name: tagName,
+              body
+            }
           });
           const assetName = `${chart.type}.tgz`;
           const assetData = await this.fileService.readFile(chart.path);
           await this.restService.uploadReleaseAsset({
-            releaseId: release.id,
-            assetName,
-            assetData
+            context: this.context,
+            asset: {
+              releaseId: release.id,
+              assetName,
+              assetData
+            }
           });
           this.logger.info(`Successfully created '${tagName}' repository release`);
           releases.push({
@@ -317,8 +327,7 @@ class Publish extends Action {
         try {
           const { name } = this.packageService.parseInfo(pkg.source);
           const deleted = await this.restService.deleteOciPackage({
-            owner: this.context.repo.owner,
-            repo: this.context.repo.repo,
+            context: this.context,
             chart: { name, type: pkg.type }
           });
           if (deleted) {
