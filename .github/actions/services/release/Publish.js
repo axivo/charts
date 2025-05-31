@@ -12,6 +12,7 @@ const Action = require('../../core/Action');
 const File = require('../File');
 const GitHub = require('../github');
 const Helm = require('../helm');
+const Issue = require('../Issue');
 const Package = require('./Package');
 const Template = require('../Template');
 
@@ -25,6 +26,7 @@ class Publish extends Action {
     super(params);
     this.fileService = new File(params);
     this.helmService = new Helm(params);
+    this.issueService = new Issue(params);
     this.packageService = new Package(params);
     this.templateService = new Template(params);
     this.restService = new GitHub.Rest(params);
@@ -38,14 +40,14 @@ class Publish extends Action {
    */
   async authenticate() {
     return this.execute('authenticate to OCI registry', async () => {
-      const ociRegistry = this.config.get('repository.oci.registry');
+      const registry = this.config.get('repository.oci.registry');
       const username = this.context.repo.owner;
       const password = process.env['INPUT_GITHUB-TOKEN'];
       if (!password) {
         this.logger.warning('GitHub token not available for OCI authentication');
         return false;
       }
-      return await this.helmService.login({ registry: ociRegistry, username, password });
+      return await this.helmService.login({ registry, username, password });
     }, false);
   }
 
@@ -96,11 +98,11 @@ class Publish extends Action {
    */
   async find(type) {
     return this.execute('find available charts', async () => {
-      const results = [];
+      const result = [];
       try {
         const dirs = await this.fileService.listDirectory(type);
         const filtered = dirs.filter(dir => !dir.startsWith('.'));
-        results.push(...filtered.map(dir => ({
+        result.push(...filtered.map(dir => ({
           dir: path.join(type, dir),
           type: type
         })));
@@ -110,7 +112,7 @@ class Publish extends Action {
           fatal: false
         });
       }
-      return results;
+      return result;
     });
   }
 
@@ -176,24 +178,22 @@ class Publish extends Action {
       const releaseTemplate = this.config.get('repository.release.template');
       await this.fileService.validateFile(releaseTemplate);
       const templateContent = await this.fileService.readFile(releaseTemplate);
-      const issues = await this.graphqlService.getReleaseIssues({
+      const issues = await this.issueService.get({
         context: this.context,
-        chart: {
-          name: chart.name,
-          type: chart.type
-        },
-        since: chart.since
+        chart: { name: chart.name, type: chart.type }
       });
       const tagName = this.config.get('repository.release.title')
         .replace('{{ .Name }}', chart.name)
         .replace('{{ .Version }}', chart.version);
+      const repoUrl = this.context.payload.repository.html_url;
+      const chartYamlSource = `${repoUrl}/blob/${tagName}/${chart.type}/${chart.name}/Chart.yaml`;
       const templateContext = {
         AppVersion: chart.metadata.appVersion || '',
         Branch: this.context.payload.repository.default_branch,
         Dependencies: (chart.metadata.dependencies || []).map(dependency => ({
           Name: dependency.name,
           Repository: dependency.repository,
-          Source: `${this.context.payload.repository.html_url}/blob/${tagName}/${chart.type}/${chart.name}/Chart.yaml`,
+          Source: chartYamlSource,
           Version: dependency.version
         })),
         Description: chart.metadata.description || '',
@@ -201,12 +201,12 @@ class Publish extends Action {
         Issues: issues.length ? issues : null,
         KubeVersion: chart.metadata.kubeVersion || '',
         Name: chart.name,
-        RepoURL: this.context.payload.repository.html_url,
+        RepoURL: repoUrl,
         Type: chart.type,
         Version: chart.version
       };
       return this.templateService.render(templateContent, templateContext);
-    }, { chart: `${chart.name}-${chart.version}` });
+    });
   }
 
   /**
@@ -225,7 +225,7 @@ class Publish extends Action {
       const appType = this.config.get('repository.chart.type.application');
       const word = packages.length === 1 ? 'release' : 'releases';
       this.logger.info(`Publishing ${packages.length} GitHub ${word}...`);
-      const releases = [];
+      const result = [];
       for (const pkg of packages) {
         try {
           const { name, version } = this.packageService.parseInfo(pkg.source);
@@ -286,7 +286,7 @@ class Publish extends Action {
             }
           });
           this.logger.info(`Successfully created '${tagName}' repository release`);
-          releases.push({
+          result.push({
             name: chart.name,
             version: chart.version,
             tagName,
@@ -299,12 +299,12 @@ class Publish extends Action {
           });
         }
       }
-      if (releases.length) {
-        const keyword = releases.length === 1 ? 'release' : 'releases';
-        this.logger.info(`Successfully published ${releases.length} GitHub ${keyword}`);
+      if (result.length) {
+        const keyword = result.length === 1 ? 'release' : 'releases';
+        this.logger.info(`Successfully published ${result.length} GitHub ${keyword}`);
       }
-      return releases;
-    }, { packagesCount: packages.length });
+      return result;
+    });
   }
 
   /**
@@ -314,7 +314,7 @@ class Publish extends Action {
    * @param {string} packagesPath - Path to packages directory
    * @returns {Promise<Array>} List of published OCI packages
    */
-  async oci(packages, packagesPath) {
+  async registry(packages, packagesPath) {
     return this.execute('publish to OCI registry', async () => {
       if (!this.config.get('repository.oci.packages.enabled')) {
         this.logger.info('Publishing of OCI packages is disabled');
@@ -350,7 +350,7 @@ class Publish extends Action {
       const ociRegistry = this.config.get('repository.oci.registry');
       const word = packages.length === 1 ? 'package' : 'packages';
       this.logger.info(`Publishing ${packages.length} OCI ${word}...`);
-      const published = [];
+      const result = [];
       for (const pkg of packages) {
         try {
           this.logger.info(`Publishing '${pkg.source}' chart package to OCI registry...`);
@@ -358,7 +358,7 @@ class Publish extends Action {
           const registry = `oci://${ociRegistry}/${this.context.payload.repository.full_name}/${pkg.type}`;
           await this.exec.exec('helm', ['push', chartPath, registry], { silent: true });
           const { name, version } = this.packageService.parseInfo(pkg.source);
-          published.push({
+          result.push({
             name,
             version,
             source: pkg.source,
@@ -371,12 +371,12 @@ class Publish extends Action {
           });
         }
       }
-      if (published.length) {
-        const successWord = published.length === 1 ? 'package' : 'packages';
-        this.logger.info(`Successfully published ${published.length} OCI ${successWord}`);
+      if (result.length) {
+        const keyword = result.length === 1 ? 'package' : 'packages';
+        this.logger.info(`Successfully published ${result.length} OCI ${keyword}`);
       }
-      return published;
-    }, { packagesCount: packages.length });
+      return result;
+    });
   }
 }
 

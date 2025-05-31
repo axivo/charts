@@ -111,6 +111,7 @@ class Chart extends Action {
 
   /**
    * Validates a chart for release
+   * TODO: Method not used
    * 
    * @param {string} directory - Chart directory
    * @returns {Promise<boolean>} - True if validation passed

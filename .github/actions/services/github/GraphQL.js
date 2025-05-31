@@ -81,7 +81,7 @@ class GraphQL extends Api {
   }
 
   /**
-   * Gets release issues since a specified date
+   * Gets release issues for a chart since a specified date
    * 
    * @param {Object} params - Function parameters
    * @param {Object} params.context - GitHub Actions context
@@ -89,35 +89,32 @@ class GraphQL extends Api {
    * @param {string} params.chart.name - Chart name
    * @param {string} params.chart.type - Chart type (application or library)
    * @param {Date} params.since - Date to get issues since
+   * @param {number} [params.issues=50] - Maximum number of issues to return
    * @returns {Promise<Array<Object>>} - Issues
    */
-  async getReleaseIssues({ context, chart, since }) {
+  async getReleaseIssues({ context, chart, since, issues = 50 }) {
     let result = [];
     const { name, type } = chart;
+    const chartName = `${type}/${name}`;
     try {
       const sinceDate = since ? new Date(since) : new Date(0);
       const query = `
-        query GetIssues($owner: String!, $repo: String!, $chartLabel: String!, $typeLabel: String!, $cursor: String) {
+        query GetIssues($owner: String!, $repo: String!, $issues: Int!) {
           repository(owner: $owner, name: $repo) {
             issues(
-              first: 100,
-              after: $cursor,
-              states: [CLOSED],
-              labels: [$chartLabel, $typeLabel],
-              orderBy: {field: CREATED_AT, direction: DESC}
+              first: $issues,
+              states: [OPEN, CLOSED],
+              orderBy: {field: UPDATED_AT, direction: DESC}
             ) {
-              pageInfo {
-                hasNextPage
-                endCursor
-              }
               nodes {
                 number
+                state
                 title
                 url
-                closedAt
-                labels(
-                  first: 10
-                ) {
+                bodyText
+                createdAt
+                updatedAt
+                labels(first: 10) {
                   nodes {
                     name
                   }
@@ -127,28 +124,31 @@ class GraphQL extends Api {
           }
         }
       `;
-      const issues = await this.execute('getReleaseIssues', async () => {
-        return await this.paginate(query,
-          this.setVariables({ owner: context.repo.owner, repo: context.repo.repo }, {
-            chartLabel: name,
-            typeLabel: type
-          }),
-          (data) => data.repository.issues,
-          (issue) => issue.closedAt && new Date(issue.closedAt) > sinceDate
-        );
-      }, false);
-      this.logger.info(`Found ${issues.length} issues for ${name} (${type}) since ${sinceDate.toISOString()}`);
-      result = this.transform(issues, issue => ({
-        number: issue.number,
-        title: issue.title,
-        url: issue.url,
-        closedAt: issue.closedAt,
-        labels: issue.labels.nodes.map(label => label.name)
+      const variables = {
+        owner: context.repo.owner,
+        repo: context.repo.repo,
+        issues
+      };
+      const response = await this.execute('getReleaseIssues', async () => {
+        return await this.github.graphql(query, variables);
+      });
+      const allIssues = response.repository.issues.nodes.filter(issue => {
+        return !since || new Date(issue.createdAt || issue.updatedAt) > sinceDate;
+      });
+      const word = allIssues.length === 1 ? 'issue' : 'issues';
+      this.logger.info(`Found ${allIssues.length} ${word} for '${chartName}' chart`);
+      result = this.transform(allIssues, issue => ({
+        Number: issue.number,
+        State: issue.state,
+        Title: issue.title,
+        URL: issue.url,
+        Labels: issue.labels.nodes.map(label => label.name),
+        bodyText: issue.bodyText
       }));
       return result;
     } catch (error) {
       this.actionError.handle(error, {
-        operation: `get release issues for '${name}' chart (${type})`,
+        operation: `get release issues for '${chartName}' chart`,
         fatal: false
       });
       return result;
@@ -160,10 +160,11 @@ class GraphQL extends Api {
    * 
    * @param {Object} params - Function parameters
    * @param {Object} params.context - GitHub Actions context
-   * @param {number} params.limit - Maximum number of releases to return
+   * @param {string} [params.prefix] - Optional tag prefix to filter releases
+   * @param {number} [params.limit=100] - Maximum number of releases to return
    * @returns {Promise<Array<Object>>} - Releases
    */
-  async getReleases({ context, limit = 100 }) {
+  async getReleases({ context, prefix, limit = 100 }) {
     let result = [];
     try {
       const query = `
@@ -205,11 +206,12 @@ class GraphQL extends Api {
         return await this.paginate(query,
           this.setVariables({ owner: context.repo.owner, repo: context.repo.repo }),
           (data) => data.repository.releases,
-          () => true,
+          prefix ? (release) => release.tagName.startsWith(prefix) : () => true,
           limit
         );
       }, false);
-      this.logger.info(`Found ${releases.length} releases`);
+      const filterMessage = prefix ? ` with '${prefix}' tag prefix` : '';
+      this.logger.info(`Found ${releases.length} releases${filterMessage}`);
       result = this.transform(releases, release => ({
         id: release.id,
         name: release.name,

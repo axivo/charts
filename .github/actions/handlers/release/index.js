@@ -60,7 +60,7 @@ class Release extends Action {
           await this.publishService.generateIndexes();
         }
         if (this.config.get('repository.oci.packages.enabled')) {
-          await this.publishService.oci(packages, packagesDir);
+          await this.publishService.registry(packages, packagesDir);
         }
       } else {
         this.logger.info('No chart packages available for publishing');

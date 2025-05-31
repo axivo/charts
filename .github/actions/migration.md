@@ -32,6 +32,49 @@ Assistant: "Step 1 complete. Here's the diff for Step 2:"
 [continues with next step only after approval]
 ```
 
+### **MANDATORY DIFF PRESENTATION FOR ALL CODE CHANGES**
+
+**BEFORE making ANY changes to codebase classes (*.js files), you MUST:**
+
+1. **Show actual diff format** - Never use edit_file with dryRun, show real diff format
+2. **Present current vs proposed implementation** - Show both complete code blocks
+3. **Display line-by-line diff** - Use standard diff format with +/- indicators
+4. **Wait for explicit approval** - Do not proceed without "implement the code changes" or similar approval
+5. **One change at a time** - Show diff for each file separately, get approval, then implement
+
+**EXAMPLE OF REQUIRED DIFF FORMAT:**
+
+```diff
+* @param {Object} params - Function parameters
+   * @param {Object} params.context - GitHub Actions context
++  * @param {string} [params.prefix] - Optional tag prefix to filter releases
+-  * @param {number} params.limit - Maximum number of releases to return
++  * @param {number} [params.limit=100] - Maximum number of releases to return
+   * @returns {Promise<Array<Object>>} - Releases
+   */
+-  async getReleases({ context, limit = 100 }) {
++  async getReleases({ context, prefix, limit = 100 }) {
+     let result = [];
+     try {
+       const query = `
+         return await this.paginate(query,
+           this.setVariables({ owner: context.repo.owner, repo: context.repo.repo }),
+           (data) => data.repository.releases,
+-          () => true,
++          prefix ? (release) => release.tagName.startsWith(prefix) : () => true,
+           limit
+         );
+       }, false);
+-      this.logger.info(`Found ${releases.length} releases`);
++      const filterMessage = prefix ? ` with '${prefix}' tag prefix` : '';
++      this.logger.info(`Found ${releases.length} releases${filterMessage}`);
+       result = this.transform(releases, release => ({
+```
+
+**VIOLATION: Making code changes without showing proper diffs constitutes CRITICAL FAILURE**
+
+**EXCEPTION:** Direct edits to `/Users/floren/github/charts/.github/actions/migration.md` are allowed without prior approval as this is a documentation file, not codebase classes.
+
 ## MIGRATION VALIDATION PROCESS
 
 ### How to Perform Migration Validation
@@ -385,11 +428,6 @@ New classes/methods:
 - Rest.deleteOciPackage() - Primary OCI package deletion implementation with enhanced architecture
 - Release.delete() - Uses Rest.deleteOciPackage() for chart cleanup operations
 - Publish.oci() - Uses Rest.deleteOciPackage() for package replacement during publishing
-**SEARCH VERIFICATION COMPLETED:**
-✅ Searched all 47 files in /Users/floren/github/charts/.github/actions/
-✅ Found deleteOciPackage method implemented in Rest.js service
-✅ Confirmed no duplicate functionality exists
-✅ Verified no similar implementations present
 **EXISTING METHODS ANALYSIS:**
 - Rest.deleteOciPackage(): Full GitHub OCI package deletion with enhanced parameter structure (context, chart: {name, type}), automatic repository type detection, proper error handling
 - GraphQL.getRepositoryType(): Determines organization vs user repository type for correct API endpoint selection
@@ -427,11 +465,6 @@ New classes/methods:
 - Rest.deleteReleases() - Primary release deletion implementation with enhanced architecture
 - Rest.#getReleaseIds() - Private helper method that replaces old _getReleaseIds functionality
 - Release.delete() - Uses Rest.deleteReleases() for chart cleanup operations
-**SEARCH VERIFICATION COMPLETED:**
-✅ Searched all 47 files in /Users/floren/github/charts/.github/actions/
-✅ Found deleteReleases method implemented in Rest.js service
-✅ Confirmed no duplicate functionality exists
-✅ Verified no similar implementations present
 **EXISTING METHODS ANALYSIS:**
 - Rest.deleteReleases(): Full GitHub release deletion with enhanced parameter structure (context, chart), sequential processing, improved error handling
 - Rest.#getReleaseIds(): Private helper method that finds all releases for a chart using tag prefix filtering and pagination
@@ -465,24 +498,109 @@ The functionality has been fully migrated and is operational:
 
 #### getReleaseByTag
 New classes/methods:
-- Rest.getReleaseByTag()
-Status: Needs Review
+- Rest.getReleaseByTag() - Primary implementation with enhanced parameter structure and return format
+- Publish.github() - Uses Rest.getReleaseByTag() to check for existing releases before creation
+**EXISTING METHODS ANALYSIS:**
+- Rest.getReleaseByTag(): Full functionality match with enhanced parameter structure ({context, tag}), improved error handling, standardized returns
+- GraphQL.getReleases(): Different implementation (GraphQL vs REST) for bulk release retrieval
+- Rest.#getReleaseIds(): Private helper method for release identification used in deletion operations
+**CONCLUSION:** Based on complete search, functionality is fully present and enhanced
+Status: ✅ **COMPLETE** - Release retrieval by tag functionality fully migrated with architectural improvements
 Technical Details:
-Needs Review
+The functionality has been fully migrated and is operational:
+**MIGRATION COMPLETE:**
+1. ✅ **Full API compatibility** - Same GitHub REST API calls (repos.getReleaseByTag)
+2. ✅ **Enhanced parameter structure** - Uses {context, tag} pattern consistent with Rest.js methods
+3. ✅ **Improved error handling** - Uses execute() pattern with proper error context instead of utils.handleError
+4. ✅ **Active integration** - Used by Publish.github() for checking existing releases before creation
+5. ✅ **Standardized returns** - Returns enhanced object structure {id, htmlUrl, uploadUrl, tagName, name, body, createdAt, draft, prerelease}
+**ARCHITECTURAL IMPROVEMENTS:**
+- Object-oriented design with dependency injection
+- Better parameter validation and error reporting
+- Enhanced return object with more release details
+- Seamless integration into publishing workflow
+- Non-fatal error handling with proper logging
+- Enhanced maintainability with service-based architecture
+**FUNCTIONALITY MAPPING:**
+- OLD: getReleaseByTag({github, context, core, tagName})
+- NEW: Rest.getReleaseByTag({context, tag})
+- Integration: Publish.github() uses getReleaseByTag() to check for existing releases before creation
 
 #### getReleases
 New classes/methods:
-- GraphQL.getReleases()
-Status: Needs Review
+- GraphQL.getReleases() - Primary implementation using GraphQL API with pagination support and tag prefix filtering
+- Rest.getReleaseByTag() - Single release retrieval by tag (different use case)
+- Rest.#getReleaseIds() - Private helper method for release ID retrieval
+**EXISTING METHODS ANALYSIS:**
+- GraphQL.getReleases(): Full functionality match with enhanced parameter structure ({context, prefix, limit}), improved error handling, standardized returns
+- Rest.getReleaseByTag(): Single release retrieval, different use case from bulk operations
+- Rest.#getReleaseIds(): Private helper for release IDs only, limited functionality scope
+**FUNCTIONALITY GAPS RESOLVED:**
+1. ✅ **Added prefix parameter** - New: getReleases({context, prefix, limit}) matches old functionality
+2. ✅ **Tag prefix filtering implemented** - New implementation can filter releases by tag prefix like old getReleases()
+3. ✅ **Parameter compatibility restored** - Full compatibility with original use cases
+**CONCLUSION:** Based on complete search and implementation, functionality is fully present and enhanced
+Status: ✅ **COMPLETE** - Release retrieval with tag prefix filtering functionality fully migrated and enhanced
 Technical Details:
-Needs Review
+The functionality has been fully migrated and is operational:
+**MIGRATION COMPLETE:**
+1. ✅ **Full API compatibility** - Same GitHub GraphQL API calls with enhanced filtering
+2. ✅ **Enhanced parameter structure** - Uses {context, prefix, limit} pattern with optional prefix filtering
+3. ✅ **Improved error handling** - Uses execute() pattern with proper error context and logging
+4. ✅ **Active integration** - Ready for use in release workflow processes
+5. ✅ **Restored filtering capability** - Tag prefix filtering now works like original implementation
+6. ✅ **Enhanced return structure** - More detailed release and asset information than original
+**ARCHITECTURAL IMPROVEMENTS:**
+- Object-oriented design with dependency injection
+- Better error handling with execute() pattern and proper logging
+- Enhanced return structure with detailed release and asset information
+- Client-side filtering using existing pagination infrastructure
+- Backward compatibility maintained - existing calls without prefix continue to work
+**FUNCTIONALITY MAPPING:**
+- OLD: getReleases({github, context, core, tagPrefix, limit}) -> _getReleases() with filtering
+- NEW: GraphQL.getReleases({context, prefix, limit}) -> full filtering capability restored
+- IMPLEMENTED: Tag prefix filtering functionality using startsWith() logic
 
 #### getReleaseIssues
 New classes/methods:
-- GraphQL.getReleaseIssues()
-Status: Needs Review
+- Issue.get() - **IMPLEMENTED**: Complete getReleaseIssues functionality with architectural consolidation
+- GraphQL.getReleaseIssues() - Basic GraphQL querying (now used internally by Issue.get())
+- Publish.getIssues() - **MOVED**: Chart-specific filtering logic moved to Issue.get()
+**EXISTING METHODS ANALYSIS:**
+- GraphQL.getReleaseIssues(): Basic GraphQL issue querying with pagination
+- Publish.getIssues(): Chart-specific filtering with automatic date lookup and body text analysis
+- Issue.report(): Issue creation functionality, different use case from issue retrieval
+- Issue.create(): Direct issue creation, different use case from issue retrieval
+**ARCHITECTURAL CONSOLIDATION COMPLETED:**
+1. ✅ **Automatic last release date lookup** - Moved from Publish.getIssues() to Issue.get()
+2. ✅ **Body text regex analysis** - Moved from Publish.getIssues() to Issue.get()
+3. ✅ **Chart type label filtering** - Moved from Publish.getIssues() to Issue.get()
+4. ✅ **Compatible return structure** - Issue.get() returns PascalCase format matching old implementation
+5. ✅ **Proper service architecture** - Issue retrieval logic now in correct Issue service class
+6. ✅ **Enhanced GraphQL integration** - Uses GraphQL.getReleases() for automatic date lookup
+**CONCLUSION:** Based on complete search, functionality is fully present and architecturally improved
+Status: ✅ **COMPLETE** - Full getReleaseIssues functionality implemented with architectural improvements
 Technical Details:
-Needs Review
+The functionality has been fully migrated and consolidated with architectural improvements:
+**ARCHITECTURAL IMPROVEMENT:**
+- OLD APPROACH: Single function with mixed responsibilities
+- NEW APPROACH: Proper service separation with Issue.get() as primary interface
+**IMPLEMENTED FUNCTIONALITY:**
+1. ✅ **Automatic last release date lookup** - Issue.get() automatically determines cutoff date via GraphQL.getReleases()
+2. ✅ **Body text regex analysis** - Full chartNameRegex.test(issue.bodyText) implementation
+3. ✅ **Chart type label filtering** - Complete hasChartTypeLabel logic
+4. ✅ **Compatible return structure** - Returns {Labels, Number, State, Title, URL} format
+5. ✅ **Mixed issue states** - Supports OPEN+CLOSED states like original
+6. ✅ **Clean method signature** - Simplified to get({context, chart}) interface
+**CONSOLIDATED ARCHITECTURE:**
+- Issue.get(): Primary interface for chart-specific issue retrieval
+- GraphQL.getReleases(): Used internally for automatic last release date lookup
+- GraphQL.getReleaseIssues(): Used internally for basic issue querying with pagination
+- Publish.generateContent(): Updated to use Issue.get() instead of internal getIssues()
+**FUNCTIONALITY MAPPING:**
+- OLD: getReleaseIssues({github, context, core, chart, maxIssues}) -> automatic date + body text filtering
+- NEW: Issue.get({context, chart}) -> complete functionality with cleaner interface
+- IMPROVEMENT: Proper service architecture with automatic internal complexity management
 
 #### getUpdatedFiles
 New classes/methods:
