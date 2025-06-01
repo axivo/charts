@@ -75,16 +75,18 @@ class Publish extends Action {
   /**
    * Prepares chart data for publishing
    * 
-   * @param {Object} package - Package object with source and type
+   * @param {Object} object - Package object
+   * @param {string} object.source - Chart package filename
+   * @param {string} object.type - Chart type
    * @param {string} directory - Path to packages directory
    * @param {string} type - Application type for comparison
    * @returns {Promise<Object|null>} Prepared chart data or null
    */
-  async #publish(package, directory, type) {
-    const { name, version } = this.packageService.parseInfo(package.source);
-    const chartType = package.type === type ? 'application' : 'library';
+  async #publish(object, directory, type) {
+    const { name, version } = this.packageService.parseInfo(object.source);
+    const chartType = object.type === type ? 'application' : 'library';
     const chartDir = path.join(this.config.get(`repository.chart.type.${chartType}`), name);
-    const chartPath = path.join(directory, package.type, package.source);
+    const chartPath = path.join(directory, object.type, object.source);
     const chartYamlPath = path.join(chartDir, 'Chart.yaml');
     const iconPath = path.join(chartDir, this.config.get('repository.chart.icon'));
     const iconExists = await this.fileService.exists(iconPath);
