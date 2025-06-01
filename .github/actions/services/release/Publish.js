@@ -34,6 +34,83 @@ class Publish extends Action {
   }
 
   /**
+   * Creates a GitHub release for a chart
+   * 
+   * @param {Object} chart - Chart information
+   * @param {string} tag - Release tag name
+   * @returns {Promise<Object>} Created release information
+   */
+  async #create(chart, tag) {
+    return this.execute('create release', async () => {
+      this.logger.info(`Processing '${tag}' repository release...`);
+      const body = await this.generateContent(chart);
+      const release = await this.restService.createRelease({
+        context: this.context,
+        release: {
+          tag,
+          name: tag,
+          body
+        }
+      });
+      const assetName = `${chart.type}.tgz`;
+      const assetData = await this.fileService.readFile(chart.path);
+      await this.restService.uploadReleaseAsset({
+        context: this.context,
+        asset: {
+          releaseId: release.id,
+          assetName,
+          assetData
+        }
+      });
+      this.logger.info(`Successfully created '${tag}' repository release`);
+      return {
+        name: chart.name,
+        version: chart.version,
+        tagName: tag,
+        releaseId: release.id
+      };
+    });
+  }
+
+  /**
+   * Prepares chart data for publishing
+   * 
+   * @param {Object} package - Package object with source and type
+   * @param {string} directory - Path to packages directory
+   * @param {string} type - Application type for comparison
+   * @returns {Promise<Object|null>} Prepared chart data or null
+   */
+  async #publish(package, directory, type) {
+    const { name, version } = this.packageService.parseInfo(package.source);
+    const chartType = package.type === type ? 'application' : 'library';
+    const chartDir = path.join(this.config.get(`repository.chart.type.${chartType}`), name);
+    const chartPath = path.join(directory, package.type, package.source);
+    const chartYamlPath = path.join(chartDir, 'Chart.yaml');
+    const iconPath = path.join(chartDir, this.config.get('repository.chart.icon'));
+    const iconExists = await this.fileService.exists(iconPath);
+    let metadata = {};
+    try {
+      const chartYamlContent = await this.fileService.readFile(chartYamlPath);
+      const yaml = require('js-yaml');
+      metadata = yaml.load(chartYamlContent);
+      this.logger.info(`Successfully loaded '${chartDir}' chart metadata`);
+    } catch (error) {
+      this.actionError.handle(error, {
+        operation: `load '${chartDir}' chart metadata`,
+        fatal: false
+      });
+    }
+    return {
+      icon: iconExists,
+      metadata,
+      name,
+      path: chartPath,
+      type: chartType,
+      version
+    };
+  }
+
+  /**
    * Authenticates with OCI registry
    * 
    * @returns {Promise<boolean>} Authentication success
@@ -227,76 +304,22 @@ class Publish extends Action {
       this.logger.info(`Publishing ${packages.length} GitHub ${word}...`);
       const result = [];
       for (const pkg of packages) {
-        try {
-          const { name, version } = this.packageService.parseInfo(pkg.source);
-          const type = pkg.type === appType ? 'application' : 'library';
-          const chartDir = path.join(this.config.get(`repository.chart.type.${type}`), name);
-          const chartPath = path.join(packagesPath, pkg.type, pkg.source);
-          const chartYamlPath = path.join(chartDir, 'Chart.yaml');
-          const iconPath = path.join(chartDir, this.config.get('repository.chart.icon'));
-          const iconExists = await this.fileService.exists(iconPath);
-          let metadata = {};
-          try {
-            const chartYamlContent = await this.fileService.readFile(chartYamlPath);
-            metadata = yaml.load(chartYamlContent);
-            this.logger.info(`Successfully loaded '${chartDir}' chart metadata`);
-          } catch (error) {
-            this.actionError.handle(error, {
-              operation: `load '${chartDir}' chart metadata`,
-              fatal: false
-            });
-          }
-          const chart = {
-            icon: iconExists,
-            metadata,
-            name,
-            path: chartPath,
-            type,
-            version
-          };
-          const tagName = this.config.get('repository.release.title')
-            .replace('{{ .Name }}', chart.name)
-            .replace('{{ .Version }}', chart.version);
-          this.logger.info(`Processing '${tagName}' repository release...`);
-          const existingRelease = await this.restService.getReleaseByTag({
-            context: this.context,
-            tag: tagName
-          });
-          if (existingRelease) {
-            this.logger.info(`Release '${tagName}' already exists, skipping`);
-            continue;
-          }
-          const body = await this.generateContent(chart);
-          const release = await this.restService.createRelease({
-            context: this.context,
-            release: {
-              tag: tagName,
-              name: tagName,
-              body
-            }
-          });
-          const assetName = `${chart.type}.tgz`;
-          const assetData = await this.fileService.readFile(chart.path);
-          await this.restService.uploadReleaseAsset({
-            context: this.context,
-            asset: {
-              releaseId: release.id,
-              assetName,
-              assetData
-            }
-          });
-          this.logger.info(`Successfully created '${tagName}' repository release`);
-          result.push({
-            name: chart.name,
-            version: chart.version,
-            tagName,
-            releaseId: release.id
-          });
-        } catch (error) {
-          this.actionError.handle(error, {
-            operation: `process '${pkg.source}' package`,
-            fatal: false
-          });
+        const chart = await this.#publish(pkg, packagesPath, appType);
+        if (!chart) continue;
+        const tagName = this.config.get('repository.release.title')
+          .replace('{{ .Name }}', chart.name)
+          .replace('{{ .Version }}', chart.version);
+        const existingRelease = await this.restService.getReleaseByTag({
+          context: this.context,
+          tag: tagName
+        });
+        if (existingRelease) {
+          this.logger.info(`Release '${tagName}' already exists, skipping`);
+          continue;
+        }
+        const publishResult = await this.#create(chart, tagName);
+        if (publishResult) {
+          result.push(publishResult);
         }
       }
       if (result.length) {
