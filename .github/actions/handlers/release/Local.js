@@ -23,6 +23,7 @@ class Local extends Action {
     this.helmService = new Helm(params);
     this.releaseService = new ReleaseService(params);
     this.packageService = new ReleaseService.Package(params);
+    this.localService = new ReleaseService.Local(params);
   }
 
   /**
@@ -32,42 +33,42 @@ class Local extends Action {
    */
   async process() {
     return this.execute('process local releases', async () => {
-      this.logger.info('Starting local chart release process...');
-      const files = await this.githubService.getUpdatedFiles();
-      const charts = await this.releaseService.find({ files });
-      if (!charts.total && !charts.deleted.length) {
-        this.logger.info('No chart releases found');
+      if (this.config.get('repository.release.deployment') === 'production') {
+        this.logger.info("In 'production' deployment mode, skipping local releases process");
         return { processed: 0, published: 0 };
       }
+      const depsAvailable = await this.localService.checkDependencies();
+      if (!depsAvailable) {
+        this.logger.error('Missing required dependencies');
+        return { processed: 0, published: 0 };
+      }
+      this.logger.info('Starting local chart release process...');
+      const files = await this.localService.getLocalFiles();
+      const charts = await this.releaseService.find({ files });
+      if (!charts.total && !charts.deleted.length) {
+        this.logger.info(`No ${charts.total === 1 ? 'chart' : 'charts'} chart releases found`);
+        return { processed: 0, published: 0 };
+      }
+      const chartResult = await this.localService.processCharts(charts);
       const result = {
-        processed: charts.total,
-        published: 0,
+        processed: chartResult.processed,
+        published: chartResult.published,
         deleted: charts.deleted.length
       };
       let packages = [];
       if (charts.total) {
-        const packaged = await this.packageService.package(charts);
         const packagesDir = this.config.get('repository.release.packages');
         packages = await this.packageService.get(packagesDir);
       }
       if (charts.deleted.length) {
-        await this.releaseService.delete({ 
-          context: this.context, 
-          files: charts.deleted 
+        await this.releaseService.delete({
+          context: this.context,
+          files: charts.deleted
         });
       }
       this.logger.info('Successfully completed the local chart release process');
       return result;
     });
-  }
-
-  /**
-   * Run the handler
-   * 
-   * @returns {Promise<Object>} Process results
-   */
-  async run() {
-    return this.process();
   }
 }
 

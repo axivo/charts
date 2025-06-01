@@ -53,45 +53,55 @@ jobs:
         run: npm install glob handlebars js-yaml
 
       - name: Configure repository
+        id: workflow
         uses: actions/github-script@v7
         with:
           script: |
             const { Workflow } = require('./.github/actions/handlers');
-            await Workflow.configureRepository({ github, context, core, exec });
+            const workflow = new Workflow({ github, context, core, exec });
+            await workflow.configureRepository();
+
+      - name: Setup repository charts linter
+        if: steps.workflow.outputs.publish != 'true'
+        uses: helm/chart-testing-action@v2
 
       - name: Process chart releases
         uses: actions/github-script@v7
         with:
           script: |
             const { Workflow } = require('./.github/actions/handlers');
-            await Workflow.processReleases({ github, context, core, exec });
+            const workflow = new Workflow({ github, context, core, exec });
+            await workflow.processReleases();
 
       - name: Setup frontpage
-        id: setup
+        if: steps.workflow.outputs.publish == 'true'
         uses: actions/github-script@v7
         with:
           script: |
             const { Workflow } = require('./.github/actions/handlers');
-            await Workflow.setFrontpage({ github, context, core, exec });
+            const workflow = new Workflow({ github, context, core, exec });
+            await workflow.setFrontpage();
 
       - name: Build pages
+        if: steps.workflow.outputs.publish == 'true'
         uses: actions/jekyll-build-pages@v1
         with:
           source: ./
           destination: ./_site
 
       - name: Configure pages
+        if: steps.workflow.outputs.publish == 'true'
         id: pages
         uses: actions/configure-pages@v5
 
       - name: Upload pages artifact
-        if: steps.setup.outputs.publish
+        if: steps.workflow.outputs.publish == 'true'
         uses: actions/upload-pages-artifact@v3
         with:
           path: ./_site
 
       - name: Deploy pages
-        if: steps.setup.outputs.publish
+        if: steps.workflow.outputs.publish == 'true'
         uses: actions/deploy-pages@v4
 
       - name: Report workflow issue
@@ -100,4 +110,5 @@ jobs:
         with:
           script: |
             const { Workflow } = require('./.github/actions/handlers');
-            await Workflow.reportIssue({ github, context, core, exec });
+            const workflow = new Workflow({ github, context, core, exec });
+            await workflow.reportIssue();

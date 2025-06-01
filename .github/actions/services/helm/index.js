@@ -111,6 +111,27 @@ class Helm extends Action {
   }
 
   /**
+   * Renders chart templates
+   * 
+   * @param {string} directory - Chart directory
+   * @param {Object} options - Template options
+   * @param {string} options.values - Values file path
+   * @param {string} options.set - Set values on command line
+   * @returns {Promise<string>} - Rendered template output
+   */
+  async template(directory, options = {}) {
+    return this.execute(`render templates for '${directory}' chart`, async () => {
+      const args = ['template', directory];
+      if (options.values) args.push('--values', options.values);
+      if (options.set) args.push('--set', options.set);
+      this.logger.info(`Rendering templates for '${directory}' chart...`);
+      const output = await this.shellService.execute('helm', args, { output: true });
+      this.logger.info(`Successfully rendered templates for '${directory}' chart`);
+      return output;
+    });
+  }
+
+  /**
    * Updates chart dependencies
    * 
    * @param {string} directory - Chart directory

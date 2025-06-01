@@ -22,167 +22,146 @@ class Workflow extends Action {
   constructor(params) {
     params.config = config;
     super(params);
+    this.frontpageService = new Frontpage(params);
+    this.gitService = new Git(params);
+    this.issueService = new Issue(params);
+    this.labelService = new Label(params);
+    this.templateService = new Template(params);
+    this.fileService = new File(params);
   }
 
   /**
-   * Static method to configure repository
+   * Configure repository
    * 
-   * @param {Object} params - Handler parameters
    * @returns {Promise<void>}
    */
-  static async configureRepository(params) {
-    const workflow = new Workflow(params);
-    try {
-      workflow.logger.info('Configuring repository for workflow operations...');
-      const gitService = new Git(params);
-      await gitService.configure();
-      workflow.logger.info('Repository configuration complete');
-    } catch (error) {
-      workflow.errorHandler.handle(error, { operation: 'configure repository' });
-    }
+  async configureRepository() {
+    return this.execute('configure repository', async () => {
+      this.logger.info('Configuring repository for workflow operations...');
+      await this.gitService.configure();
+      const isPrivate = this.context.payload.repository.private === true;
+      const deployment = this.config.get('repository.release.deployment');
+      const publish = !isPrivate && deployment === 'production';
+      this.core.setOutput('publish', publish);
+      this.logger.info('Repository configuration complete');
+    });
   }
 
   /**
-   * Static method to install helm-docs
+   * Install helm-docs
    * 
-   * @param {Object} params - Handler parameters
-   * @param {string} params.version - Version of helm-docs to install
+   * @param {string} version - Version of helm-docs to install
    * @returns {Promise<void>}
    */
-  static async installHelmDocs(params) {
-    const workflow = new Workflow(params);
-    try {
+  async installHelmDocs(version) {
+    return this.execute('install helm-docs', async () => {
       const docsService = new Docs({
-        github: params.github,
-        context: params.context,
-        core: params.core,
-        exec: params.exec,
-        config: params.config
+        github: this.github,
+        context: this.context,
+        core: this.core,
+        exec: this.exec,
+        config: this.config
       });
-      await docsService.install(params.version);
-    } catch (error) {
-      workflow.errorHandler.handle(error, { operation: 'install helm-docs' });
-    }
+      await docsService.install(version);
+    });
   }
 
   /**
-   * Static method to process chart releases
+   * Process chart releases
    * 
-   * @param {Object} params - Handler parameters
    * @returns {Promise<void>}
    */
-  static async processReleases(params) {
-    const workflow = new Workflow(params);
-    try {
-      workflow.logger.info('Processing chart releases...');
+  async processReleases() {
+    return this.execute('process chart releases', async () => {
+      this.logger.info('Processing chart releases...');
       const releaseHandler = new Release({
-        github: params.github,
-        context: params.context,
-        core: params.core,
-        exec: params.exec,
-        config: params.config
+        github: this.github,
+        context: this.context,
+        core: this.core,
+        exec: this.exec,
+        config: this.config
       });
       await releaseHandler.process();
-      workflow.logger.info('Chart release process complete');
-    } catch (error) {
-      workflow.errorHandler.handle(error, { operation: 'process chart releases' });
-    }
+      this.logger.info('Chart release process complete');
+    });
   }
 
   /**
-   * Static method to report workflow issues
+   * Report workflow issues
    * 
-   * @param {Object} params - Handler parameters
    * @returns {Promise<Object>} - Issue creation result
    */
-  static async reportIssue(params) {
-    const workflow = new Workflow(params);
-    try {
-      workflow.logger.info('Checking for workflow issues...');
-      const issueService = new Issue(params);
-      const templateService = new Template(params);
-      const labelService = new Label(params);
-      const fileService = new File(params);
-      if (workflow.config.get('issue.createLabels') === true && params.context.workflow === 'Chart') {
-        workflow.logger.warning('Set "createLabels: false" in config.js after initial setup, to optimize workflow performance.');
+  async reportIssue() {
+    return this.execute('report workflow issue', async () => {
+      this.logger.info('Checking for workflow issues...');
+      if (this.config.get('issue.createLabels') === true && this.context.workflow === 'Chart') {
+        this.logger.warning('Set "createLabels: false" in config.js after initial setup, to optimize workflow performance.');
       }
-      const templatePath = workflow.config.get('workflow.template');
-      const templateContent = await fileService.read(templatePath);
-      const issue = await issueService.report({ context: params.context, templateContent, templateService, labelService });
+      const templatePath = this.config.get('workflow.template');
+      const templateContent = await this.fileService.read(templatePath);
+      const issue = await this.issueService.report({
+        context: this.context,
+        templateContent,
+        templateService: this.templateService,
+        labelService: this.labelService
+      });
       if (issue) {
-        workflow.logger.info('Successfully reported workflow issue');
+        this.logger.info('Successfully reported workflow issue');
         return { created: true, issue };
       } else {
-        workflow.logger.info('No workflow issues to report');
+        this.logger.info('No workflow issues to report');
         return { created: false };
       }
-    } catch (error) {
-      workflow.errorHandler.handle(error, { operation: 'report workflow issue', fatal: false });
-      return { created: false, error: error.message };
-    }
+    }, false);
   }
 
   /**
-   * Static method to setup frontpage for GitHub Pages
+   * Setup frontpage for GitHub Pages
    * 
-   * @param {Object} params - Handler parameters
    * @returns {Promise<void>}
    */
-  static async setFrontpage(params) {
-    const workflow = new Workflow(params);
-    try {
-      workflow.logger.info('Setting up build environment...');
-      const frontpageService = new Frontpage(params);
-      await frontpageService.generate();
-      await frontpageService.setTheme();
-      workflow.logger.info('Build environment setup complete');
-    } catch (error) {
-      workflow.errorHandler.handle(error, { operation: 'setup build environment' });
-    }
+  async setFrontpage() {
+    return this.execute('setup build environment', async () => {
+      this.logger.info('Setting up build environment...');
+      await this.frontpageService.generate();
+      await this.frontpageService.setTheme();
+      this.logger.info('Build environment setup complete');
+    });
   }
 
   /**
-   * Static method to update charts
+   * Update charts
    * 
-   * @param {Object} params - Handler parameters
    * @returns {Promise<Object>} - Update results
    */
-  static async updateCharts(params) {
-    const workflow = new Workflow(params);
-    try {
-      workflow.logger.info('Starting the charts update process...');
+  async updateCharts() {
+    return this.execute('update charts', async () => {
+      this.logger.info('Starting the charts update process...');
       const chartHandler = new Chart({
-        github: params.github,
-        context: params.context,
-        core: params.core,
-        exec: params.exec,
-        config: params.config
+        github: this.github,
+        context: this.context,
+        core: this.core,
+        exec: this.exec,
+        config: this.config
       });
       const result = await chartHandler.process();
-      workflow.logger.info('Successfully completed the charts update process');
+      this.logger.info('Successfully completed the charts update process');
       return result;
-    } catch (error) {
-      workflow.errorHandler.handle(error, { operation: 'update charts' });
-    }
+    });
   }
 
   /**
-   * Static method to update issue labels
+   * Update issue labels
    * 
-   * @param {Object} params - Handler parameters
    * @returns {Promise<string[]>} - Array of created label names
    */
-  static async updateLabels(params) {
-    const workflow = new Workflow(params);
-    try {
-      workflow.logger.info('Updating repository issue labels...');
-      const labelService = new Label(params);
-      const result = await labelService.update();
-      workflow.logger.info('Repository issue labels update complete');
+  async updateLabels() {
+    return this.execute('update issue labels', async () => {
+      this.logger.info('Updating repository issue labels...');
+      const result = await this.labelService.update();
+      this.logger.info('Repository issue labels update complete');
       return result;
-    } catch (error) {
-      throw workflow.errorHandler.handle(error, { operation: 'update issue labels', fatal: false });
-    }
+    }, false);
   }
 }
 

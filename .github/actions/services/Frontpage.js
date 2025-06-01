@@ -95,9 +95,6 @@ class Frontpage extends Action {
       await this.fileService.copy(this.config('theme.head.template'), './_includes/head-custom.html');
       await this.fileService.createDir('./_layouts');
       await this.fileService.copy(this.config('theme.layout.template'), './_layouts/default.html');
-      const isPrivate = this.context.payload.repository.private === true;
-      const publish = !isPrivate && deployment === 'production';
-      this.core.setOutput('publish', publish);
       this.logger.info(`Successfully set up Jekyll theme for '${deployment}' deployment`);
     }, false);
   }
