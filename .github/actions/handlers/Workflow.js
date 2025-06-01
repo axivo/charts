@@ -20,7 +20,8 @@ class Workflow extends Action {
    * @param {Object} params - Handler parameters
    */
   constructor(params) {
-    super({ ...params, config });
+    params.config = config;
+    super(params);
     this.chartService = new Chart(params);
     this.docsService = new Docs(params);
     this.fileService = new File(params);
