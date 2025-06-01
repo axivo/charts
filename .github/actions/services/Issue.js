@@ -19,6 +19,7 @@ class Issue extends Action {
   constructor(params) {
     super(params);
     this.graphqlService = new GraphQL(params);
+    this.restService = new Rest(params);
   }
 
   /**
@@ -31,14 +32,7 @@ class Issue extends Action {
   async #validate(context) {
     try {
       let hasFailures = false;
-      const restService = new Rest({
-        github: this.github,
-        context: context,
-        core: this.core,
-        exec: this.exec,
-        config: this.config
-      });
-      const jobs = await restService.listJobs(context);
+      const jobs = await this.restService.listJobs(context);
       for (const job of jobs) {
         if (job.steps) {
           const failedSteps = job.steps.filter(step => step.conclusion !== 'success');

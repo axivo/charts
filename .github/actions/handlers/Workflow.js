@@ -22,12 +22,15 @@ class Workflow extends Action {
   constructor(params) {
     params.config = config;
     super(params);
+    this.chartService = new Chart(params);
+    this.docsService = new Docs(params);
+    this.fileService = new File(params);
     this.frontpageService = new Frontpage(params);
     this.gitService = new Git(params);
     this.issueService = new Issue(params);
     this.labelService = new Label(params);
+    this.releaseService = new Release(params);
     this.templateService = new Template(params);
-    this.fileService = new File(params);
   }
 
   /**
@@ -39,10 +42,7 @@ class Workflow extends Action {
     return this.execute('configure repository', async () => {
       this.logger.info('Configuring repository for workflow operations...');
       await this.gitService.configure();
-      const isPrivate = this.context.payload.repository.private === true;
-      const deployment = this.config.get('repository.release.deployment');
-      const publish = !isPrivate && deployment === 'production';
-      this.core.setOutput('publish', publish);
+      this.core.setOutput('publish', this.publish());
       this.logger.info('Repository configuration complete');
     });
   }
@@ -55,14 +55,7 @@ class Workflow extends Action {
    */
   async installHelmDocs(version) {
     return this.execute('install helm-docs', async () => {
-      const docsService = new Docs({
-        github: this.github,
-        context: this.context,
-        core: this.core,
-        exec: this.exec,
-        config: this.config
-      });
-      await docsService.install(version);
+      await this.docsService.install(version);
     });
   }
 
@@ -74,14 +67,7 @@ class Workflow extends Action {
   async processReleases() {
     return this.execute('process chart releases', async () => {
       this.logger.info('Processing chart releases...');
-      const releaseHandler = new Release({
-        github: this.github,
-        context: this.context,
-        core: this.core,
-        exec: this.exec,
-        config: this.config
-      });
-      await releaseHandler.process();
+      await this.releaseService.process();
       this.logger.info('Chart release process complete');
     });
   }
@@ -137,14 +123,7 @@ class Workflow extends Action {
   async updateCharts() {
     return this.execute('update charts', async () => {
       this.logger.info('Starting the charts update process...');
-      const chartHandler = new Chart({
-        github: this.github,
-        context: this.context,
-        core: this.core,
-        exec: this.exec,
-        config: this.config
-      });
-      const result = await chartHandler.process();
+      const result = await this.chartService.process();
       this.logger.info('Successfully completed the charts update process');
       return result;
     });

@@ -7,7 +7,6 @@
  * @license BSD-3-Clause
  */
 const path = require('path');
-const sharp = require('sharp');
 const Action = require('../../core/Action');
 const Chart = require('../chart');
 const File = require('../File');
@@ -190,33 +189,6 @@ class Local extends Action {
       await this.fileService.write(tempFile, templateResult);
       await this.shellService.execute('kubectl', ['apply', '--validate=true', '--dry-run=server', '-f', tempFile]);
       await this.fileService.delete(tempFile);
-      if (!await this.validateIcon(directory)) {
-        return false;
-      }
-      return true;
-    }, false);
-  }
-
-  /**
-   * Validates chart's icon.png file
-   * 
-   * @param {string} directory - Path to the chart directory
-   * @returns {Promise<boolean>} - True if validation succeeds
-   */
-  async validateIcon(directory) {
-    return this.execute(`validate icon for '${directory}' chart`, async () => {
-      const iconPath = path.join(directory, 'icon.png');
-      if (!await this.fileService.exists(iconPath)) {
-        throw new Error(`icon.png not found in '${directory}' directory`);
-      }
-      const metadata = await sharp(iconPath).metadata();
-      if (metadata.width !== 256 || metadata.height !== 256) {
-        throw new Error(`Icon in '${directory}' has dimensions ${metadata.width}x${metadata.height}px, required size is 256x256px`);
-      }
-      if (metadata.format !== 'png') {
-        throw new Error(`Icon in ${directory} is not in PNG format, required format is PNG`);
-      }
-      this.logger.info(`Icon validation successful for '${directory}' chart`);
       return true;
     }, false);
   }

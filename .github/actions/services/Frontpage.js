@@ -21,6 +21,7 @@ class Frontpage extends Action {
    */
   constructor(params) {
     super(params);
+    this.chartService = new Chart(params);
     this.fileService = new File(params);
     this.templateService = new Template(params);
   }
@@ -33,14 +34,7 @@ class Frontpage extends Action {
   async generate() {
     return this.execute('generate repository frontpage', async () => {
       this.logger.info('Generating repository frontpage...');
-      const chartService = new Chart({
-        github: this.github,
-        context: this.context,
-        core: this.core,
-        exec: this.exec,
-        config: this.config
-      });
-      const charts = await chartService.discover();
+      const charts = await this.chartService.discover();
       const chartEntries = {};
       const allCharts = [
         ...charts.application.map(directory => ({ directory, type: 'application' })),

@@ -15,6 +15,18 @@ const Update = require('./Update');
 
 class Chart extends Action {
   /**
+   * Creates a new Chart instance
+   * 
+   * @param {Object} params - Service parameters
+   */
+  constructor(params) {
+    super(params);
+    this.fileService = new File(params);
+    this.helmService = new Helm(params);
+    this.shellService = new Shell(params);
+  }
+
+  /**
    * Discovers all charts in the repository
    * 
    * @returns {Promise<Object>} - Object containing application and library chart paths
@@ -22,24 +34,17 @@ class Chart extends Action {
   async discover() {
     return this.execute('discover charts', async () => {
       const charts = { application: [], library: [], total: 0 };
-      const fileService = new File({
-        github: this.github,
-        context: this.context,
-        core: this.core,
-        exec: this.exec,
-        config: this.config
-      });
       const types = [
         { name: 'application', path: this.config.get('repository.chart.type.application') },
         { name: 'library', path: this.config.get('repository.chart.type.library') }
       ];
       for (const type of types) {
-        const dirs = await fileService.listDir(type.path);
+        const dirs = await this.fileService.listDir(type.path);
         for (const dir of dirs) {
           if (dir.endsWith('.yaml') || dir.endsWith('.yml') || dir.endsWith('.md')) continue;
           const chartPath = path.basename(dir);
           const chartYamlPath = path.join(type.path, chartPath, 'Chart.yaml');
-          if (await fileService.exists(chartYamlPath)) {
+          if (await this.fileService.exists(chartYamlPath)) {
             charts[type.name].push(path.join(type.path, chartPath));
             charts.total++;
           }
@@ -60,19 +65,12 @@ class Chart extends Action {
   async find(files) {
     return this.execute('find modified charts', async () => {
       const charts = { application: [], library: [], total: 0 };
-      const fileService = new File({
-        github: this.github,
-        context: this.context,
-        core: this.core,
-        exec: this.exec,
-        config: this.config
-      });
       const chartTypes = this.config.get('repository.chart.type');
-      const chartDirs = fileService.filterPath(files, chartTypes);
+      const chartDirs = this.fileService.filterPath(files, chartTypes);
       for (const chartDir of chartDirs) {
         const [type, chartPath] = chartDir.split(':');
         const chartYamlPath = path.join(chartPath, 'Chart.yaml');
-        if (await fileService.exists(chartYamlPath)) {
+        if (await this.fileService.exists(chartYamlPath)) {
           charts[type].push(chartPath);
           charts.total++;
         }
@@ -96,14 +94,7 @@ class Chart extends Action {
     return this.execute('lint charts', async () => {
       const word = charts.length === 1 ? 'chart' : 'charts';
       this.logger.info(`Linting ${charts.length} ${word}...`);
-      const shellService = new Shell({
-        github: this.github,
-        context: this.context,
-        core: this.core,
-        exec: this.exec,
-        config: this.config
-      });
-      await shellService.execute('ct', ['lint', '--charts', charts.join(','), '--skip-helm-dependencies']);
+      await this.shellService.execute('ct', ['lint', '--charts', charts.join(','), '--skip-helm-dependencies']);
       this.logger.info(`Successfully linted ${charts.length} ${word}`);
       return true;
     }, false);

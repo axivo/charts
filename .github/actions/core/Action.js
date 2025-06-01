@@ -58,6 +58,17 @@ class Action {
       return null;
     }
   }
+
+  /**
+   * Determines if deployments are in local or publish mode
+   * 
+   * @returns {boolean} - True if in publish mode
+   */
+  publish() {
+    const isPrivate = this.context.payload.repository.private === true;
+    const deployment = this.config.get('repository.release.deployment');
+    return !isPrivate && deployment !== 'local';
+  }
 }
 
 module.exports = Action;
