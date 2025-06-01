@@ -17,11 +17,11 @@ class Release extends Action {
    */
   constructor(params) {
     super(params);
-    this.releaseService = new ReleaseService(params);
     this.fileService = new File(params);
     this.githubService = new GitHub.Rest(params);
     this.packageService = new ReleaseService.Package(params);
     this.publishService = new ReleaseService.Publish(params);
+    this.releaseService = new ReleaseService(params);
   }
 
   /**

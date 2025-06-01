@@ -25,12 +25,12 @@ class Publish extends Action {
   constructor(params) {
     super(params);
     this.fileService = new File(params);
+    this.graphqlService = new GitHub.GraphQL(params);
     this.helmService = new Helm(params);
     this.issueService = new Issue(params);
     this.packageService = new Package(params);
-    this.templateService = new Template(params);
     this.restService = new GitHub.Rest(params);
-    this.graphqlService = new GitHub.GraphQL(params);
+    this.templateService = new Template(params);
   }
 
   /**

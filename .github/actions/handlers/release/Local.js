@@ -21,9 +21,9 @@ class Local extends Action {
     this.fileService = new File(params);
     this.githubService = new GitHub.Rest(params);
     this.helmService = new Helm(params);
-    this.releaseService = new ReleaseService(params);
-    this.packageService = new ReleaseService.Package(params);
     this.localService = new ReleaseService.Local(params);
+    this.packageService = new ReleaseService.Package(params);
+    this.releaseService = new ReleaseService(params);
   }
 
   /**
