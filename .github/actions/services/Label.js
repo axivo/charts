@@ -58,10 +58,10 @@ class Label extends Action {
         this.logger.info(`Successfully created '${name}' label`);
         return true;
       } catch (error) {
-        this.actionError.handle(error, {
+        this.actionError.report({
           operation: `add '${name}' label`,
           fatal: false
-        });
+        }, error);
         return false;
       }
     }, false);

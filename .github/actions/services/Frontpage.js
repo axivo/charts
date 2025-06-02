@@ -61,7 +61,7 @@ class Frontpage extends Action {
           Type: data.type || 'application',
           Version: data.version || ''
         }));
-      const templatePath = this.config('theme.frontpage.template');
+      const templatePath = this.config.get('theme.frontpage.template');
       const templateContent = await this.fileService.read(templatePath);
       const repoUrl = this.context.payload.repository.html_url;
       const defaultBranch = this.context.payload.repository.default_branch;
@@ -82,13 +82,13 @@ class Frontpage extends Action {
    */
   async setTheme() {
     return this.execute('set Jekyll theme', async () => {
-      const deployment = this.config('repository.release.deployment');
+      const deployment = this.config.get('repository.release.deployment');
       this.logger.info(`Setting up Jekyll theme for '${deployment}' deployment...`);
-      await this.fileService.copy(this.config('theme.configuration.file'), './_config.yml');
+      await this.fileService.copy(this.config.get('theme.configuration.file'), './_config.yml');
       await this.fileService.createDir('./_includes');
-      await this.fileService.copy(this.config('theme.head.template'), './_includes/head-custom.html');
+      await this.fileService.copy(this.config.get('theme.head.template'), './_includes/head-custom.html');
       await this.fileService.createDir('./_layouts');
-      await this.fileService.copy(this.config('theme.layout.template'), './_layouts/default.html');
+      await this.fileService.copy(this.config.get('theme.layout.template'), './_layouts/default.html');
       this.logger.info(`Successfully set up Jekyll theme for '${deployment}' deployment`);
     }, false);
   }

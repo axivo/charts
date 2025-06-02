@@ -19,9 +19,10 @@ class Logger {
    * @param {Boolean} options.timestamp - Whether to include timestamps
    * @param {String} options.level - Minimum log level ('debug'|'info'|'warning'|'error')
    */
-  constructor(core, options = {}) {
-    this.context = options.context || 'action';
+  constructor(params, options = {}) {
+    const { core } = params;
     this.core = core;
+    this.context = options.context || 'action';
     this.level = options.level || 'info';
     this.levelPriority = { debug: 0, info: 1, warning: 2, error: 3 };
     this.timestamp = options.timestamp === true;

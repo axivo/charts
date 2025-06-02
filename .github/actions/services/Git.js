@@ -25,6 +25,24 @@ class Git extends Action {
   }
 
   /**
+   * Parses git status output into structured format
+   * 
+   * @private
+   * @param {string} output - Git status output
+   * @returns {Array<Object>} - Parsed status entries
+   */
+  #parseGitStatus(output) {
+    if (!output) return [];
+    return output.split('\n')
+      .filter(Boolean)
+      .map(line => {
+        const [status, ...pathParts] = line.split('\t');
+        const path = pathParts.join('\t');
+        return { status, path };
+      });
+  }
+
+  /**
    * Adds files to git staging area
    * 
    * @param {string[]} files - Array of file paths to add
@@ -180,23 +198,6 @@ class Git extends Action {
   }
 
   /**
-   * Parses git status output into structured format
-   * 
-   * @param {string} output - Git status output
-   * @returns {Array<Object>} - Parsed status entries
-   */
-  parseGitStatus(output) {
-    if (!output) return [];
-    return output.split('\n')
-      .filter(Boolean)
-      .map(line => {
-        const [status, ...pathParts] = line.split('\t');
-        const path = pathParts.join('\t');
-        return { status, path };
-      });
-  }
-
-  /**
    * Pulls the latest changes from remote
    * 
    * @param {string} [remote='origin'] - Remote name
@@ -241,8 +242,7 @@ class Git extends Action {
     const word = files.length === 1 ? 'file' : 'files';
     return this.execute(`create signed commit for ${files.length} ${word}`, async () => {
       const headRef = branch || process.env.GITHUB_HEAD_REF;
-      await this.fetch('origin', headRef);
-      await this.switch(headRef);
+      await this.pull('origin', headRef);
       const currentHead = await this.getRevision('HEAD');
       await this.add(files);
       const stagedChanges = await this.getStagedChanges();

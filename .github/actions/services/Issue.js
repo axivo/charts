@@ -52,10 +52,10 @@ class Issue extends Action {
       return hasFailures || hasWarnings;
     } catch (error) {
       if (error.status === 404) return false;
-      this.actionError.handle(error, {
+      this.actionError.report({
         operation: 'validate workflow status',
         fatal: false
-      });
+      }, error);
       return false;
     }
   }
@@ -104,10 +104,10 @@ class Issue extends Action {
       const chartPath = `${chart.type}/${chart.name}`;
       this.logger.info(`Fetching '${chartPath}' chart issues...`);
       const tagPrefix = `${chart.name}-`;
-      const releases = await this.graphqlService.getReleases({ 
-        context, 
-        prefix: tagPrefix, 
-        limit: 1 
+      const releases = await this.graphqlService.getReleases({
+        context,
+        prefix: tagPrefix,
+        limit: 1
       });
       const lastReleaseDate = releases.length > 0 ? new Date(releases[0].createdAt) : null;
       const allIssues = await this.graphqlService.getReleaseIssues({

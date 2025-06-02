@@ -30,6 +30,7 @@ class Update extends Action {
   /**
    * Commits files and returns results
    * 
+   * @private
    * @param {Object} data - Commit data object
    * @param {string} data.type - Type of files (application, dependency lock, metadata)
    * @param {Array<string>} data.files - Files to commit
@@ -50,6 +51,7 @@ class Update extends Action {
   /**
    * Generates chart index from directory
    * 
+   * @private
    * @param {Object} directory - Directory object with chart and temp paths
    * @param {string} directory.chart - Chart directory path
    * @param {string} directory.temp - Temporary directory path
@@ -77,6 +79,7 @@ class Update extends Action {
   /**
    * Merges metadata entries with retention policy
    * 
+   * @private
    * @param {Object} chart - Chart object with index, metadata and name
    * @param {Object} chart.index - Generated index object
    * @param {Object} chart.metadata - Existing metadata object
@@ -127,10 +130,10 @@ class Update extends Action {
           this.logger.info(`Successfully updated '${chartDir}' ${type} file`);
           return true;
         } catch (error) {
-          this.actionError.handle(error, {
+          this.actionError.report({
             operation: `update '${chartDir}' ${type} file`,
             fatal: false
-          });
+          }, error);
           return false;
         }
       });
@@ -171,10 +174,10 @@ class Update extends Action {
           }
           return true;
         } catch (error) {
-          this.actionError.handle(error, {
+          this.actionError.report({
             operation: `update '${chartDir}' ${type} file`,
             fatal: false
-          });
+          }, error);
           return false;
         }
       });
@@ -217,10 +220,10 @@ class Update extends Action {
           this.logger.info(`Successfully updated '${chartDir}' ${type} file`);
           return true;
         } catch (error) {
-          this.actionError.handle(error, {
+          this.actionError.report({
             operation: `update '${chartDir}' ${type} file`,
             fatal: false
-          });
+          }, error);
           return false;
         }
       });
