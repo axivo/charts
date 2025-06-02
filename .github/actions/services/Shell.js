@@ -57,10 +57,10 @@ class Shell extends Action {
         return '';
       }
     } catch (error) {
-      this.actionError.handle(error, {
+      this.actionError.report({
         operation: `execute '${command}' command`,
         fatal: throwOnError
-      });
+      }, error);
       return null;
     }
   }

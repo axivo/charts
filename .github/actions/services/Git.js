@@ -25,18 +25,34 @@ class Git extends Action {
   }
 
   /**
-   * Adds files to git staging area
+   * Gets staged changes from git
    * 
-   * @param {string[]} files - Array of file paths to add
-   * @returns {Promise<string>} - Command output
+   * @private
+   * @returns {Promise<Object>} - Object with additions and deletions arrays
    */
-  async add(files) {
-    if (!files || !files.length) {
-      this.logger.info('No files to add to git staging area');
-      return '';
-    }
-    return this.execute(`add ${files.length} files to git staging area`, async () => {
-      return await this.shellService.execute('git', ['add', ...files], { output: true });
+  async #getStagedChanges() {
+    return this.execute('get staged changes', async () => {
+      const additionsFiles = await this.shellService.execute('git', [
+        'diff', '--name-only', '--staged', '--diff-filter=ACMR'
+      ], { output: true });
+      const deletionsFiles = await this.shellService.execute('git', [
+        'diff', '--name-only', '--staged', '--diff-filter=D'
+      ], { output: true });
+      const additions = await Promise.all(
+        additionsFiles.split('\n')
+          .filter(Boolean)
+          .map(async file => {
+            const contents = await this.fileService.read(file);
+            return { path: file, contents: Buffer.from(contents).toString('base64') };
+          })
+      );
+      const deletions = deletionsFiles.split('\n')
+        .filter(Boolean)
+        .map(file => ({ path: file }));
+      return {
+        additions,
+        deletions
+      };
     });
   }
 
@@ -74,21 +90,6 @@ class Git extends Action {
   }
 
   /**
-   * Fetches from a remote
-   * 
-   * @param {string} remote - Remote name
-   * @param {string} [reference] - Specific reference to fetch
-   * @returns {Promise<string>} - Command output
-   */
-  async fetch(remote = 'origin', reference) {
-    return this.execute(`fetch from '${remote}' remote${reference ? ` (${reference})` : ''}`, async () => {
-      const args = ['fetch', remote];
-      if (reference) args.push(reference);
-      return await this.shellService.execute('git', args, { output: true });
-    });
-  }
-
-  /**
    * Gets the current branch name
    * 
    * @returns {Promise<string>} - Current branch name
@@ -115,49 +116,6 @@ class Git extends Action {
   }
 
   /**
-   * Gets the revision hash for a reference
-   * 
-   * @param {string} [reference='HEAD'] - Git reference
-   * @returns {Promise<string>} - Revision hash
-   */
-  async getRevision(reference = 'HEAD') {
-    return this.execute(`get revision for '${reference}' reference`, async () => {
-      return await this.shellService.execute('git', ['rev-parse', reference], { output: true });
-    });
-  }
-
-  /**
-   * Gets staged changes from git
-   * 
-   * @returns {Promise<Object>} - Object with additions and deletions arrays
-   */
-  async getStagedChanges() {
-    return this.execute('get staged changes', async () => {
-      const additionsFiles = await this.shellService.execute('git', [
-        'diff', '--name-only', '--staged', '--diff-filter=ACMR'
-      ], { output: true });
-      const deletionsFiles = await this.shellService.execute('git', [
-        'diff', '--name-only', '--staged', '--diff-filter=D'
-      ], { output: true });
-      const additions = await Promise.all(
-        additionsFiles.split('\n')
-          .filter(Boolean)
-          .map(async file => {
-            const contents = await this.fileService.read(file);
-            return { path: file, contents: Buffer.from(contents).toString('base64') };
-          })
-      );
-      const deletions = deletionsFiles.split('\n')
-        .filter(Boolean)
-        .map(file => ({ path: file }));
-      return {
-        additions,
-        deletions
-      };
-    });
-  }
-
-  /**
    * Gets the git status
    * 
    * @returns {Promise<Object>} - Git status information
@@ -177,23 +135,6 @@ class Git extends Action {
       }
       return status;
     }, false);
-  }
-
-  /**
-   * Parses git status output into structured format
-   * 
-   * @param {string} output - Git status output
-   * @returns {Array<Object>} - Parsed status entries
-   */
-  parseGitStatus(output) {
-    if (!output) return [];
-    return output.split('\n')
-      .filter(Boolean)
-      .map(line => {
-        const [status, ...pathParts] = line.split('\t');
-        const path = pathParts.join('\t');
-        return { status, path };
-      });
   }
 
   /**
@@ -240,22 +181,23 @@ class Git extends Action {
   async signedCommit(branch, files, message) {
     const word = files.length === 1 ? 'file' : 'files';
     return this.execute(`create signed commit for ${files.length} ${word}`, async () => {
-      const headRef = branch || process.env.GITHUB_HEAD_REF;
-      await this.fetch('origin', headRef);
-      await this.switch(headRef);
-      const currentHead = await this.getRevision('HEAD');
-      await this.add(files);
-      const stagedChanges = await this.getStagedChanges();
-      const { additions, deletions } = stagedChanges;
+      await this.shellService.execute('git', ['fetch', 'origin', branch], { output: true });
+      if (!files || !files.length) {
+        this.logger.info(`No updated files present into ${branch} branch`);
+        return { updated: 0 };
+      }
+      await this.shellService.execute('git', ['add', ...files], { output: true });
+      const { additions, deletions } = await this.#getStagedChanges();
       if (additions.length + deletions.length === 0) {
         this.logger.info('No staged changes to commit');
         return { updated: 0 };
       }
+      const oid = await this.shellService.execute('git', ['rev-parse', `origin/${branch}`], { output: true });
       await this.graphqlService.createSignedCommit({
         context: this.context,
         commit: {
-          branch: headRef,
-          oid: currentHead,
+          branch,
+          oid,
           additions,
           deletions,
           message
