@@ -14,6 +14,24 @@ const Action = require('../core/Action');
 
 class File extends Action {
   /**
+   * Extracts path from file, based on pattern
+   * 
+   * @private
+   * @param {string} file - File name
+   * @param {string} pattern - Path pattern
+   * @returns {string|null} - Extracted path or null if no match
+   */
+  #extractPath(file, pattern) {
+    if (file.startsWith(pattern + '/')) {
+      const segments = file.split('/');
+      if (segments.length >= 3) {
+        return path.join(segments[0], segments[1]);
+      }
+    }
+    return null;
+  }
+
+  /**
    * Copies a file from source to destination
    * 
    * @param {string} source - Source file path
@@ -85,23 +103,6 @@ class File extends Action {
   }
 
   /**
-   * Extracts path from file, based on pattern
-   * 
-   * @param {string} file - File name
-   * @param {string} pattern - Path pattern
-   * @returns {string|null} - Extracted path or null if no match
-   */
-  extractPath(file, pattern) {
-    if (file.startsWith(pattern + '/')) {
-      const segments = file.split('/');
-      if (segments.length >= 3) {
-        return path.join(segments[0], segments[1]);
-      }
-    }
-    return null;
-  }
-
-  /**
    * Filters paths to only include existing files
    * 
    * @param {Array<string>} directories - List of directories to check
@@ -140,7 +141,7 @@ class File extends Action {
     const matches = new Set();
     for (const file of files) {
       for (const [type, pattern] of Object.entries(patterns)) {
-        const extractedPath = this.extractPath(file, pattern);
+        const extractedPath = this.#extractPath(file, pattern);
         if (extractedPath) {
           matches.add(`${type}:${extractedPath}`);
         }

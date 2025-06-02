@@ -72,10 +72,10 @@ class GraphQL extends Api {
       };
       return result;
     } catch (error) {
-      this.actionError.handle(error, {
+      this.actionError.report({
         operation: `create signed commit on '${branch}' branch`,
         fatal: true
-      });
+      }, error);
       return result;
     }
   }
@@ -147,10 +147,10 @@ class GraphQL extends Api {
       }));
       return result;
     } catch (error) {
-      this.actionError.handle(error, {
+      this.actionError.report({
         operation: `get release issues for '${chartName}' chart`,
         fatal: false
-      });
+      }, error);
       return result;
     }
   }
@@ -229,10 +229,10 @@ class GraphQL extends Api {
       }));
       return result;
     } catch (error) {
-      this.actionError.handle(error, {
+      this.actionError.report({
         operation: `get releases for ${context.repo.owner}/${context.repo.repo}`,
         fatal: false
-      });
+      }, error);
       return result;
     }
   }
@@ -261,10 +261,10 @@ class GraphQL extends Api {
       this.logger.info(`Repository is of '${ownerType}' type`);
       return ownerType;
     } catch (error) {
-      this.actionError.handle(error, {
+      this.actionError.report({
         operation: `get repository type`,
         fatal: false
-      });
+      }, error);
       return result;
     }
   }
