@@ -25,6 +25,24 @@ class Git extends Action {
   }
 
   /**
+   * Parses git status output into structured format
+   * 
+   * @private
+   * @param {string} output - Git status output
+   * @returns {Array<Object>} - Parsed status entries
+   */
+  #parseGitStatus(output) {
+    if (!output) return [];
+    return output.split('\n')
+      .filter(Boolean)
+      .map(line => {
+        const [status, ...pathParts] = line.split('\t');
+        const path = pathParts.join('\t');
+        return { status, path };
+      });
+  }
+
+  /**
    * Adds files to git staging area
    * 
    * @param {string[]} files - Array of file paths to add
@@ -177,23 +195,6 @@ class Git extends Action {
       }
       return status;
     }, false);
-  }
-
-  /**
-   * Parses git status output into structured format
-   * 
-   * @param {string} output - Git status output
-   * @returns {Array<Object>} - Parsed status entries
-   */
-  parseGitStatus(output) {
-    if (!output) return [];
-    return output.split('\n')
-      .filter(Boolean)
-      .map(line => {
-        const [status, ...pathParts] = line.split('\t');
-        const path = pathParts.join('\t');
-        return { status, path };
-      });
   }
 
   /**

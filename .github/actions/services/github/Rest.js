@@ -50,7 +50,7 @@ class Rest extends Api {
       this.logger.info(`Found ${result.length} ${word} for '${chart}' chart`);
       return result;
     } catch (error) {
-      this.actionError.handle(error, {
+      this.actionError.report(error, {
         operation: 'get release IDs',
         fatal: false
       });
@@ -91,7 +91,7 @@ class Rest extends Api {
       };
       return result;
     } catch (error) {
-      this.actionError.handle(error, {
+      this.actionError.report(error, {
         operation: `create '${name}' label`,
         fatal: false
       });
@@ -137,7 +137,7 @@ class Rest extends Api {
       };
       return result;
     } catch (error) {
-      this.actionError.handle(error, {
+      this.actionError.report(error, {
         operation: `create '${name}' release`,
         fatal: true
       });
@@ -174,7 +174,7 @@ class Rest extends Api {
       return true;
     } catch (error) {
       if (error.status === 404) return false;
-      this.actionError.handle(error, {
+      this.actionError.report(error, {
         operation: `delete OCI package for '${chartName}' chart`,
         fatal: false
       });
@@ -213,7 +213,7 @@ class Rest extends Api {
           });
           result++;
         } catch (error) {
-          this.actionError.handle(error, {
+          this.actionError.report(error, {
             operation: `delete '${release.tagName}' release`,
             fatal: false
           });
@@ -223,7 +223,7 @@ class Rest extends Api {
       this.logger.info(`Successfully deleted ${result} ${word} for ${chart} chart`);
       return result;
     } catch (error) {
-      this.actionError.handle(error, {
+      this.actionError.report(error, {
         operation: `delete releases for '${chart}' chart`,
         fatal: false
       });
@@ -261,7 +261,7 @@ class Rest extends Api {
       };
       return result;
     } catch (error) {
-      this.actionError.handle(error, {
+      this.actionError.report(error, {
         operation: `get '${name}' label`,
         fatal: false
       });
@@ -304,7 +304,7 @@ class Rest extends Api {
       };
       return result;
     } catch (error) {
-      this.actionError.handle(error, {
+      this.actionError.report(error, {
         operation: `get release by '${tag}' tag`,
         fatal: false
       });
@@ -350,7 +350,7 @@ class Rest extends Api {
           return result;
       }
     } catch (error) {
-      this.actionError.handle(error, {
+      this.actionError.report(error, {
         operation: 'get updated files',
         fatal: false
       });
@@ -386,7 +386,7 @@ class Rest extends Api {
       };
       return result;
     } catch (error) {
-      this.actionError.handle(error, {
+      this.actionError.report(error, {
         operation: `get workflow run '${id}' ID`,
         fatal: false
       });
@@ -418,7 +418,7 @@ class Rest extends Api {
       return result;
     } catch (error) {
       if (error.status === 404) return result;
-      this.actionError.handle(error, {
+      this.actionError.report(error, {
         operation: 'list jobs',
         fatal: false
       });
@@ -495,7 +495,7 @@ class Rest extends Api {
       };
       return result;
     } catch (error) {
-      this.actionError.handle(error, {
+      this.actionError.report(error, {
         operation: `upload '${assetName}' asset to release ${releaseId}`,
         fatal: true
       });

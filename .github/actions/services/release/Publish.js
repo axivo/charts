@@ -59,7 +59,7 @@ class Publish extends Action {
         }
       });
       const assetName = `${chart.type}.tgz`;
-      const assetData = await this.fileService.readFile(chart.path);
+      const assetData = await this.fileService.read(chart.path);
       await this.restService.uploadReleaseAsset({
         context: this.context,
         asset: {
@@ -98,12 +98,12 @@ class Publish extends Action {
     const iconExists = await this.fileService.exists(iconPath);
     let metadata = {};
     try {
-      const chartYamlContent = await this.fileService.readFile(chartYamlPath);
+      const chartYamlContent = await this.fileService.read(chartYamlPath);
       const yaml = require('js-yaml');
       metadata = yaml.load(chartYamlContent);
       this.logger.info(`Successfully loaded '${chartDir}' chart metadata`);
     } catch (error) {
-      this.actionError.handle(error, {
+      this.actionError.report(error, {
         operation: `load '${chartDir}' chart metadata`,
         fatal: false
       });
@@ -153,10 +153,10 @@ class Publish extends Action {
         return false;
       }
       const indexPath = path.join(outputDir, 'index.yaml');
-      await this.fileService.copyFile(metadataPath, indexPath);
+      await this.fileService.copy(metadataPath, indexPath);
       this.logger.info(`Generated index for '${chart.type}/${chartName}'`);
       const redirectTemplate = this.config.get('repository.chart.redirect.template');
-      const redirectContent = await this.fileService.readFile(redirectTemplate);
+      const redirectContent = await this.fileService.read(redirectTemplate);
       const redirectContext = {
         RepoURL: this.config.get('repository.url'),
         Type: chart.type,
@@ -164,10 +164,10 @@ class Publish extends Action {
       };
       const redirectHtml = this.templateService.render(redirectContent, redirectContext);
       const redirectPath = path.join(outputDir, 'index.html');
-      await this.fileService.writeFile(redirectPath, redirectHtml);
+      await this.fileService.write(redirectPath, redirectHtml);
       return true;
     } catch (error) {
-      this.actionError.handle(error, {
+      this.actionError.report(error, {
         operation: `generate index for '${chart.type}/${path.basename(chart.dir)}'`,
         fatal: false
       });
@@ -185,17 +185,17 @@ class Publish extends Action {
     return this.execute('find available charts', async () => {
       const result = [];
       try {
-        const dirs = await this.fileService.listDirectory(type);
+        const dirs = await this.fileService.listDir(type);
         const filtered = dirs.filter(dir => !dir.startsWith('.'));
         result.push(...filtered.map(dir => ({
           dir: path.join(type, dir),
           type: type
         })));
       } catch (error) {
-        this.actionError.handle(error, {
-          operation: `list ${type} directory`,
-          fatal: false
-        });
+      this.actionError.report(error, {
+      operation: `list ${type} directory`,
+      fatal: false
+      });
       }
       return result;
     });
@@ -225,14 +225,14 @@ class Publish extends Action {
         const results = await Promise.all(chartDirs.map(async (chart) => {
           const outputDir = path.join('./', chart.type, path.basename(chart.dir));
           try {
-            await this.fileService.createDirectory(outputDir);
+            await this.fileService.createDir(outputDir);
             return await this.createIndex(chart, outputDir);
           } catch (error) {
-            this.actionError.handle(error, {
-              operation: `create output directory for ${chart.dir}`,
-              fatal: false
-            });
-            return false;
+          this.actionError.report(error, {
+          operation: `create output directory for ${chart.dir}`,
+          fatal: false
+          });
+          return false;
           }
         }));
         const successCount = results.filter(Boolean).length;
@@ -242,7 +242,7 @@ class Publish extends Action {
         }
         return successCount;
       } catch (error) {
-        this.actionError.handle(error, {
+        this.actionError.report(error, {
           operation: 'generate chart indexes',
           fatal: false
         });
@@ -261,8 +261,7 @@ class Publish extends Action {
     return this.execute('generate release content', async () => {
       this.logger.info(`Generating release content for '${chart.type}/${chart.name}' chart...`);
       const releaseTemplate = this.config.get('repository.release.template');
-      await this.fileService.validateFile(releaseTemplate);
-      const templateContent = await this.fileService.readFile(releaseTemplate);
+      const templateContent = await this.fileService.read(releaseTemplate);
       const issues = await this.issueService.get({
         context: this.context,
         chart: { name: chart.name, type: chart.type }
@@ -372,7 +371,7 @@ class Publish extends Action {
             this.logger.info(`Deleted existing OCI package for ${name}`);
           }
         } catch (error) {
-          this.actionError.handle(error, {
+          this.actionError.report(error, {
             operation: `delete existing OCI package for ${pkg.source}`,
             fatal: false
           });
@@ -396,7 +395,7 @@ class Publish extends Action {
             registry
           });
         } catch (error) {
-          this.actionError.handle(error, {
+          this.actionError.report(error, {
             operation: `push '${pkg.source}' package`,
             fatal: false
           });

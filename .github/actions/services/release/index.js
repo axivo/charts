@@ -56,7 +56,7 @@ class Release extends Action {
           }
           return true;
         } catch (error) {
-          this.actionError.handle(error, {
+          this.actionError.report(error, {
             operation: `delete releases for '${filePath}' chart`,
             fatal: false
           });

@@ -26,19 +26,20 @@ class Package extends Action {
   /**
    * Creates package directory structure
    * 
+   * @private
    * @returns {Promise<Object>} Created directories
    */
-  async createDirectories() {
-    return this.execute('create package directories', async () => {
+  async #createDir() {
+    return this.execute('create package directory structure', async () => {
       const packagesPath = this.config.get('repository.release.packages');
       const appType = this.config.get('repository.chart.type.application');
       const libType = this.config.get('repository.chart.type.library');
       this.logger.info(`Creating '${packagesPath}' directory...`);
-      await this.fileService.createDirectory(packagesPath);
+      await this.fileService.createDir(packagesPath);
       const appPackagesDir = path.join(packagesPath, appType);
       const libPackagesDir = path.join(packagesPath, libType);
-      await this.fileService.createDirectory(appPackagesDir);
-      await this.fileService.createDirectory(libPackagesDir);
+      await this.fileService.createDir(appPackagesDir);
+      await this.fileService.createDir(libPackagesDir);
       this.logger.info(`Successfully created '${packagesPath}' directory structure`);
       return {
         root: packagesPath,
@@ -64,14 +65,14 @@ class Package extends Action {
       for (const [dir, type] of [[appPackagesDir, appType], [libPackagesDir, libType]]) {
         try {
           if (await this.fileService.exists(dir)) {
-            const files = await this.fileService.listDirectory(dir);
+            const files = await this.fileService.listDir(dir);
             packages.push(...files
               .filter(file => file.endsWith('.tgz'))
               .map(file => ({ source: file, type }))
             );
           }
         } catch (error) {
-          this.actionError.handle(error, {
+          this.actionError.report(error, {
             operation: `read ${type} packages directory`,
             fatal: false
           });
@@ -93,7 +94,7 @@ class Package extends Action {
         this.logger.info('No charts to package');
         return [];
       }
-      const dirs = await this.createDirectories();
+      const dirs = await this.#createDir();
       const appType = this.config.get('repository.chart.type.application');
       const chartDirs = [...charts.application, ...charts.library];
       this.logger.info(`Packaging ${chartDirs.length} charts...`);
@@ -111,7 +112,7 @@ class Package extends Action {
             type: isAppChartType ? 'application' : 'library'
           };
         } catch (error) {
-          this.actionError.handle(error, {
+          this.actionError.report(error, {
             operation: `package ${chartDir} chart`,
             fatal: false
           });
