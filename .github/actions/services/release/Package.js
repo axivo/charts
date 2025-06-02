@@ -72,10 +72,10 @@ class Package extends Action {
             );
           }
         } catch (error) {
-          this.actionError.report(error, {
+          this.actionError.report({
             operation: `read ${type} packages directory`,
             fatal: false
-          });
+          }, error);
         }
       }
       return packages;
@@ -112,10 +112,10 @@ class Package extends Action {
             type: isAppChartType ? 'application' : 'library'
           };
         } catch (error) {
-          this.actionError.report(error, {
+          this.actionError.report({
             operation: `package ${chartDir} chart`,
             fatal: false
-          });
+          }, error);
           return {
             chartDir,
             success: false,

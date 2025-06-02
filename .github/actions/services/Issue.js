@@ -52,10 +52,10 @@ class Issue extends Action {
       return hasFailures || hasWarnings;
     } catch (error) {
       if (error.status === 404) return false;
-      this.actionError.report(error, {
+      this.actionError.report({
         operation: 'validate workflow status',
         fatal: false
-      });
+      }, error);
       return false;
     }
   }

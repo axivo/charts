@@ -103,10 +103,10 @@ class Publish extends Action {
       metadata = yaml.load(chartYamlContent);
       this.logger.info(`Successfully loaded '${chartDir}' chart metadata`);
     } catch (error) {
-      this.actionError.report(error, {
+      this.actionError.report({
         operation: `load '${chartDir}' chart metadata`,
         fatal: false
-      });
+      }, error);
     }
     return {
       icon: iconExists,
@@ -167,10 +167,10 @@ class Publish extends Action {
       await this.fileService.write(redirectPath, redirectHtml);
       return true;
     } catch (error) {
-      this.actionError.report(error, {
+      this.actionError.report({
         operation: `generate index for '${chart.type}/${path.basename(chart.dir)}'`,
         fatal: false
-      });
+      }, error);
       return false;
     }
   }
@@ -192,10 +192,10 @@ class Publish extends Action {
           type: type
         })));
       } catch (error) {
-      this.actionError.report(error, {
+      this.actionError.report({
       operation: `list ${type} directory`,
       fatal: false
-      });
+      }, error);
       }
       return result;
     });
@@ -228,10 +228,10 @@ class Publish extends Action {
             await this.fileService.createDir(outputDir);
             return await this.createIndex(chart, outputDir);
           } catch (error) {
-          this.actionError.report(error, {
+          this.actionError.report({
           operation: `create output directory for ${chart.dir}`,
           fatal: false
-          });
+          }, error);
           return false;
           }
         }));
@@ -242,10 +242,10 @@ class Publish extends Action {
         }
         return successCount;
       } catch (error) {
-        this.actionError.report(error, {
+        this.actionError.report({
           operation: 'generate chart indexes',
           fatal: false
-        });
+        }, error);
         return 0;
       }
     });
@@ -371,10 +371,10 @@ class Publish extends Action {
             this.logger.info(`Deleted existing OCI package for ${name}`);
           }
         } catch (error) {
-          this.actionError.report(error, {
+          this.actionError.report({
             operation: `delete existing OCI package for ${pkg.source}`,
             fatal: false
-          });
+          }, error);
         }
       }
       const ociRegistry = this.config.get('repository.oci.registry');
@@ -395,10 +395,10 @@ class Publish extends Action {
             registry
           });
         } catch (error) {
-          this.actionError.report(error, {
+          this.actionError.report({
             operation: `push '${pkg.source}' package`,
             fatal: false
-          });
+          }, error);
         }
       }
       if (result.length) {

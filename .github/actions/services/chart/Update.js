@@ -130,10 +130,10 @@ class Update extends Action {
           this.logger.info(`Successfully updated '${chartDir}' ${type} file`);
           return true;
         } catch (error) {
-          this.actionError.report(error, {
+          this.actionError.report({
             operation: `update '${chartDir}' ${type} file`,
             fatal: false
-          });
+          }, error);
           return false;
         }
       });
@@ -174,10 +174,10 @@ class Update extends Action {
           }
           return true;
         } catch (error) {
-          this.actionError.report(error, {
+          this.actionError.report({
             operation: `update '${chartDir}' ${type} file`,
             fatal: false
-          });
+          }, error);
           return false;
         }
       });
@@ -220,10 +220,10 @@ class Update extends Action {
           this.logger.info(`Successfully updated '${chartDir}' ${type} file`);
           return true;
         } catch (error) {
-          this.actionError.report(error, {
+          this.actionError.report({
             operation: `update '${chartDir}' ${type} file`,
             fatal: false
-          });
+          }, error);
           return false;
         }
       });

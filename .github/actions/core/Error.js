@@ -16,9 +16,10 @@ class ActionError {
    * @param {Object} core - GitHub Actions Core API for logging
    * @param {Object} config - Configuration instance
    */
-  constructor(core, config) {
-    this.config = config;
+  constructor(params) {
+    const { core, config } = params;
     this.core = core;
+    this.config = config;
   }
 
   /**
@@ -51,7 +52,7 @@ class ActionError {
    * @param {Object} context - Error context
    * @returns {Object} - Formatted error information
    */
-  extractErrorInfo(error, context) {
+  extractErrorInfo(context, error) {
     return {
       message: `Failed to ${context.operation}: ${error.message}`,
       operation: context.operation,
@@ -77,8 +78,8 @@ class ActionError {
    * @param {number} [context.col] - Related column number
    * @returns {string} - The formatted error message
    */
-  report(error, context) {
-    const errorInfo = this.extractErrorInfo(error, context);
+  report(context, error) {
+    const errorInfo = this.extractErrorInfo(context, error);
     if (context.fatal !== false) {
       this.createAnnotation(errorInfo, 'error');
       this.core.setFailed(errorInfo.message);

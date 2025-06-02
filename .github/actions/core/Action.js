@@ -23,14 +23,15 @@ class Action {
    * @param {Object} params.exec - GitHub Actions exec helper
    * @param {Object} params.config - Configuration instance
    */
-  constructor({ core, github, context, exec, config }) {
-    this.actionError = new ActionError(core, config);
+  constructor(params) {
+    const { core, github, context, exec, config } = params;
+    this.actionError = new ActionError(params);
     this.config = config;
     this.context = context;
     this.core = core;
     this.exec = exec;
     this.github = github;
-    this.logger = new Logger(core, {
+    this.logger = new Logger(params, {
       context: this.constructor.name,
       timestamp: this.config.get('workflow.debug')
     });
@@ -51,10 +52,10 @@ class Action {
     try {
       return await action();
     } catch (error) {
-      this.actionError.report(error, {
+      this.actionError.report({
         operation,
         fatal
-      });
+      }, error);
       return null;
     }
   }
