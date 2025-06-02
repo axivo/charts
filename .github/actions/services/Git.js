@@ -242,8 +242,7 @@ class Git extends Action {
     const word = files.length === 1 ? 'file' : 'files';
     return this.execute(`create signed commit for ${files.length} ${word}`, async () => {
       const headRef = branch || process.env.GITHUB_HEAD_REF;
-      await this.fetch('origin', headRef);
-      await this.switch(headRef);
+      await this.pull('origin', headRef);
       const currentHead = await this.getRevision('HEAD');
       await this.add(files);
       const stagedChanges = await this.getStagedChanges();
