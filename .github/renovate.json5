@@ -23,7 +23,7 @@
         ".github/workflows/chart.yml"
       ],
       "matchStrings": [
-        "await\\s+installHelmDocs[\\s\\S]+?version:\\s+'(?<currentValue>.+)'"
+        "await[\\s\\S]+?installHelmDocs[\\s\\S]+'(?<currentValue>.+)'"
       ]
     },
     {

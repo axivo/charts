@@ -19,6 +19,7 @@ class Git extends Action {
    */
   constructor(params) {
     super(params);
+    this.fileService = new File(params);
     this.graphqlService = new GitHub.GraphQL(params);
     this.shellService = new Shell(params);
   }
@@ -132,13 +133,6 @@ class Git extends Action {
    */
   async getStagedChanges() {
     return this.execute('get staged changes', async () => {
-      const fileService = new File({
-        github: this.github,
-        context: this.context,
-        core: this.core,
-        exec: this.exec,
-        config: this.config
-      });
       const additionsFiles = await this.shellService.execute('git', [
         'diff', '--name-only', '--staged', '--diff-filter=ACMR'
       ], { output: true });
@@ -149,7 +143,7 @@ class Git extends Action {
         additionsFiles.split('\n')
           .filter(Boolean)
           .map(async file => {
-            const contents = await fileService.read(file);
+            const contents = await this.fileService.read(file);
             return { path: file, contents: Buffer.from(contents).toString('base64') };
           })
       );
@@ -258,13 +252,14 @@ class Git extends Action {
         return { updated: 0 };
       }
       await this.graphqlService.createSignedCommit({
-        owner: this.context.repo.owner,
-        repo: this.context.repo.repo,
-        branchName: headRef,
-        expectedHeadOid: currentHead,
-        additions,
-        deletions,
-        commitMessage: message
+        context: this.context,
+        commit: {
+          branch: headRef,
+          oid: currentHead,
+          additions,
+          deletions,
+          message
+        }
       });
       this.logger.info(`Successfully committed ${files.length} ${word}`);
       return { updated: files.length };

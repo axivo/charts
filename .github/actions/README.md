@@ -20,6 +20,7 @@ The codebase follows a modular, layered architecture designed for maintainabilit
 
 ```
 .github/actions/
+├── README.md               # This documentation file
 ├── config/                 # Configuration management
 │   ├── index.js            # Singleton configuration instance
 │   └── production.js       # Production configuration values
@@ -27,48 +28,48 @@ The codebase follows a modular, layered architecture designed for maintainabilit
 │   ├── Action.js           # Base Action class with lifecycle hooks
 │   ├── Configuration.js    # Configuration management class
 │   ├── Error.js            # Error reporter class
-│   ├── index.js            # Core module exports
-│   └── Logger.js           # Standardized logging class
+│   ├── Logger.js           # Standardized logging class
+│   └── index.js            # Core module exports
 ├── handlers/               # High-level workflow orchestration
 │   ├── Chart.js            # Chart update handler
+│   ├── Workflow.js         # Common workflow operations
 │   ├── index.js            # Handlers module exports
-│   ├── release/            # Release-specific handlers
-│   │   ├── index.js        # Release handler with Local export
-│   │   └── Local.js        # Local development release handler
-│   └── Workflow.js         # Common workflow operations
+│   └── release/            # Release-specific handlers
+│       ├── Local.js        # Local development release handler
+│       └── index.js        # Release handler with Local export
 ├── services/               # Business logic services
-│   ├── chart/              # Chart-specific services
-│   │   ├── index.js        # Chart service with Update export
-│   │   └── Update.js       # Chart update operations service
 │   ├── File.js             # File system operations service
 │   ├── Frontpage.js        # Repository frontpage generation service
 │   ├── Git.js              # Git operations service
+│   ├── Issue.js            # GitHub issue management service
+│   ├── Label.js            # Repository label management service
+│   ├── Shell.js            # Shell command execution service
+│   ├── Template.js         # Handlebars template rendering service
+│   ├── chart/              # Chart-specific services
+│   │   ├── Update.js       # Chart update operations service
+│   │   └── index.js        # Chart service with Update export
 │   ├── github/             # GitHub API services
 │   │   ├── Api.js          # Base GitHub API service
 │   │   ├── GraphQL.js      # GitHub GraphQL API service
-│   │   ├── index.js        # GitHub services module exports
-│   │   └── Rest.js         # GitHub REST API service
+│   │   ├── Rest.js         # GitHub REST API service
+│   │   └── index.js        # GitHub services module exports
 │   ├── helm/               # Helm tool services
 │   │   ├── Docs.js         # Helm-docs operations service
-│   │   └── index.js        # Helm service
+│   │   └── index.js        # Helm service exports
 │   ├── index.js            # Services module exports
-│   ├── Issue.js            # GitHub issue management service
-│   ├── Label.js            # Repository label management service
-│   ├── release/            # Release management services
-│   │   ├── index.js        # Release service with Package/Publish exports
-│   │   ├── Package.js      # Chart packaging service
-│   │   └── Publish.js      # Release publishing service
-│   ├── Shell.js            # Shell command execution service
-│   └── Template.js         # Handlebars template rendering service
-├── templates/              # Handlebars templates
-│   ├── config.yml          # Jekyll configuration template
-│   ├── head-custom.html    # Custom HTML head content template
-│   ├── index.md.hbs        # Repository frontpage template
-│   ├── layout.html         # Custom HTML layout template
-│   ├── redirect.html.hbs   # Chart redirection template
-│   ├── release.md.hbs      # GitHub release notes template
-│   └── workflow.md.hbs     # Workflow issue template
-└── README.md               # This documentation file
+│   └── release/            # Release management services
+│       ├── Local.js        # Local development release service
+│       ├── Package.js      # Chart packaging service
+│       ├── Publish.js      # Release publishing service
+│       └── index.js        # Release service with Package/Publish exports
+└── templates/              # Handlebars templates
+    ├── config.yml          # Jekyll configuration template
+    ├── head-custom.html    # Custom HTML head content template
+    ├── index.md.hbs        # Repository frontpage template
+    ├── layout.html         # Custom HTML layout template
+    ├── redirect.html.hbs   # Chart redirection template
+    ├── release.md.hbs      # GitHub release notes template
+    └── workflow.md.hbs     # Workflow issue template
 ```
 
 ### Architectural Principles

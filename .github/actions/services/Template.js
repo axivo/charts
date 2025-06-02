@@ -21,17 +21,33 @@ class Template extends Action {
   }
 
   /**
+   * Registers helper for equality comparison
+   * 
+   * @private
+   * @returns {*} - Result of the execute operation
+   */
+  #registerEqual() {
+    return this.execute('register equal helper', () => {
+      this.handlebars.registerHelper('equal', function (key, value) {
+        return key === value;
+      });
+      this.logger.info(`Successfully registered 'equal' helper`);
+    });
+  }
+
+  /**
    * Registers helper for repository URL transformation
    * 
    * @private
    * @param {string} url - Repository URL
+   * @returns {*} - Result of the execute operation
    */
-  #setRepoRawUrl(url) {
+  #registerRepoRawUrl(url) {
     return this.execute('register RepoRawURL helper', () => {
       this.handlebars.registerHelper('RepoRawURL', function () {
         return String(url).replace('github.com', 'raw.githubusercontent.com');
       });
-      this.logger.info('Successfully registered RepoRawURL helper');
+      this.logger.info(`Successfully registered 'RepoRawURL' helper`);
     });
   }
 
@@ -66,8 +82,9 @@ class Template extends Action {
   render(template, context, options = {}) {
     return this.execute('render template', () => {
       this.logger.info('Rendering template...');
+      this.#registerEqual();
       if (options.repoUrl) {
-        this.#setRepoRawUrl(options.repoUrl);
+        this.#registerRepoRawUrl(options.repoUrl);
       }
       const compiledTemplate = this.execute('compile template', () => this.handlebars.compile(template));
       const result = this.execute('render compiled template', () => compiledTemplate(context));

@@ -18,11 +18,11 @@ class Chart extends Action {
   constructor(params) {
     super(params);
     this.chartService = new ChartService(params);
+    this.chartUpdate = new ChartService.Update(params);
     this.docsService = new Docs(params);
     this.fileService = new File(params);
     this.gitService = new Git(params);
     this.githubService = new GitHub.Rest(params);
-    this.chartUpdate = new ChartService.Update(params);
   }
 
   /**

@@ -26,19 +26,34 @@ class Release extends Action {
   /**
    * Deletes GitHub releases for deleted charts
    * 
-   * @param {Array} files - List of deleted chart files
+   * @param {Object} params - Function parameters
+   * @param {Object} params.context - GitHub Actions context
+   * @param {Array} params.files - List of deleted chart files
    * @returns {Promise<number>} Number of deleted releases
    */
-  async delete(files) {
+  async delete({ context, files }) {
     return this.execute('delete releases', async () => {
       if (!files.length) return 0;
       const word = files.length === 1 ? 'release' : 'releases';
       this.logger.info(`Deleting ${files.length} chart ${word}...`);
-      const results = await Promise.all(files.map(async (filePath) => {
+      const result = await Promise.all(files.map(async (filePath) => {
         try {
+          const appType = this.config.get('repository.chart.type.application');
           const chartPath = path.dirname(filePath);
-          const chart = path.basename(chartPath);
-          await this.githubService.deleteReleases(chart);
+          const type = chartPath.startsWith(appType) ? 'application' : 'library';
+          const name = path.basename(chartPath);
+          if (this.config.get('repository.chart.packages.enabled')) {
+            await this.githubService.deleteReleases({
+              context,
+              chart: name
+            });
+          }
+          if (this.config.get('repository.oci.packages.enabled')) {
+            await this.githubService.deleteOciPackage({
+              context,
+              chart: { name, type }
+            });
+          }
           return true;
         } catch (error) {
           this.actionError.handle(error, {
@@ -48,74 +63,74 @@ class Release extends Action {
           return false;
         }
       }));
-      const deletedCount = results.filter(Boolean).length;
-      return deletedCount;
-    }, { deletedCount: files.length });
+      return result.filter(Boolean).length;
+    });
   }
 
   /**
    * Finds release-eligible charts based on file changes
    * 
-   * @param {Object} files - Object with changed files as keys
-   * @returns {Promise<Object>} Object containing eligible charts and deleted charts
+   * @param {Object} params - Function parameters
+   * @param {Object} params.files - Object mapping file paths to their Git change status
+   * @returns {Promise<Object>} Object containing categorized charts
+   * @returns {Array<string>} returns.application - Array of application chart directory paths
+   * @returns {Array<string>} returns.library - Array of library chart directory paths
+   * @returns {Array<string>} returns.deleted - Array of deleted Chart.yaml file paths
+   * @returns {number} returns.total - Total count of eligible charts (application + library)
    */
-  async find(files) {
+  async find({ files }) {
+    let result = { application: [], library: [], deleted: [], total: 0 };
     return this.execute('find charts', async () => {
-      this.logger.info('Finding release-eligible charts...');
-      const config = this.config.get();
-      const appDir = config.repository.chart.type.application;
-      const libDir = config.repository.chart.type.library;
+      this.logger.info('Finding charts...');
+      const appType = this.config.get('repository.chart.type.application');
+      const libType = this.config.get('repository.chart.type.library');
       const fileList = Object.keys(files);
-      const application = [];
-      const library = [];
-      const deleted = [];
       for (const file of fileList) {
         if (!file.endsWith('Chart.yaml')) continue;
         const dir = path.dirname(file);
-        const isApp = dir.startsWith(appDir);
-        const isLib = dir.startsWith(libDir);
+        const isApp = dir.startsWith(appType);
+        const isLib = dir.startsWith(libType);
         if (!isApp && !isLib) continue;
         if (files[file] === 'removed') {
-          deleted.push(file);
+          result.deleted.push(file);
           continue;
         }
-        const chartDir = dir;
-        if (isApp) {
-          application.push(chartDir);
-        } else {
-          library.push(chartDir);
-        }
+        if (isApp) result.application.push(dir);
+        else result.library.push(dir);
       }
-      const total = application.length + library.length;
-      const word = total === 1 ? 'modified' : 'total';
-      this.logger.info(`Found ${total} release-eligible charts and ${deleted.length} deleted charts`);
-      return { application, library, deleted, total, word };
+      result.total = result.application.length + result.library.length;
+      const word = (count) => count === 1 ? 'chart' : 'charts';
+      const released = `${result.total} released ${word(result.total)}`;
+      const deleted = `${result.deleted.length} deleted ${word(result.deleted.length)}`;
+      this.logger.info(`Found ${released} and ${deleted}`);
+      return result;
     });
   }
 
   /**
    * Validates a chart for release eligibility
+   * TODO: Method not used
    * 
    * @param {string} directory - Chart directory path
    * @returns {Promise<boolean>} True if chart is eligible for release
    */
   async validate(directory) {
     return this.execute('validate chart', async () => {
-      this.logger.info(`Validating chart: ${directory}`);
-      const config = this.config.get();
-      const chartYamlPath = path.join(directory, 'Chart.yaml');
+      this.logger.info(`Validating '${directory}' chart`);
+      const chartPath = path.join(directory, 'Chart.yaml');
       try {
-        await this.fileService.exists(chartYamlPath);
+        await this.fileService.exists(chartPath);
         return true;
       } catch (error) {
-        this.logger.warning(`Chart.yaml not found for ${directory}, skipping`);
+        this.logger.warning(`Chart '${directory}' not found`);
         return false;
       }
-    }, { directory });
+    });
   }
 }
 
 // Attach specialized services
+Release.Local = require('./Local');
 Release.Package = require('./Package');
 Release.Publish = require('./Publish');
 

@@ -21,6 +21,7 @@ class Frontpage extends Action {
    */
   constructor(params) {
     super(params);
+    this.chartService = new Chart(params);
     this.fileService = new File(params);
     this.templateService = new Template(params);
   }
@@ -33,14 +34,7 @@ class Frontpage extends Action {
   async generate() {
     return this.execute('generate repository frontpage', async () => {
       this.logger.info('Generating repository frontpage...');
-      const chartService = new Chart({
-        github: this.github,
-        context: this.context,
-        core: this.core,
-        exec: this.exec,
-        config: this.config
-      });
-      const charts = await chartService.discover();
+      const charts = await this.chartService.discover();
       const chartEntries = {};
       const allCharts = [
         ...charts.application.map(directory => ({ directory, type: 'application' })),
@@ -67,8 +61,7 @@ class Frontpage extends Action {
           Type: data.type || 'application',
           Version: data.version || ''
         }));
-      const config = this.config.get();
-      const templatePath = config.theme.frontpage.template;
+      const templatePath = this.config('theme.frontpage.template');
       const templateContent = await this.fileService.read(templatePath);
       const repoUrl = this.context.payload.repository.html_url;
       const defaultBranch = this.context.payload.repository.default_branch;
@@ -88,21 +81,15 @@ class Frontpage extends Action {
    * @returns {Promise<void>}
    */
   async setTheme() {
-    return this.execute('set Jekyll theme for GitHub Pages', async () => {
-      const config = this.config.get();
-      this.logger.info(`Setting up Jekyll theme for '${config.repository.release.deployment}' deployment...`);
-      this.logger.info('Copying Jekyll theme config to ./_config.yml...');
-      await this.fileService.copy(config.theme.configuration.file, './_config.yml');
-      this.logger.info('Copying Jekyll theme custom head content to ./_includes/head-custom.html...');
+    return this.execute('set Jekyll theme', async () => {
+      const deployment = this.config('repository.release.deployment');
+      this.logger.info(`Setting up Jekyll theme for '${deployment}' deployment...`);
+      await this.fileService.copy(this.config('theme.configuration.file'), './_config.yml');
       await this.fileService.createDir('./_includes');
-      await this.fileService.copy(config.theme.head.template, './_includes/head-custom.html');
-      this.logger.info('Copying Jekyll theme custom layout content to ./_layouts/default.html...');
+      await this.fileService.copy(this.config('theme.head.template'), './_includes/head-custom.html');
       await this.fileService.createDir('./_layouts');
-      await this.fileService.copy(config.theme.layout.template, './_layouts/default.html');
-      const isPrivate = this.context.payload.repository.private === true;
-      const publish = !isPrivate && config.repository.release.deployment === 'production';
-      this.core.setOutput('publish', publish);
-      this.logger.info(`Successfully set up Jekyll theme for '${config.repository.release.deployment}' deployment`);
+      await this.fileService.copy(this.config('theme.layout.template'), './_layouts/default.html');
+      this.logger.info(`Successfully set up Jekyll theme for '${deployment}' deployment`);
     }, false);
   }
 }

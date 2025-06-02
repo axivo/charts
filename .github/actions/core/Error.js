@@ -17,8 +17,8 @@ class ActionError {
    * @param {Object} config - Configuration instance
    */
   constructor(core, config) {
-    this.core = core;
     this.config = config;
+    this.core = core;
   }
 
   /**

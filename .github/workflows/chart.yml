@@ -50,31 +50,35 @@ jobs:
         with:
           script: |
             const { Workflow } = require('./.github/actions/handlers');
-            await Workflow.configureRepository({ github, context, core, exec });
+            const workflow = new Workflow({ github, context, core, exec });
+            await workflow.configureRepository();
+
+      - name: Setup repository charts linter
+        uses: helm/chart-testing-action@v2
 
       - name: Update repository issue labels
         uses: actions/github-script@v7
         with:
           script: |
             const { Workflow } = require('./.github/actions/handlers');
-            await Workflow.updateLabels({ github, context, core, exec });
+            const workflow = new Workflow({ github, context, core, exec });
+            await workflow.updateLabels();
 
       - name: Install helm-docs
         uses: actions/github-script@v7
         with:
           script: |
             const { Workflow } = require('./.github/actions/handlers');
-            await Workflow.installHelmDocs({ github, context, core, exec, version: '1.14.2' });
-
-      - name: Setup repository charts linter
-        uses: helm/chart-testing-action@v2
+            const workflow = new Workflow({ github, context, core, exec });
+            await workflow.installHelmDocs('1.14.2');
 
       - name: Update repository charts
         uses: actions/github-script@v7
         with:
           script: |
             const { Workflow } = require('./.github/actions/handlers');
-            await Workflow.updateCharts({ github, context, core, exec });
+            const workflow = new Workflow({ github, context, core, exec });
+            await workflow.updateCharts();
 
       - name: Report workflow issue
         uses: actions/github-script@v7
@@ -82,4 +86,5 @@ jobs:
         with:
           script: |
             const { Workflow } = require('./.github/actions/handlers');
-            await Workflow.reportIssue({ github, context, core, exec });
+            const workflow = new Workflow({ github, context, core, exec });
+            await workflow.reportIssue();

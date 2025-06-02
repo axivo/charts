@@ -13,189 +13,228 @@ class GraphQL extends Api {
    * Creates a signed commit using GitHub API
    * 
    * @param {Object} params - Function parameters
-   * @param {string} params.owner - Repository owner
-   * @param {string} params.repo - Repository name
-   * @param {string} params.branchName - Branch name
-   * @param {string} params.expectedHeadOid - Expected HEAD OID
-   * @param {Array<Object>} params.additions - Files to add/modify
-   * @param {Array<Object>} params.deletions - Files to delete
-   * @param {string} params.commitMessage - Commit message
+   * @param {Object} params.context - GitHub Actions context
+   * @param {Object} params.commit - Commit configuration
+   * @param {string} params.commit.branch - Branch name
+   * @param {string} params.commit.oid - Expected HEAD OID
+   * @param {Array<Object>} params.commit.additions - Files to add/modify
+   * @param {Array<Object>} params.commit.deletions - Files to delete
+   * @param {string} params.commit.message - Commit message
    * @returns {Promise<Object>} - Commit details
    */
-  async createSignedCommit({ owner, repo, branchName, expectedHeadOid, additions, deletions, commitMessage }) {
-    const fileChanges = {};
-    if (additions?.length) {
-      fileChanges.additions = additions.map(file => ({
-        path: file.path,
-        contents: file.contents
-      }));
-    }
-    if (deletions?.length) {
-      fileChanges.deletions = deletions.map(file => ({
-        path: file.path
-      }));
-    }
-    const query = `mutation CreateCommit($input: CreateCommitOnBranchInput!) {
-        createCommitOnBranch(input: $input) {
-          commit {
-            url
-            oid
+  async createSignedCommit({ context, commit }) {
+    let result = {};
+    const { branch, oid, additions, deletions, message } = commit;
+    try {
+      const fileChanges = {};
+      if (additions?.length) {
+        fileChanges.additions = additions.map(file => ({
+          path: file.path,
+          contents: file.contents
+        }));
+      }
+      if (deletions?.length) {
+        fileChanges.deletions = deletions.map(file => ({
+          path: file.path
+        }));
+      }
+      const query = `
+        mutation CreateCommit($input: CreateCommitOnBranchInput!) {
+          createCommitOnBranch(input: $input) {
+            commit {
+              url
+              oid
+            }
           }
         }
-      }`;
-    const variables = {
-      input: {
-        branch: {
-          repositoryNameWithOwner: this.getPath(owner, repo),
-          branchName
-        },
-        message: {
-          headline: commitMessage
-        },
-        expectedHeadOid,
-        fileChanges
-      }
-    };
-    const response = await this.execute('createSignedCommit', async () => {
-      return await this.github.graphql(query, variables);
-    });
-    const commit = response.createCommitOnBranch.commit;
-    this.logger.info(`Created signed commit: ${commit.oid}`);
-    return {
-      url: commit.url,
-      oid: commit.oid
-    };
+      `;
+      const variables = {
+        input: {
+          branch: {
+            repositoryNameWithOwner: `${context.repo.owner}/${context.repo.repo}`,
+            branchName: branch
+          },
+          message: {
+            headline: message
+          },
+          expectedHeadOid: oid,
+          fileChanges
+        }
+      };
+      const response = await this.execute('createSignedCommit', async () => {
+        return await this.github.graphql(query, variables);
+      });
+      const commitData = response.createCommitOnBranch.commit;
+      this.logger.info(`Successfully created '${commitData.oid}' signed commit`);
+      result = {
+        url: commitData.url,
+        oid: commitData.oid
+      };
+      return result;
+    } catch (error) {
+      this.actionError.handle(error, {
+        operation: `create signed commit on '${branch}' branch`,
+        fatal: true
+      });
+      return result;
+    }
   }
 
   /**
-   * Gets release issues since a specified date
+   * Gets release issues for a chart since a specified date
    * 
    * @param {Object} params - Function parameters
-   * @param {string} params.owner - Repository owner
-   * @param {string} params.repo - Repository name
-   * @param {string} params.chartName - Chart name
-   * @param {string} params.chartType - Chart type (application or library)
+   * @param {Object} params.context - GitHub Actions context
+   * @param {Object} params.chart - Chart configuration
+   * @param {string} params.chart.name - Chart name
+   * @param {string} params.chart.type - Chart type (application or library)
    * @param {Date} params.since - Date to get issues since
+   * @param {number} [params.issues=50] - Maximum number of issues to return
    * @returns {Promise<Array<Object>>} - Issues
    */
-  async getReleaseIssues({ owner, repo, chartName, chartType, since }) {
-    const sinceDate = since ? new Date(since) : new Date(0);
-    const query = `query GetIssues($owner: String!, $repo: String!, $chartLabel: String!, $typeLabel: String!, $cursor: String) {
-        repository(owner: $owner, name: $repo) {
-          issues(
-            first: 100,
-            after: $cursor,
-            states: [CLOSED],
-            labels: [$chartLabel, $typeLabel],
-            orderBy: {field: CREATED_AT, direction: DESC}
-          ) {
-            pageInfo {
-              hasNextPage
-              endCursor
-            }
-            nodes {
-              number
-              title
-              url
-              closedAt
-              labels(
-                first: 10
-              ) {
-                nodes {
-                  name
+  async getReleaseIssues({ context, chart, since, issues = 50 }) {
+    let result = [];
+    const { name, type } = chart;
+    const chartName = `${type}/${name}`;
+    try {
+      const sinceDate = since ? new Date(since) : new Date(0);
+      const query = `
+        query GetIssues($owner: String!, $repo: String!, $issues: Int!) {
+          repository(owner: $owner, name: $repo) {
+            issues(
+              first: $issues,
+              states: [OPEN, CLOSED],
+              orderBy: {field: UPDATED_AT, direction: DESC}
+            ) {
+              nodes {
+                number
+                state
+                title
+                url
+                bodyText
+                createdAt
+                updatedAt
+                labels(first: 10) {
+                  nodes {
+                    name
+                  }
                 }
               }
             }
           }
         }
-      }`;
-    const issues = await this.execute('getReleaseIssues', async () => {
-      return await this.paginate(query,
-        this.setVariables({ owner, repo }, {
-          chartLabel: chartName,
-          typeLabel: chartType
-        }),
-        (data) => data.repository.issues,
-        (issue) => issue.closedAt && new Date(issue.closedAt) > sinceDate
-      );
-    }, false);
-    this.logger.info(`Found ${issues.length} issues for ${chartName} (${chartType}) since ${sinceDate.toISOString()}`);
-    return this.transform(issues, issue => ({
-      number: issue.number,
-      title: issue.title,
-      url: issue.url,
-      closedAt: issue.closedAt,
-      labels: issue.labels.nodes.map(label => label.name)
-    }));
+      `;
+      const variables = {
+        owner: context.repo.owner,
+        repo: context.repo.repo,
+        issues
+      };
+      const response = await this.execute('getReleaseIssues', async () => {
+        return await this.github.graphql(query, variables);
+      });
+      const allIssues = response.repository.issues.nodes.filter(issue => {
+        return !since || new Date(issue.createdAt || issue.updatedAt) > sinceDate;
+      });
+      const word = allIssues.length === 1 ? 'issue' : 'issues';
+      this.logger.info(`Found ${allIssues.length} ${word} for '${chartName}' chart`);
+      result = this.transform(allIssues, issue => ({
+        Number: issue.number,
+        State: issue.state,
+        Title: issue.title,
+        URL: issue.url,
+        Labels: issue.labels.nodes.map(label => label.name),
+        bodyText: issue.bodyText
+      }));
+      return result;
+    } catch (error) {
+      this.actionError.handle(error, {
+        operation: `get release issues for '${chartName}' chart`,
+        fatal: false
+      });
+      return result;
+    }
   }
 
   /**
    * Gets releases for a repository
    * 
    * @param {Object} params - Function parameters
-   * @param {string} params.owner - Repository owner
-   * @param {string} params.repo - Repository name
-   * @param {number} params.limit - Maximum number of releases to return
+   * @param {Object} params.context - GitHub Actions context
+   * @param {string} [params.prefix] - Optional tag prefix to filter releases
+   * @param {number} [params.limit=100] - Maximum number of releases to return
    * @returns {Promise<Array<Object>>} - Releases
    */
-  async getReleases({ owner, repo, limit = 100 }) {
-    const query = `query GetReleases($owner: String!, $repo: String!, $cursor: String) {
-        repository(owner: $owner, name: $repo) {
-          releases(
-            first: 100,
-            after: $cursor,
-            orderBy: {field: CREATED_AT, direction: DESC}
-          ) {
-            pageInfo {
-              hasNextPage
-              endCursor
-            }
-            nodes {
-              id
-              name
-              tagName
-              createdAt
-              description
-              isDraft
-              isPrerelease
-              releaseAssets(
-                first: 100
-              ) {
-                nodes {
-                  name
-                  downloadUrl
-                  contentType
-                  size
+  async getReleases({ context, prefix, limit = 100 }) {
+    let result = [];
+    try {
+      const query = `
+        query GetReleases($owner: String!, $repo: String!, $cursor: String) {
+          repository(owner: $owner, name: $repo) {
+            releases(
+              first: 100,
+              after: $cursor,
+              orderBy: {field: CREATED_AT, direction: DESC}
+            ) {
+              pageInfo {
+                hasNextPage
+                endCursor
+              }
+              nodes {
+                id
+                name
+                tagName
+                createdAt
+                description
+                isDraft
+                isPrerelease
+                releaseAssets(
+                  first: 100
+                ) {
+                  nodes {
+                    name
+                    downloadUrl
+                    contentType
+                    size
+                  }
                 }
               }
             }
           }
         }
-      }`;
-    const releases = await this.execute('getReleases', async () => {
-      return await this.paginate(query,
-        this.setVariables({ owner, repo }),
-        (data) => data.repository.releases,
-        () => true,
-        limit
-      );
-    }, false);
-    this.logger.info(`Found ${releases.length} releases in ${owner}/${repo}`);
-    return this.transform(releases, release => ({
-      id: release.id,
-      name: release.name,
-      tagName: release.tagName,
-      createdAt: release.createdAt,
-      description: release.description,
-      isDraft: release.isDraft,
-      isPrerelease: release.isPrerelease,
-      assets: release.releaseAssets.nodes.map(asset => ({
-        name: asset.name,
-        downloadUrl: asset.downloadUrl,
-        contentType: asset.contentType,
-        size: asset.size
-      }))
-    }));
+      `;
+      const releases = await this.execute('getReleases', async () => {
+        return await this.paginate(query,
+          this.setVariables({ owner: context.repo.owner, repo: context.repo.repo }),
+          (data) => data.repository.releases,
+          prefix ? (release) => release.tagName.startsWith(prefix) : () => true,
+          limit
+        );
+      }, false);
+      const filterMessage = prefix ? ` with '${prefix}' tag prefix` : '';
+      this.logger.info(`Found ${releases.length} releases${filterMessage}`);
+      result = this.transform(releases, release => ({
+        id: release.id,
+        name: release.name,
+        tagName: release.tagName,
+        createdAt: release.createdAt,
+        description: release.description,
+        isDraft: release.isDraft,
+        isPrerelease: release.isPrerelease,
+        assets: release.releaseAssets.nodes.map(asset => ({
+          name: asset.name,
+          downloadUrl: asset.downloadUrl,
+          contentType: asset.contentType,
+          size: asset.size
+        }))
+      }));
+      return result;
+    } catch (error) {
+      this.actionError.handle(error, {
+        operation: `get releases for ${context.repo.owner}/${context.repo.repo}`,
+        fatal: false
+      });
+      return result;
+    }
   }
 
   /**
@@ -205,18 +244,29 @@ class GraphQL extends Api {
    * @returns {Promise<string>} - 'organization' or 'user'
    */
   async getRepositoryType(owner) {
-    const query = `query GetOwnerType($owner: String!) {
-        repositoryOwner(login: $owner) {
-          __typename
+    let result = '';
+    try {
+      const query = `
+        query GetOwnerType($owner: String!) {
+          repositoryOwner(login: $owner) {
+            __typename
+          }
         }
-      }`;
-    const variables = { owner };
-    const response = await this.execute('getRepositoryType', async () => {
-      return await this.github.graphql(query, variables);
-    });
-    const ownerType = response.repositoryOwner.__typename.toLowerCase();
-    this.logger.info(`Repository owner ${owner} is type: ${ownerType}`);
-    return ownerType;
+      `;
+      const variables = { owner };
+      const response = await this.execute('getRepositoryType', async () => {
+        return await this.github.graphql(query, variables);
+      });
+      const ownerType = response.repositoryOwner.__typename.toLowerCase();
+      this.logger.info(`Repository is of '${ownerType}' type`);
+      return ownerType;
+    } catch (error) {
+      this.actionError.handle(error, {
+        operation: `get repository type`,
+        fatal: false
+      });
+      return result;
+    }
   }
 
   /**
