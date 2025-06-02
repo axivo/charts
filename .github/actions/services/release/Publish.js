@@ -37,6 +37,12 @@ class Publish extends Action {
    * Creates a GitHub release for a chart
    * 
    * @param {Object} chart - Chart information
+   * @param {string} chart.name - Chart name
+   * @param {string} chart.version - Chart version
+   * @param {string} chart.type - Chart type
+   * @param {string} chart.path - Path to chart package file
+   * @param {Object} chart.metadata - Chart metadata
+   * @param {boolean} chart.icon - Whether chart has an icon
    * @param {string} tag - Release tag name
    * @returns {Promise<Object>} Created release information
    */
