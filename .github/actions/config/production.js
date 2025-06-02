@@ -682,21 +682,6 @@ module.exports = {
    */
   workflow: {
     /**
-     * Whether to enable debug mode for workflows
-     * 
-     * Controls debug features across the workflow system including:
-     * - Stack traces in error output and GitHub annotations
-     * - Timestamps in log messages for detailed timing information
-     * 
-     * When enabled, detailed debugging information will be displayed.
-     * When disabled, only basic messages are shown for cleaner output.
-     * 
-     * @type {boolean}
-     * @default false
-     */
-    debug: true,
-
-    /**
      * Documentation generation configuration
      * 
      * Contains settings for controlling documentation generation behavior,
@@ -717,6 +702,20 @@ module.exports = {
        */
       logLevel: 'info'
     },
+
+    /**
+     * Log level for workflow operations
+     * 
+     * Controls the verbosity of log output in workflows. Available levels:
+     * - debug: Show all messages including detailed tracing and stack traces
+     * - info: Show informational, warning, and error messages (default)
+     * - warning: Show only warning and error messages
+     * - error: Show only error messages
+     * 
+     * @type {string}
+     * @default 'info'
+     */
+    logLevel: 'debug',
 
     /**
      * Standard labels to apply to workflow-generated issues
