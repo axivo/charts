@@ -42,9 +42,9 @@ class Update extends Action {
       this.logger.info(`No ${data.type} file changes to commit`);
       return data.results.every(result => result === true);
     }
-    const headRef = process.env.GITHUB_HEAD_REF;
+    const branch = process.env.GITHUB_HEAD_REF;
     const word = data.files.length === 1 ? 'file' : 'files';
-    await this.gitService.signedCommit(headRef, data.files, `chore(github-action): update ${data.type} ${word}`);
+    await this.gitService.signedCommit(branch, data.files, `chore(github-action): update ${data.type} ${word}`);
     return data.results.every(result => result === true);
   }
 

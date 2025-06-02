@@ -33,7 +33,6 @@ class Docs extends Action {
    */
   async generate(directories) {
     return this.execute('generate documentation', async () => {
-      const headRef = process.env.GITHUB_HEAD_REF;
       this.logger.info('Generating documentation with helm-docs...');
       if (!directories || !directories.length) {
         await this.shellService.execute('helm-docs', ['-l', this.config.get('workflow.docs.logLevel')]);
@@ -47,7 +46,8 @@ class Docs extends Action {
         this.logger.info('No documentation file changes to commit');
         return { updated: 0, total: directories ? directories.length : 0 };
       }
-      const result = await this.gitService.signedCommit(headRef, files, 'chore(github-action): update documentation');
+      const branch = process.env.GITHUB_HEAD_REF;
+      const result = await this.gitService.signedCommit(branch, files, 'chore(github-action): update documentation');
       return { updated: result.updated, total: directories ? directories.length : 0 };
     }, false);
   }
