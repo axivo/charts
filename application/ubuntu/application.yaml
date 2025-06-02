@@ -14,7 +14,7 @@ spec:
         - values.yaml
     path: application/ubuntu
     repoURL: https://github.com/axivo/charts.git
-    targetRevision: ubuntu-1.0.4
+    targetRevision: ubuntu-1.0.5
   syncPolicy:
     automated:
       prune: true
