@@ -86,8 +86,7 @@ class Template extends Action {
       if (options.repoUrl) {
         this.#registerRepoRawUrl(options.repoUrl);
       }
-      const compiledTemplate = this.execute('compile template', () => this.handlebars.compile(template));
-      const result = this.execute('render compiled template', () => compiledTemplate(context));
+      const result = this.handlebars.compile(template)(context);
       this.logger.info('Successfully rendered template');
       return result;
     }, false);
