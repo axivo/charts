@@ -65,7 +65,7 @@ class Frontpage extends Action {
       const templateContent = await this.fileService.read(templatePath);
       const repoUrl = this.context.payload.repository.html_url;
       const defaultBranch = this.context.payload.repository.default_branch;
-      const content = this.templateService.render(templateContent, {
+      const content = await this.templateService.render(templateContent, {
         Charts: sortedCharts,
         RepoURL: repoUrl,
         Branch: defaultBranch

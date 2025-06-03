@@ -81,7 +81,7 @@ class ActionError {
   report(context, error) {
     const errorInfo = this.extractErrorInfo(context, error);
     if (this.config.get('workflow.logLevel') === 'debug') {
-      console.error('Stack trace:', errorInfo.stack);
+      console.error(errorInfo.stack);
     }
     if (context.fatal !== false) {
       this.createAnnotation(errorInfo, 'error');
