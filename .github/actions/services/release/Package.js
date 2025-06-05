@@ -9,7 +9,8 @@
 const path = require('path');
 const Action = require('../../core/Action');
 const File = require('../File');
-const Helm = require('../helm');
+const GitHub = require('../github');
+const Shell = require('../Shell');
 
 class Package extends Action {
   /**
@@ -20,33 +21,30 @@ class Package extends Action {
   constructor(params) {
     super(params);
     this.fileService = new File(params);
-    this.helmService = new Helm(params);
+    this.restService = new GitHub.Rest(params);
+    this.shellService = new Shell(params);
   }
 
   /**
-   * Creates package directory structure
+   * Gets packages from a specific directory
    * 
    * @private
-   * @returns {Promise<Object>} Created directories
+   * @param {string} directory - Directory path
+   * @returns {Promise<Array>} List of packages
    */
-  async #createDir() {
-    return this.execute('create package directory structure', async () => {
-      const packagesPath = this.config.get('repository.release.packages');
-      const appType = this.config.get('repository.chart.type.application');
-      const libType = this.config.get('repository.chart.type.library');
-      this.logger.info(`Creating '${packagesPath}' directory...`);
-      await this.fileService.createDir(packagesPath);
-      const appPackagesDir = path.join(packagesPath, appType);
-      const libPackagesDir = path.join(packagesPath, libType);
-      await this.fileService.createDir(appPackagesDir);
-      await this.fileService.createDir(libPackagesDir);
-      this.logger.info(`Successfully created '${packagesPath}' directory structure`);
-      return {
-        root: packagesPath,
-        application: appPackagesDir,
-        library: libPackagesDir
-      };
-    });
+  async #getPackages(directory) {
+    if (!await this.fileService.exists(directory)) {
+      return [];
+    }
+    const sources = await this.fileService.listDir(directory);
+    return sources
+      .filter(source => source.endsWith('.tgz'))
+      .map(source => {
+        const filename = source.replace('.tgz', '');
+        const lastDashIndex = filename.lastIndexOf('-');
+        const name = filename.substring(0, lastDashIndex);
+        return { source, name };
+      });
   }
 
   /**
@@ -56,92 +54,66 @@ class Package extends Action {
    * @returns {Promise<Array>} List of package objects
    */
   async get(directory) {
+    let result = [];
     return this.execute('get packages', async () => {
       const appType = this.config.get('repository.chart.type.application');
       const libType = this.config.get('repository.chart.type.library');
       const appPackagesDir = path.join(directory, appType);
       const libPackagesDir = path.join(directory, libType);
-      let packages = [];
-      for (const [dir, type] of [[appPackagesDir, appType], [libPackagesDir, libType]]) {
-        try {
-          if (await this.fileService.exists(dir)) {
-            const files = await this.fileService.listDir(dir);
-            packages.push(...files
-              .filter(file => file.endsWith('.tgz'))
-              .map(file => ({ source: file, type }))
-            );
-          }
-        } catch (error) {
-          this.actionError.report({
-            operation: `read ${type} packages directory`,
-            fatal: false
-          }, error);
-        }
-      }
-      return packages;
-    }, { directory });
+      const [appPackages, libPackages] = await Promise.all([
+        this.#getPackages(appPackagesDir),
+        this.#getPackages(libPackagesDir)
+      ]);
+      appPackages.forEach(pkg => pkg.type = appType);
+      libPackages.forEach(pkg => pkg.type = libType);
+      result.push(...appPackages, ...libPackages);
+      return result;
+    }, false);
   }
 
   /**
-   * Packages a release with all its charts
+   * Deletes a package from OCI registry
    * 
-   * @param {Object} charts - Object with application and library charts
-   * @returns {Promise<Array>} List of packaged charts
+   * @param {string} name - Chart name
+   * @param {string} type - Package type
+   * @returns {Promise<boolean>} True if deletion succeeded, false otherwise
    */
-  async package(charts) {
-    return this.execute('package release', async () => {
-      if (!charts.application.length && !charts.library.length) {
-        this.logger.info('No charts to package');
-        return [];
+  async delete(name, type) {
+    let result = false;
+    return this.execute(`delete '${name}' package`, async () => {
+      result = await this.restService.deletePackage(name, type);
+      if (result) {
+        this.logger.info(`Deleted existing OCI package for ${name}`);
       }
-      const dirs = await this.#createDir();
-      const appType = this.config.get('repository.chart.type.application');
-      const chartDirs = [...charts.application, ...charts.library];
-      this.logger.info(`Packaging ${chartDirs.length} charts...`);
-      const results = await Promise.all(chartDirs.map(async (chartDir) => {
-        try {
-          this.logger.info(`Packaging '${chartDir}' chart...`);
-          this.logger.info(`Updating dependencies for '${chartDir}' chart...`);
-          await this.helmService.updateDependencies(chartDir);
-          const isAppChartType = chartDir.startsWith(appType);
-          const packageDest = isAppChartType ? dirs.application : dirs.library;
-          await this.helmService.package(chartDir, packageDest);
-          return {
-            chartDir,
-            success: true,
-            type: isAppChartType ? 'application' : 'library'
-          };
-        } catch (error) {
-          this.actionError.report({
-            operation: `package ${chartDir} chart`,
-            fatal: false
-          }, error);
-          return {
-            chartDir,
-            success: false,
-            type: chartDir.startsWith(appType) ? 'application' : 'library'
-          };
-        }
-      }));
-      const successCount = results.filter(r => r.success).length;
-      const word = successCount === 1 ? 'chart' : 'charts';
-      this.logger.info(`Successfully packaged ${successCount} ${word}`);
-      return results.filter(r => r.success);
-    }, { chartCount: charts.application.length + charts.library.length });
+      return result;
+    }, false);
   }
 
   /**
-   * Parses chart information from package filename
+   * Publishes a package to OCI registry
    * 
-   * @param {string} file - Chart package filename
-   * @returns {Object} Chart name and version
+   * @param {string} registry - OCI registry URL
+   * @param {Object} package - Package object with source and type
+   * @param {string} package.source - Package source file
+   * @param {string} package.type - Package type
+   * @param {string} directory - Path to packages directory
+   * @returns {Promise<Object|null>} Package publish result or null on failure
    */
-  parseInfo(file) {
-    const source = file.replace('.tgz', '');
-    const lastDashIndex = source.lastIndexOf('-');
-    const name = source.substring(0, lastDashIndex);
-    const version = source.substring(lastDashIndex + 1);
-    return { name, version };
+  async publish(registry, package, directory) {
+    const { source, type } = package;
+    let result = null;
+    return this.execute(`publish '${source}' package`, async () => {
+      const chartPath = path.join(directory, type, source);
+      const registryPath = `oci://${registry}/${this.context.payload.repository.full_name}/${type}`;
+      await this.shellService.execute('helm', ['push', chartPath, registryPath]);
+      this.logger.info(`Successfully published '${source}' chart package to OCI registry`);
+      result = {
+        type,
+        source,
+        registry: registryPath
+      };
+      return result;
+    }, false);
   }
 }
 

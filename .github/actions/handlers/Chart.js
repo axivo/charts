@@ -6,8 +6,9 @@
  * @author AXIVO
  * @license BSD-3-Clause
  */
+const path = require('path');
 const Action = require('../core/Action');
-const { Chart: ChartService, Docs, File, Git, GitHub } = require('../services');
+const { Chart, Docs, File, Git, GitHub } = require('../services');
 
 class Chart extends Action {
   /**
@@ -17,8 +18,8 @@ class Chart extends Action {
    */
   constructor(params) {
     super(params);
-    this.chartService = new ChartService(params);
-    this.chartUpdate = new ChartService.Update(params);
+    this.chartService = new Chart(params);
+    this.chartUpdate = new Chart.Update(params);
     this.docsService = new Docs(params);
     this.fileService = new File(params);
     this.gitService = new Git(params);
@@ -32,7 +33,7 @@ class Chart extends Action {
    */
   async process() {
     return this.execute('process charts', async () => {
-      const files = Object.keys(await this.githubService.getUpdatedFiles({ context: this.context }));
+      const files = Object.keys(await this.githubService.getUpdatedFiles());
       const charts = await this.chartService.find(files);
       if (charts.total === 0) {
         this.logger.info('No chart updates found');
@@ -44,6 +45,18 @@ class Chart extends Action {
       await this.chartUpdate.metadata(allCharts);
       await this.chartService.lint(allCharts);
       await this.docsService.generate(allCharts);
+      const deletedCharts = Object.keys(files)
+        .filter(file => file.endsWith('Chart.yaml') && files[file] === 'removed');
+      for (const filePath of deletedCharts) {
+        const chartName = path.basename(path.dirname(filePath));
+        const chartType = path.dirname(filePath).split('/')[0];
+        await this.chartUpdate.inventory(chartType, chartName, 'deleted');
+      }
+      for (const chartPath of allCharts) {
+        const chartName = path.basename(chartPath);
+        const chartType = chartPath.startsWith('application') ? 'application' : 'library';
+        await this.chartUpdate.inventory(chartType, chartName, 'released');
+      }
       return { charts: charts.total, updated: charts.total };
     });
   }

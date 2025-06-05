@@ -7,7 +7,7 @@
  * @license BSD-3-Clause
  */
 const Action = require('../../core/Action');
-const { File, GitHub, Release: ReleaseService } = require('../../services');
+const { Chart, File, GitHub, Release: ReleaseService } = require('../../services');
 
 class Release extends Action {
   /**
@@ -17,6 +17,7 @@ class Release extends Action {
    */
   constructor(params) {
     super(params);
+    this.chartService = new Chart(params);
     this.fileService = new File(params);
     this.githubService = new GitHub.Rest(params);
     this.packageService = new ReleaseService.Package(params);
@@ -32,8 +33,28 @@ class Release extends Action {
   async process() {
     return this.execute('process releases', async () => {
       this.logger.info('Starting chart release process...');
-      const files = await this.githubService.getUpdatedFiles({ context: this.context });
-      const charts = await this.releaseService.find({ files });
+      const [appCharts, libCharts] = await Promise.all([
+        this.chartService.getInventory('application'),
+        this.chartService.getInventory('library')
+      ]);
+      const deletedAppCharts = appCharts.filter(chart => chart.state === 'deleted');
+      const deletedLibCharts = libCharts.filter(chart => chart.state === 'deleted');
+      for (const chart of deletedAppCharts) {
+        await this.githubService.deleteReleases(chart.name);
+        await this.githubService.deletePackage(chart.name, 'application');
+      }
+      for (const chart of deletedLibCharts) {
+        await this.githubService.deleteReleases(chart.name);
+        await this.githubService.deletePackage(chart.name, 'library');
+      }
+      if (deletedAppCharts.length > 0) {
+        await this.chartService.deleteInventory('application', 'deleted');
+      }
+      if (deletedLibCharts.length > 0) {
+        await this.chartService.deleteInventory('library', 'deleted');
+      }
+      const files = await this.githubService.getUpdatedFiles();
+      const charts = await this.releaseService.find(files);
       if (!charts.total && !charts.deleted.length) {
         this.logger.info('No chart releases found');
         return { processed: 0, published: 0 };
@@ -46,13 +67,18 @@ class Release extends Action {
       let packages = [];
       const packagesDir = this.config.get('repository.release.packages');
       if (charts.total) {
-        await this.packageService.package(charts);
+        const allCharts = [...charts.application, ...charts.library];
+        for (const chartDir of allCharts) {
+          const isValid = await this.releaseService.validate(chartDir);
+          if (!isValid) {
+            this.logger.warning(`Chart '${chartDir}' failed validation, skipping release`);
+            continue;
+          }
+        }
+        await this.releaseService.package(charts);
         packages = await this.packageService.get(packagesDir);
       }
-      if (charts.deleted.length) await this.releaseService.delete({ 
-        context: this.context, 
-        files: charts.deleted 
-      });
+      if (charts.deleted.length) await this.releaseService.delete(charts.deleted);
       if (packages.length) {
         const releases = await this.publishService.github(packages, packagesDir);
         result.published = releases.length;

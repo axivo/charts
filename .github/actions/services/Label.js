@@ -38,23 +38,17 @@ class Label extends Action {
         return false;
       }
       try {
-        const existingLabel = await this.restService.getLabel({
-          context: this.context,
-          name
-        });
+        const existingLabel = await this.restService.getLabel(name);
         if (existingLabel) return true;
         if (!this.config.get('issue.createLabels')) {
           this.logger.warning(`Label '${name}' not found and createLabels is disabled`);
           return false;
         }
-        await this.restService.createLabel({
-          context: this.context,
-          label: {
-            name,
-            color: labelConfig.color,
-            description: labelConfig.description
-          }
-        });
+        await this.restService.createLabel(
+          name,
+          labelConfig.color,
+          labelConfig.description
+        );
         this.logger.info(`Successfully created '${name}' label`);
         return true;
       } catch (error) {

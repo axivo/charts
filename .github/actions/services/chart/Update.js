@@ -31,47 +31,45 @@ class Update extends Action {
    * Commits files and returns results
    * 
    * @private
-   * @param {Object} data - Commit data object
-   * @param {string} data.type - Type of files (application, dependency lock, metadata)
-   * @param {Array<string>} data.files - Files to commit
-   * @param {Array<boolean>} data.results - Update operation results
+   * @param {string} type - Type of files (application, dependency lock, metadata)
+   * @param {Array<string>} files - Files to commit
+   * @param {Array<boolean>} results - Update operation results
    * @returns {Promise<boolean>} - True if all operations succeeded
    */
-  async #commit(data) {
-    if (!data.files.length) {
-      this.logger.info(`No ${data.type} file changes to commit`);
-      return data.results.every(result => result === true);
+  async #commit(type, files, results) {
+    if (!files.length) {
+      this.logger.info(`No ${type} file changes to commit`);
+      return results.every(result => result === true);
     }
     const branch = process.env.GITHUB_HEAD_REF;
-    const word = data.files.length === 1 ? 'file' : 'files';
-    await this.gitService.signedCommit(branch, data.files, `chore(github-action): update ${data.type} ${word}`);
-    return data.results.every(result => result === true);
+    const word = files.length === 1 ? 'file' : 'files';
+    await this.gitService.signedCommit(branch, files, `chore(github-action): update ${type} ${word}`);
+    return results.every(result => result === true);
   }
 
   /**
    * Generates chart index from directory
    * 
    * @private
-   * @param {Object} directory - Directory object with chart and temp paths
-   * @param {string} directory.chart - Chart directory path
-   * @param {string} directory.temp - Temporary directory path
+   * @param {string} directory - Chart directory path
+   * @param {string} workspace - Workspace directory path
    * @returns {Promise<Object>} Generated index object
    */
-  async #generateIndex(directory) {
-    const chartType = path.basename(path.dirname(directory.chart));
+  async #generateIndex(directory, workspace) {
+    const chartType = path.basename(path.dirname(directory));
     const assetName = `${chartType}.tgz`;
-    const baseUrl = `${this.context.payload.repository.html_url}/releases/download`;
-    await this.fileService.createDir(directory.temp);
-    await this.helmService.package(directory.chart, { destination: directory.temp });
-    await this.helmService.generateIndex(directory.temp, { url: baseUrl });
-    const indexPath = path.join(directory.temp, 'index.yaml');
+    const url = `${this.context.payload.repository.html_url}/releases/download`;
+    await this.fileService.createDir(workspace);
+    await this.helmService.package(directory, { destination: workspace });
+    await this.helmService.generateIndex(workspace, { url });
+    const indexPath = path.join(workspace, 'index.yaml');
     const index = await this.fileService.readYaml(indexPath);
-    const chartName = path.basename(directory.chart);
+    const chartName = path.basename(directory);
     index.entries[chartName].forEach(entry => {
       const tagName = this.config.get('repository.release.title')
         .replace('{{ .Name }}', chartName)
         .replace('{{ .Version }}', entry.version);
-      entry.urls = [`${baseUrl}/${tagName}/${assetName}`];
+      entry.urls = [`${url}/${tagName}/${assetName}`];
     });
     return index;
   }
@@ -80,21 +78,20 @@ class Update extends Action {
    * Merges metadata entries with retention policy
    * 
    * @private
-   * @param {Object} chart - Chart object with index, metadata and name
-   * @param {Object} chart.index - Generated index object
-   * @param {Object} chart.metadata - Existing metadata object
-   * @param {string} chart.name - Chart name
+   * @param {string} name - Chart name
+   * @param {Object} index - Generated index object
+   * @param {Object} metadata - Existing metadata object
    * @returns {Object} Updated index with merged entries
    */
-  async #mergeEntries(chart) {
-    let entries = [...chart.index.entries[chart.name], ...chart.metadata.entries[chart.name]];
+  async #mergeEntries(name, index, metadata) {
+    let entries = [...index.entries[name], ...metadata.entries[name]];
     entries.sort((current, next) => next.version.localeCompare(current.version));
     const seen = new Set();
     entries = entries.filter(entry => !seen.has(entry.version) && seen.add(entry.version));
     const retention = this.config.get('repository.chart.packages.retention');
     if (retention && entries.length > retention) entries = entries.slice(0, retention);
-    chart.index.entries[chart.name] = entries;
-    return chart.index;
+    index.entries[name] = entries;
+    return index;
   }
 
   /**
@@ -103,7 +100,7 @@ class Update extends Action {
    * @param {Array<string>} charts - Chart directories to update
    * @returns {Promise<boolean>} - True if all application files were updated successfully
    */
-  async application(charts) {
+  async application(charts = []) {
     if (!charts || !charts.length) return true;
     return this.execute('update application files', async () => {
       const type = 'application';
@@ -138,8 +135,38 @@ class Update extends Action {
         }
       });
       const results = await Promise.all(updatePromises);
-      return this.#commit({ type, files, results });
+      return this.#commit('application', files, results);
     });
+  }
+
+  /**
+   * Updates specific chart inventory to a specific state
+   * 
+   * @param {string} type - Chart type ('application' or 'library')
+   * @param {string} name - Chart name
+   * @param {string} state - Chart state ('released' or 'deleted')
+   * @returns {Promise<void>}
+   */
+  async inventory(type, name, state) {
+    return this.execute(`update '${name}' chart to '${state}' in '${type}' inventory`, async () => {
+      const inventoryPath = `${type}/inventory.yaml`;
+      let inventory = await this.fileService.readYaml(inventoryPath);
+      if (!inventory) {
+        inventory = { [type]: [] };
+      }
+      if (!inventory[type]) {
+        inventory[type] = [];
+      }
+      const existingIndex = inventory[type].findIndex(chart => chart.name === name);
+      if (existingIndex >= 0) {
+        inventory[type][existingIndex].state = state;
+      } else {
+        inventory[type].push({ name, state });
+      }
+      inventory[type].sort((current, updated) => current.name.localeCompare(updated.name));
+      await this.fileService.writeYaml(inventoryPath, inventory);
+      this.logger.info(`Updated '${name}' chart to '${state}' in '${type}' inventory`);
+    }, false);
   }
 
   /**
@@ -148,7 +175,7 @@ class Update extends Action {
    * @param {Array<string>} charts - Chart directories to update
    * @returns {Promise<boolean>} - True if all lock files were updated successfully
    */
-  async lock(charts) {
+  async lock(charts = []) {
     if (!charts || !charts.length) return true;
     return this.execute('update dependency lock files', async () => {
       const type = 'dependency lock';
@@ -182,7 +209,7 @@ class Update extends Action {
         }
       });
       const results = await Promise.all(updatePromises);
-      return this.#commit({ type, files, results });
+      return this.#commit('dependency lock', files, results);
     });
   }
 
@@ -192,7 +219,7 @@ class Update extends Action {
    * @param {Array<string>} charts - Chart directories to update
    * @returns {Promise<boolean>} - True if all metadata files were updated successfully
    */
-  async metadata(charts) {
+  async metadata(charts = []) {
     if (!charts || !charts.length) return true;
     return this.execute('update metadata files', async () => {
       const type = 'metadata';
@@ -213,8 +240,8 @@ class Update extends Action {
             }
           }
           const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'helm-metadata-'));
-          const index = await this.#generateIndex({ chart: chartDir, temp: tempDir });
-          if (metadata) await this.#mergeEntries({ index, metadata, name: chartName });
+          const index = await this.#generateIndex(chartDir, tempDir);
+          if (metadata) await this.#mergeEntries(chartName, index, metadata);
           await this.fileService.writeYaml(metadataPath, index);
           files.push(metadataPath);
           this.logger.info(`Successfully updated '${chartDir}' ${type} file`);
@@ -228,7 +255,7 @@ class Update extends Action {
         }
       });
       const results = await Promise.all(updatePromises);
-      return this.#commit({ type, files, results });
+      return this.#commit('metadata', files, results);
     });
   }
 }

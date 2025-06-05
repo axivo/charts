@@ -43,7 +43,7 @@ class Action {
    * Executes an operation with error handling
    * 
    * @param {string} operation - Operation name for error reporting
-   * @param {Function} action - Function to execute
+   * @param {Function} action - Action to execute
    * @param {boolean} fatal - Whether errors should be fatal
    * @returns {Promise<any>} - Result of the operation or null on error
    */

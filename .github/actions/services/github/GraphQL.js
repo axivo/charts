@@ -10,22 +10,62 @@ const Api = require('./Api');
 
 class GraphQL extends Api {
   /**
+   * Creates a new GraphQL service instance
+   * 
+   * @param {Object} params - Service parameters
+   */
+  constructor(params) {
+    super(params);
+  }
+
+  /**
+   * Helper method to paginate through GraphQL results
+   * 
+   * @private
+   * @param {string} query - GraphQL query
+   * @param {Object} variables - Query variables
+   * @param {Function} extractor - Function to extract nodes and page info
+   * @param {Object} [options={}] - Pagination options
+   * @param {Function} [options.filter] - Function to filter results
+   * @param {number} [options.limit] - Maximum number of results to return
+   * @returns {Promise<Array<Object>>} - Paginated results
+   */
+  async #paginate(query, variables, extractor, options = {}) {
+    const { filter = () => true, limit = Infinity } = options;
+    const result = [];
+    let hasNextPage = true;
+    let cursor = null;
+    while (hasNextPage && result.length < limit) {
+      const currentVars = { ...variables, cursor };
+      const response = await this.execute('paginate', async () => {
+        return await this.github.graphql(query, currentVars);
+      });
+      const data = extractor(response);
+      if (!data || !data.nodes || !data.pageInfo) {
+        throw new Error('Invalid GraphQL response structure');
+      }
+      const filteredNodes = data.nodes.filter(filter);
+      result.push(...filteredNodes);
+      hasNextPage = data.pageInfo.hasNextPage && result.length < limit;
+      cursor = data.pageInfo.endCursor;
+    }
+    return result.slice(0, limit);
+  }
+
+  /**
    * Creates a signed commit using GitHub API
    * 
-   * @param {Object} params - Function parameters
-   * @param {Object} params.context - GitHub Actions context
-   * @param {Object} params.commit - Commit configuration
-   * @param {string} params.commit.branch - Branch name
-   * @param {string} params.commit.oid - Expected HEAD OID
-   * @param {Array<Object>} params.commit.additions - Files to add/modify
-   * @param {Array<Object>} params.commit.deletions - Files to delete
-   * @param {string} params.commit.message - Commit message
+   * @param {string} branch - Branch name
+   * @param {Object} options - Function options
+   * @param {string} options.oid - Expected HEAD OID
+   * @param {Array<Object>} options.additions - Files to add/modify
+   * @param {Array<Object>} options.deletions - Files to delete
+   * @param {string} options.message - Commit message
    * @returns {Promise<Object>} - Commit details
    */
-  async createSignedCommit({ context, commit }) {
-    let result = {};
-    const { branch, oid, additions, deletions, message } = commit;
-    try {
+  async createSignedCommit(branch, options = {}) {
+    const { oid, additions, deletions, message } = options;
+    return this.execute(`create signed commit on '${branch}' branch`, async () => {
       const fileChanges = {};
       if (additions?.length) {
         fileChanges.additions = additions.map(file => ({
@@ -51,7 +91,7 @@ class GraphQL extends Api {
       const variables = {
         input: {
           branch: {
-            repositoryNameWithOwner: `${context.repo.owner}/${context.repo.repo}`,
+            repositoryNameWithOwner: `${this.context.repo.owner}/${this.context.repo.repo}`,
             branchName: branch
           },
           message: {
@@ -61,43 +101,33 @@ class GraphQL extends Api {
           fileChanges
         }
       };
-      const response = await this.execute('createSignedCommit', async () => {
-        return await this.github.graphql(query, variables);
-      });
+      const response = await this.github.graphql(query, variables);
       const commitData = response.createCommitOnBranch.commit;
       this.logger.info(`Successfully created '${commitData.oid}' signed commit`);
-      result = {
+      return {
         url: commitData.url,
         oid: commitData.oid
       };
-      return result;
-    } catch (error) {
-      this.actionError.report({
-        operation: `create signed commit on '${branch}' branch`,
-        fatal: true
-      }, error);
-      return result;
-    }
+    });
   }
 
   /**
    * Gets release issues for a chart since a specified date
    * 
-   * @param {Object} params - Function parameters
-   * @param {Object} params.context - GitHub Actions context
-   * @param {Object} params.chart - Chart configuration
-   * @param {string} params.chart.name - Chart name
-   * @param {string} params.chart.type - Chart type (application or library)
-   * @param {Date} params.since - Date to get issues since
-   * @param {number} [params.issues=50] - Maximum number of issues to return
+   * @param {Object} chart - Chart configuration
+   * @param {string} chart.name - Chart name
+   * @param {string} chart.type - Chart type (application or library)
+   * @param {Object} [options={}] - Function options
+   * @param {Date} [options.since] - Date to get issues since
+   * @param {number} [options.issues=50] - Maximum number of issues to return
    * @returns {Promise<Array<Object>>} - Issues
    */
-  async getReleaseIssues({ context, chart, since, issues = 50 }) {
-    let result = [];
+  async getReleaseIssues(chart, options = {}) {
+    const { since, issues = 50 } = options;
     const { name, type } = chart;
     const chartName = `${type}/${name}`;
-    try {
-      const sinceDate = since ? new Date(since) : new Date(0);
+    const sinceDate = since ? new Date(since) : null;
+    return this.execute(`get release issues for '${chartName}' chart`, async () => {
       const query = `
         query GetIssues($owner: String!, $repo: String!, $issues: Int!) {
           repository(owner: $owner, name: $repo) {
@@ -125,19 +155,17 @@ class GraphQL extends Api {
         }
       `;
       const variables = {
-        owner: context.repo.owner,
-        repo: context.repo.repo,
+        owner: this.context.repo.owner,
+        repo: this.context.repo.repo,
         issues
       };
-      const response = await this.execute('getReleaseIssues', async () => {
-        return await this.github.graphql(query, variables);
-      });
-      const allIssues = response.repository.issues.nodes.filter(issue => {
-        return !since || new Date(issue.createdAt || issue.updatedAt) > sinceDate;
-      });
+      const response = await this.github.graphql(query, variables);
+      const allIssues = sinceDate
+        ? response.repository.issues.nodes.filter(issue => new Date(issue.createdAt) > sinceDate)
+        : response.repository.issues.nodes;
       const word = allIssues.length === 1 ? 'issue' : 'issues';
       this.logger.info(`Found ${allIssues.length} ${word} for '${chartName}' chart`);
-      result = this.transform(allIssues, issue => ({
+      return this.transform(allIssues, issue => ({
         Number: issue.number,
         State: issue.state,
         Title: issue.title,
@@ -145,28 +173,18 @@ class GraphQL extends Api {
         Labels: issue.labels.nodes.map(label => label.name),
         bodyText: issue.bodyText
       }));
-      return result;
-    } catch (error) {
-      this.actionError.report({
-        operation: `get release issues for '${chartName}' chart`,
-        fatal: false
-      }, error);
-      return result;
-    }
+    }, false);
   }
 
   /**
    * Gets releases for a repository
    * 
-   * @param {Object} params - Function parameters
-   * @param {Object} params.context - GitHub Actions context
-   * @param {string} [params.prefix] - Optional tag prefix to filter releases
-   * @param {number} [params.limit=100] - Maximum number of releases to return
+   * @param {string} [prefix] - Optional tag prefix to filter releases
+   * @param {number} [limit=100] - Maximum number of releases to return
    * @returns {Promise<Array<Object>>} - Releases
    */
-  async getReleases({ context, prefix, limit = 100 }) {
-    let result = [];
-    try {
+  async getReleases(prefix, limit = 100) {
+    return this.execute(`get releases`, async () => {
       const query = `
         query GetReleases($owner: String!, $repo: String!, $cursor: String) {
           repository(owner: $owner, name: $repo) {
@@ -202,17 +220,17 @@ class GraphQL extends Api {
           }
         }
       `;
-      const releases = await this.execute('getReleases', async () => {
-        return await this.paginate(query,
-          this.setVariables({ owner: context.repo.owner, repo: context.repo.repo }),
-          (data) => data.repository.releases,
-          prefix ? (release) => release.tagName.startsWith(prefix) : () => true,
+      const releases = await this.#paginate(query, 
+        { owner: this.context.repo.owner, repo: this.context.repo.repo },
+        (data) => data.repository.releases,
+        {
+          filter: prefix ? (release) => release.tagName.startsWith(prefix) : () => true,
           limit
-        );
-      }, false);
+        }
+      );
       const filterMessage = prefix ? ` with '${prefix}' tag prefix` : '';
       this.logger.info(`Found ${releases.length} releases${filterMessage}`);
-      result = this.transform(releases, release => ({
+      return this.transform(releases, release => ({
         id: release.id,
         name: release.name,
         tagName: release.tagName,
@@ -227,14 +245,7 @@ class GraphQL extends Api {
           size: asset.size
         }))
       }));
-      return result;
-    } catch (error) {
-      this.actionError.report({
-        operation: `get releases for ${context.repo.owner}/${context.repo.repo}`,
-        fatal: false
-      }, error);
-      return result;
-    }
+    }, false);
   }
 
   /**
@@ -244,8 +255,7 @@ class GraphQL extends Api {
    * @returns {Promise<string>} - 'organization' or 'user'
    */
   async getRepositoryType(owner) {
-    let result = '';
-    try {
+    return this.execute('get repository type', async () => {
       const query = `
         query GetOwnerType($owner: String!) {
           repositoryOwner(login: $owner) {
@@ -254,50 +264,11 @@ class GraphQL extends Api {
         }
       `;
       const variables = { owner };
-      const response = await this.execute('getRepositoryType', async () => {
-        return await this.github.graphql(query, variables);
-      });
+      const response = await this.github.graphql(query, variables);
       const ownerType = response.repositoryOwner.__typename.toLowerCase();
-      this.logger.info(`Repository is of '${ownerType}' type`);
+      this.logger.info(`Repository is '${ownerType}' type`);
       return ownerType;
-    } catch (error) {
-      this.actionError.report({
-        operation: `get repository type`,
-        fatal: false
-      }, error);
-      return result;
-    }
-  }
-
-  /**
-   * Helper method to paginate through GraphQL results
-   * 
-   * @param {string} query - GraphQL query
-   * @param {Object} variables - Query variables
-   * @param {Function} extractor - Function to extract nodes and page info
-   * @param {Function} filter - Function to filter results
-   * @param {number} limit - Maximum number of results to return
-   * @returns {Promise<Array<Object>>} - Paginated results
-   */
-  async paginate(query, variables, extractor, filter = () => true, limit = Infinity) {
-    const results = [];
-    let hasNextPage = true;
-    let cursor = null;
-    while (hasNextPage && results.length < limit) {
-      const currentVars = { ...variables, cursor };
-      const response = await this.execute('paginate', async () => {
-        return await this.github.graphql(query, currentVars);
-      });
-      const data = extractor(response);
-      if (!data || !data.nodes || !data.pageInfo) {
-        throw new Error('Invalid GraphQL response structure');
-      }
-      const filteredNodes = data.nodes.filter(filter);
-      results.push(...filteredNodes);
-      hasNextPage = data.pageInfo.hasNextPage && results.length < limit;
-      cursor = data.pageInfo.endCursor;
-    }
-    return results.slice(0, limit);
+    }, false);
   }
 }
 

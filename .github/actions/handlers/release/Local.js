@@ -44,7 +44,7 @@ class Local extends Action {
       }
       this.logger.info('Starting local chart release process...');
       const files = await this.localService.getLocalFiles();
-      const charts = await this.releaseService.find({ files });
+      const charts = await this.releaseService.find(files);
       if (!charts.total && !charts.deleted.length) {
         this.logger.info(`No ${charts.total === 1 ? 'chart' : 'charts'} chart releases found`);
         return { processed: 0, published: 0 };
@@ -61,10 +61,7 @@ class Local extends Action {
         packages = await this.packageService.get(packagesDir);
       }
       if (charts.deleted.length) {
-        await this.releaseService.delete({
-          context: this.context,
-          files: charts.deleted
-        });
+        await this.releaseService.delete(charts.deleted);
       }
       this.logger.info('Successfully completed the local chart release process');
       return result;

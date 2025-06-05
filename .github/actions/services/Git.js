@@ -193,15 +193,11 @@ class Git extends Action {
         return { updated: 0 };
       }
       const oid = await this.shellService.execute('git', ['rev-parse', `origin/${branch}`], { output: true });
-      await this.graphqlService.createSignedCommit({
-        context: this.context,
-        commit: {
-          branch,
-          oid,
-          additions,
-          deletions,
-          message
-        }
+      await this.graphqlService.createSignedCommit(branch, {
+        oid,
+        additions,
+        deletions,
+        message
       });
       this.logger.info(`Successfully committed ${files.length} ${word}`);
       return { updated: files.length };
