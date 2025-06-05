@@ -7,7 +7,7 @@
  * @license BSD-3-Clause
  */
 const Action = require('../core/Action');
-const ChartService = require('../services/chart');
+const ChartHandler = require('./Chart');
 const config = require('../config');
 const DocsService = require('../services/helm/Docs');
 const FileService = require('../services/File');
@@ -27,7 +27,7 @@ class WorkflowHandler extends Action {
   constructor(params) {
     params.config = config;
     super(params);
-    this.chartService = new ChartService(params);
+    this.chartHandler = new ChartHandler(params);
     this.docsService = new DocsService(params);
     this.fileService = new FileService(params);
     this.frontpageService = new FrontpageService(params);
@@ -128,7 +128,7 @@ class WorkflowHandler extends Action {
   async updateCharts() {
     return this.execute('update charts', async () => {
       this.logger.info('Starting the charts update process...');
-      const result = await this.chartService.process();
+      const result = await this.chartHandler.process();
       this.logger.info('Successfully completed the charts update process');
       return result;
     });
