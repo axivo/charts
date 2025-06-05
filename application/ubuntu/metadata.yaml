@@ -6,6 +6,38 @@ entries:
         org.opencontainers.image.licenses: BSD-3-Clause
       apiVersion: v2
       appVersion: '24.04'
+      created: '2025-06-05T23:07:28.149487212Z'
+      dependencies:
+        - name: common
+          repository: oci://ghcr.io/axivo/charts/library
+          version: 1.0.0
+      description: Ubuntu Server LTS troubleshooting container for Kubernetes cluster
+      digest: 86f31b31068092399c5ac38de8490de667ce710d8eca01b2bb43ba961fbb235f
+      home: https://github.com/axivo/charts
+      icon: >-
+        https://raw.githubusercontent.com/axivo/charts/refs/heads/main/application/ubuntu/icon.png
+      keywords:
+        - ubuntu
+        - server
+        - troubleshooting
+      kubeVersion: '>=1.22.0-0'
+      maintainers:
+        - name: AXIVO
+          url: https://axivo.com
+      name: ubuntu
+      sources:
+        - https://github.com/axivo/charts
+        - https://ubuntu.com/server
+      type: application
+      urls:
+        - >-
+          https://github.com/axivo/charts/releases/download/ubuntu-1.0.3/application.tgz
+      version: 1.0.3
+    - annotations:
+        org.opencontainers.image.documentation: https://github.com/axivo/charts/blob/main/application/ubuntu/README.md
+        org.opencontainers.image.licenses: BSD-3-Clause
+      apiVersion: v2
+      appVersion: '24.04'
       created: '2025-05-15T04:19:41.939626034Z'
       dependencies:
         - name: common
@@ -97,4 +129,4 @@ entries:
         - >-
           https://github.com/axivo/charts/releases/download/ubuntu-1.0.0/application.tgz
       version: 1.0.0
-generated: '2025-06-03T00:19:13.959915717Z'
+generated: '2025-06-05T23:07:28.148264935Z'
