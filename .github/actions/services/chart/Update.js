@@ -48,6 +48,21 @@ class Update extends Action {
   }
 
   /**
+   * Initializes update operation with standard logging
+   * 
+   * @private
+   * @param {Array} charts - Charts to initialize
+   * @param {string} type - Operation type
+   * @returns {Object} - Initialization result with files array and logging info
+   */
+  async #initialize(charts, type) {
+    if (!charts || !charts.length) return { skip: true };
+    const word = charts.length === 1 ? 'chart' : 'charts';
+    this.logger.info(`Updating ${type} files for ${charts.length} ${word}...`);
+    return { skip: false, files: [], type, word };
+  }
+
+  /**
    * Generates chart index from directory
    * 
    * @private
@@ -95,18 +110,59 @@ class Update extends Action {
   }
 
   /**
+   * Updates a single chart entry in inventory file
+   * 
+   * @private
+   * @param {string} directory - Chart directory path
+   * @param {string} status - Git status
+   * @returns {Promise<string>} - Inventory file path that was updated
+   */
+  async #updateEntry(directory, status) {
+    const chartName = path.basename(path.dirname(directory));
+    const chartType = path.dirname(directory).split('/')[0];
+    const inventoryPath = `${chartType}/inventory.yaml`;
+    let chartData = {};
+    if (status !== 'removed') {
+      const chartYamlPath = `${chartType}/${chartName}/Chart.yaml`;
+      const chartMetadata = await this.fileService.readYaml(chartYamlPath);
+      chartData = {
+        description: chartMetadata.description,
+        version: chartMetadata.version
+      };
+    }
+    let inventory = await this.fileService.readYaml(inventoryPath);
+    if (!inventory) inventory = { [chartType]: [] };
+    if (!inventory[chartType]) inventory[chartType] = [];
+    const existingIndex = inventory[chartType].findIndex(entry => entry.name === chartName);
+    if (existingIndex >= 0) {
+      inventory[chartType][existingIndex] = {
+        ...inventory[chartType][existingIndex],
+        status,
+        ...chartData
+      };
+    } else {
+      inventory[chartType].push({
+        name: chartName,
+        status,
+        ...chartData
+      });
+    }
+    inventory[chartType].sort((current, updated) => current.name.localeCompare(updated.name));
+    await this.fileService.writeYaml(inventoryPath, inventory);
+    return inventoryPath;
+  }
+
+  /**
    * Updates application files for charts
    * 
    * @param {Array<string>} charts - Chart directories to update
    * @returns {Promise<boolean>} - True if all application files were updated successfully
    */
   async application(charts = []) {
-    if (!charts || !charts.length) return true;
     return this.execute('update application files', async () => {
-      const type = 'application';
-      const word = charts.length === 1 ? 'chart' : 'charts';
-      this.logger.info(`Updating ${type} files for ${charts.length} ${word}...`);
-      const files = [];
+      const init = await this.#initialize(charts, 'application');
+      if (init.skip) return init.skip;
+      const { files, type } = init;
       const updatePromises = charts.map(async (chartDir) => {
         try {
           const appFilePath = path.join(chartDir, 'application.yaml');
@@ -140,33 +196,34 @@ class Update extends Action {
   }
 
   /**
-   * Updates specific chart inventory to a specific state
+   * Updates inventory files for charts
    * 
-   * @param {string} type - Chart type ('application' or 'library')
-   * @param {string} name - Chart name
-   * @param {string} state - Chart state ('released' or 'deleted')
-   * @returns {Promise<void>}
+   * @param {Object} files - Chart files object mapping file paths to Git status
+   * @returns {Promise<boolean>} - True if all inventory files were updated successfully
    */
-  async inventory(type, name, state) {
-    return this.execute(`update '${name}' chart to '${state}' in '${type}' inventory`, async () => {
-      const inventoryPath = `${type}/inventory.yaml`;
-      let inventory = await this.fileService.readYaml(inventoryPath);
-      if (!inventory) {
-        inventory = { [type]: [] };
-      }
-      if (!inventory[type]) {
-        inventory[type] = [];
-      }
-      const existingIndex = inventory[type].findIndex(chart => chart.name === name);
-      if (existingIndex >= 0) {
-        inventory[type][existingIndex].state = state;
-      } else {
-        inventory[type].push({ name, state });
-      }
-      inventory[type].sort((current, updated) => current.name.localeCompare(updated.name));
-      await this.fileService.writeYaml(inventoryPath, inventory);
-      this.logger.info(`Updated '${name}' chart to '${state}' in '${type}' inventory`);
-    }, false);
+  async inventory(files = {}) {
+    return this.execute('update inventory files', async () => {
+      const init = await this.#initialize(Object.keys(files), 'inventory');
+      if (init.skip) return init.skip;
+      const { files: updatedFiles, type } = init;
+      const updatePromises = Object.entries(files)
+        .map(async ([path, status]) => {
+          try {
+            const inventoryPath = await this.#updateEntry(path, status);
+            if (!updatedFiles.includes(inventoryPath)) updatedFiles.push(inventoryPath);
+            this.logger.info(`Successfully updated '${path.dirname(path)}' ${type} file`);
+            return true;
+          } catch (error) {
+            this.actionError.report({
+              operation: `update '${path}' ${type} file`,
+              fatal: false
+            }, error);
+            return false;
+          }
+        });
+      const results = await Promise.all(updatePromises);
+      return this.#commit('inventory', updatedFiles, results);
+    });
   }
 
   /**
@@ -176,12 +233,10 @@ class Update extends Action {
    * @returns {Promise<boolean>} - True if all lock files were updated successfully
    */
   async lock(charts = []) {
-    if (!charts || !charts.length) return true;
     return this.execute('update dependency lock files', async () => {
-      const type = 'dependency lock';
-      const word = charts.length === 1 ? 'chart' : 'charts';
-      this.logger.info(`Updating ${type} files for ${charts.length} ${word}...`);
-      const files = [];
+      const init = await this.#initialize(charts, 'dependency lock');
+      if (init.skip) return init.skip;
+      const { files, type } = init;
       const updatePromises = charts.map(async (chartDir) => {
         try {
           const chartLockPath = path.join(chartDir, 'Chart.lock');
@@ -220,12 +275,10 @@ class Update extends Action {
    * @returns {Promise<boolean>} - True if all metadata files were updated successfully
    */
   async metadata(charts = []) {
-    if (!charts || !charts.length) return true;
     return this.execute('update metadata files', async () => {
-      const type = 'metadata';
-      const word = charts.length === 1 ? 'chart' : 'charts';
-      this.logger.info(`Updating ${type} files for ${charts.length} ${word}...`);
-      const files = [];
+      const init = await this.#initialize(charts, 'metadata');
+      if (init.skip) return init.skip;
+      const { files, type } = init;
       const updatePromises = charts.map(async (chartDir) => {
         try {
           const chartName = path.basename(chartDir);

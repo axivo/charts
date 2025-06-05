@@ -39,7 +39,7 @@ Release Workflow → getUpdatedFiles() → find(files) → Directory Scanning �
 
 ### New Architecture:
 ```
-Release Workflow → getInventory() → Filter by State → Chart Processing
+Release Workflow → getInventory() → Filter by Status → Chart Processing
 ```
 
 ## Coding Standards Compliance
@@ -112,8 +112,8 @@ async process() {
       this.chartService.getInventory('application'),
       this.chartService.getInventory('library')
     ]);
-    const activeAppCharts = appCharts.filter(chart => chart.state === 'released');
-    const activeLibCharts = libCharts.filter(chart => chart.state === 'released');
+    const activeAppCharts = appCharts.filter(chart => chart.status === 'modified');
+    const activeLibCharts = libCharts.filter(chart => chart.status === 'modified');
     const charts = {
       application: activeAppCharts.map(chart => `application/${chart.name}`),
       library: activeLibCharts.map(chart => `library/${chart.name}`),
@@ -134,8 +134,8 @@ Convert inventory format to release workflow format:
 **From Inventory Format:**
 ```javascript
 [
-  { name: 'nginx', state: 'released' },
-  { name: 'ubuntu', state: 'released' }
+  { name: 'nginx', status: 'modified' },
+  { name: 'ubuntu', status: 'modified' }
 ]
 ```
 
@@ -162,7 +162,7 @@ Convert inventory format to release workflow format:
 ## Validation Criteria
 
 ### **Functional Requirements:**
-1. ✅ **Chart Discovery**: Active charts with `state: 'released'` are processed
+1. ✅ **Chart Discovery**: Active charts with `status: 'modified'` are processed
 2. ✅ **Data Format**: Charts object matches expected structure for downstream processing  
 3. ✅ **Compatibility**: Existing release logic works without modification
 4. ✅ **Performance**: No filesystem scanning operations during chart discovery
@@ -193,7 +193,7 @@ for (const file of files) {
 ```javascript
 // Single inventory read
 const charts = await this.chartService.getInventory('application');
-const activeCharts = charts.filter(chart => chart.state === 'released');
+const activeCharts = charts.filter(chart => chart.status === 'modified');
 // Process all active charts...
 ```
 
@@ -257,7 +257,7 @@ const activeCharts = charts.filter(chart => chart.state === 'released');
 - **Scalability**: Linear performance with chart count
 
 ### **Functional Metrics:**
-- **Accuracy**: 100% chart discovery rate for `released` charts
+- **Accuracy**: 100% chart discovery rate for `modified` charts
 - **Reliability**: Zero filesystem-related errors during discovery
 - **Compatibility**: No breaking changes to existing workflows
 
@@ -280,8 +280,8 @@ release.yml → workflow.processReleases()
     └── this.releaseService.process()
         └── /handlers/release/index.js process()
             ├── this.chartService.getInventory() ✅ USES INVENTORY
-            ├── this.githubService.getUpdatedFiles() ✅ FILESYSTEM-BASED (FIXED)
-            ├── this.releaseService.find(files) ✅ FILESYSTEM-BASED (FIXED)
+            ├── this.githubService.getUpdatedFiles() ✅ REMOVED (FIXED)
+            ├── this.releaseService.find(files) ✅ REMOVED (FIXED)
             │   └── /services/release/index.js find()
             │       └── Chart.yaml file scanning ✅ USES INVENTORY (FIXED)
             ├── this.releaseService.validate(chartDir) ✅ FILESYSTEM-BASED (REQUIRED)
@@ -343,18 +343,18 @@ Some operations require actual chart files and cannot be migrated to inventory.y
 
 ### **❌ Filesystem-Based Operations Requiring Migration:**
 
-1. **`/handlers/release/index.js getUpdatedFiles()` method** ✅ FIXED
+1. **`/handlers/release/index.js getUpdatedFiles()` method** ✅ REMOVED
    - **Current**: GitHub API scanning for changed files + filesystem Chart.yaml detection
-   - **Required**: Use inventory to get ALL charts with `state: 'released'`
+   - **Required**: Use inventory to get ALL charts with `status: 'modified'`
    - **Impact**: Core chart discovery for release processing - ensures ALL charts processed, not just changed ones
    - **Fix**: Replace `getUpdatedFiles()` + `find(files)` with inventory-based discovery
    - **Implementation**: Lines 39-40 replaced with inventory-based chart enumeration
 
-2. **`/services/release/index.js find()` method** ✅ FIXED
+2. **`/services/release/index.js find()` method** ✅ REMOVED
    - **Current**: Scans filesystem for Chart.yaml files based on Git changes
    - **Required**: Replace with inventory-based chart enumeration
    - **Impact**: Core chart discovery - processes ALL released charts instead of only changed ones
-   - **Fix**: Replaced by inventory filtering with `state: 'released'` in main process() method
+   - **Fix**: Replaced by inventory filtering with `status: 'modified'` in main process() method
 
 3. **`/services/release/Publish.js generateIndexes()` method** ✅ CRITICAL MISSING (DOCUMENTED)
    - **Current**: Uses `this.find(appType)` and `this.find(libType)` for directory scanning
@@ -380,7 +380,7 @@ Some operations require actual chart files and cannot be migrated to inventory.y
 
 ### **🔧 Required Code Changes:**
 
-1. **Replace `getUpdatedFiles()` + `releaseService.find(files)` with inventory-based discovery** ✅ FIXED
+1. **Replace `getUpdatedFiles()` + `releaseService.find(files)` with inventory-based discovery** ✅ REMOVED
 2. **Update `publishService.generateIndexes()` to use inventory** ✅ DOCUMENTED
    - **Add Chart service to constructor**: `this.chartService = new Chart(params);`
    - **Replace `this.find()` calls**: Use `chartService.getInventory()` 
@@ -392,7 +392,7 @@ Some operations require actual chart files and cannot be migrated to inventory.y
 ### **📊 Migration Scope:**
 
 The inventory system touches **every major component** of the release workflow:
-- ✅ **Chart Discovery** - Primary entry point for finding charts (FIXED)
+- ✅ **Chart Discovery** - Primary entry point for finding charts (REMOVED - now uses inventory)
 - ✅ **Chart Validation** - Chart paths constructed from inventory (`${type}/${name}`) (FIXED)
 - ✅ **Chart Packaging** - Chart paths available from inventory data
 - ✅ **Release Publishing** - Chart metadata accessible via inventory paths
@@ -426,38 +426,42 @@ const [appCharts, libCharts] = await Promise.all([
   this.chartService.getInventory('application'),
   this.chartService.getInventory('library')
 ]);
-const activeAppCharts = appCharts.filter(chart => chart.state === 'released');
-const activeLibCharts = libCharts.filter(chart => chart.state === 'released');
+const activeAppCharts = appCharts.filter(chart => chart.status === 'removed');
+const activeLibCharts = libCharts.filter(chart => chart.status === 'removed');
+// Process deletions first...
+
+const modifiedAppCharts = appCharts.filter(chart => chart.status === 'modified' || chart.status === 'added');
+const modifiedLibCharts = libCharts.filter(chart => chart.status === 'modified' || chart.status === 'added');
 const charts = {
-  application: activeAppCharts.map(chart => `application/${chart.name}`),
-  library: activeLibCharts.map(chart => `library/${chart.name}`),
-  total: activeAppCharts.length + activeLibCharts.length,
+  application: modifiedAppCharts.map(chart => `application/${chart.name}`),
+  library: modifiedLibCharts.map(chart => `library/${chart.name}`),
+  total: modifiedAppCharts.length + modifiedLibCharts.length,
   deleted: []
 };
 ```
 
 ### **Implementation Details:**
-- **Filter Retention**: Kept `.filter(chart => chart.state === 'released')` for future-proofing and explicit intent
-- **Complete Processing**: Now processes ALL charts with `state: 'released'` instead of only changed ones
+- **Dual Processing**: Handles both deletions (`status: 'removed'`) and active charts (`status: 'modified'` or `status: 'added'`)
+- **Complete Processing**: Now processes ALL charts based on Git status instead of only changed ones
 - **Performance**: Single YAML file read vs O(n) GitHub API + filesystem operations
 - **Path Construction**: Converts inventory entries to expected `${type}/${chart.name}` format
 - **Compatibility**: Maintains existing `charts` object structure for downstream processing
 
 ### **Key Benefits Achieved:**
-- ✅ **Completeness**: Processes ALL released charts, not just changed ones
+- ✅ **Git Status Transparency**: Processes charts based on actual Git operations (`added`, `modified`, `removed`)
 - ✅ **Performance**: Single file read vs multiple API/filesystem operations
 - ✅ **Reliability**: No dependency on GitHub API or Git change detection
 - ✅ **Scalability**: Handles thousands of charts with minimal overhead
-- ✅ **Future-proof**: Filter ready for additional states like `updated`, `pending`
-- ✅ **Complete Validation**: Lints ALL released charts instead of only changed ones
+- ✅ **Complete Metadata**: Chart.yaml description and version automatically included
+- ✅ **Complete Validation**: Lints ALL active charts instead of only changed ones
 - ✅ **Path Construction**: Chart paths (`${type}/${chart.name}`) derived from inventory data
 
 ### **Validation Criteria Met:**
-- ✅ Only charts with `state: 'released'` are processed
+- ✅ Charts are processed based on Git status (`added`, `modified` for releases, `removed` for deletions)
 - ✅ Chart paths correctly constructed as `${type}/${name}`
 - ✅ Existing release processing logic works unchanged
 - ✅ Zero filesystem scanning during chart discovery
-- ✅ Inventory.yaml established as single source of truth for chart enumeration
+- ✅ Inventory.yaml established as single source of truth with complete Chart.yaml metadata
 
 ---
 
@@ -502,10 +506,10 @@ async generateIndexes() {
     this.chartService.getInventory('library')
   ]);
   const activeAppCharts = appCharts
-    .filter(chart => chart.state === 'released')
+    .filter(chart => chart.status === 'modified' || chart.status === 'added')
     .map(chart => ({ dir: `application/${chart.name}`, type: 'application', name: chart.name }));
   const activeLibCharts = libCharts
-    .filter(chart => chart.state === 'released')
+    .filter(chart => chart.status === 'modified' || chart.status === 'added')
     .map(chart => ({ dir: `library/${chart.name}`, type: 'library', name: chart.name }));
   const chartDirs = [...activeAppCharts, ...activeLibCharts];
   
@@ -565,17 +569,17 @@ async generate() {
     this.chartService.getInventory('library')
   ]);
   const activeAppCharts = appCharts
-    .filter(chart => chart.state === 'released')
+    .filter(chart => chart.status === 'modified' || chart.status === 'added')
     .map(chart => ({ directory: `application/${chart.name}`, type: 'application' }));
   const activeLibCharts = libCharts
-    .filter(chart => chart.state === 'released')
+    .filter(chart => chart.status === 'modified' || chart.status === 'added')
     .map(chart => ({ directory: `library/${chart.name}`, type: 'library' }));
   const allCharts = [...activeAppCharts, ...activeLibCharts];
   
   // BENEFIT: All metadata already available in inventory
   const chartEntries = {};
   [...appCharts, ...libCharts]
-    .filter(chart => chart.state === 'released')
+    .filter(chart => chart.status === 'modified' || chart.status === 'added')
     .forEach(chart => {
       chartEntries[chart.name] = {
         description: chart.description || '',
@@ -592,9 +596,9 @@ async generate() {
 ### **Expected Changes:**
 - **Replace `this.chartService.discover()`** with inventory-based discovery
 - **Eliminate Chart.yaml reading** - use inventory metadata directly
-- **Filter only released charts** using `state: 'released'`
+- **Filter only active charts** using `status: 'modified'` or `status: 'added'`
 - **Performance improvement** - single file read vs directory scanning + multiple file reads
-- **Complete metadata access** - name, description, version, state all in inventory
+- **Complete metadata access** - name, description, version, status all in inventory
 
 ---
 
@@ -604,7 +608,7 @@ async generate() {
 Validate complete inventory migration and test all workflows.
 
 ### **Validation Steps:**
-1. **Release Processing**: Verify only `released` charts are processed
+1. **Release Processing**: Verify charts are processed based on Git status (`added`, `modified`, `removed`)
 2. **Index Generation**: Confirm GitHub Pages indexes use inventory data
 3. **Frontpage Generation**: Validate repository frontpage shows only active charts
 4. **Performance**: Measure improvement in chart discovery time
@@ -612,6 +616,7 @@ Validate complete inventory migration and test all workflows.
 
 ### **Success Criteria:**
 - Zero filesystem scanning operations during chart discovery
-- All workflows use inventory as single source of truth
+- All workflows use inventory as single source of truth with complete Chart.yaml metadata
 - Performance improvement in chart enumeration
+- Git status transparency in inventory tracking
 - Backward compatibility maintained for all existing functionality

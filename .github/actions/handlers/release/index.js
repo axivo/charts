@@ -37,8 +37,8 @@ class Release extends Action {
         this.chartService.getInventory('application'),
         this.chartService.getInventory('library')
       ]);
-      const deletedAppCharts = appCharts.filter(chart => chart.state === 'deleted');
-      const deletedLibCharts = libCharts.filter(chart => chart.state === 'deleted');
+      const deletedAppCharts = appCharts.filter(chart => chart.status === 'removed');
+      const deletedLibCharts = libCharts.filter(chart => chart.status === 'removed');
       for (const chart of deletedAppCharts) {
         await this.githubService.deleteReleases(chart.name);
         await this.githubService.deletePackage(chart.name, 'application');
@@ -48,10 +48,10 @@ class Release extends Action {
         await this.githubService.deletePackage(chart.name, 'library');
       }
       if (deletedAppCharts.length > 0) {
-        await this.chartService.deleteInventory('application', 'deleted');
+        await this.chartService.deleteInventory('application', 'removed');
       }
       if (deletedLibCharts.length > 0) {
-        await this.chartService.deleteInventory('library', 'deleted');
+        await this.chartService.deleteInventory('library', 'removed');
       }
       const files = await this.githubService.getUpdatedFiles();
       const charts = await this.releaseService.find(files);

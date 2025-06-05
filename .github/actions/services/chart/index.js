@@ -27,14 +27,14 @@ class Chart extends Action {
   }
 
   /**
-   * Removes all charts with specific state from inventory
+   * Removes all charts with specific status from inventory
    * 
    * @param {string} type - Chart type ('application' or 'library')
-   * @param {string} state - State to remove ('deleted' typically)
+   * @param {string} status - Status to remove ('removed' typically)
    * @returns {Promise<void>}
    */
-  async deleteInventory(type, state) {
-    return this.execute(`delete '${state}' charts from '${type}' inventory`, async () => {
+  async deleteInventory(type, status) {
+    return this.execute(`delete '${status}' charts from '${type}' inventory`, async () => {
       const inventoryPath = `${type}/inventory.yaml`;
       const inventory = await this.fileService.readYaml(inventoryPath);
       if (!inventory || !inventory[type]) {
@@ -42,11 +42,11 @@ class Chart extends Action {
         return;
       }
       const originalCount = inventory[type].length;
-      inventory[type] = inventory[type].filter(chart => chart.state !== state);
+      inventory[type] = inventory[type].filter(chart => chart.status !== status);
       const removedCount = originalCount - inventory[type].length;
       if (removedCount > 0) {
         await this.fileService.writeYaml(inventoryPath, inventory);
-        this.logger.info(`Removed ${removedCount} '${state}' charts from '${type}' inventory`);
+        this.logger.info(`Removed ${removedCount} '${status}' charts from '${type}' inventory`);
       }
     }, false);
   }
@@ -126,7 +126,7 @@ class Chart extends Action {
         const discoveredCharts = await this.discover();
         const initialCharts = discoveredCharts[type].map(chartPath => ({
           name: path.basename(chartPath),
-          state: 'released'
+          status: 'modified'
         }));
         inventory = { [type]: initialCharts };
         await this.fileService.writeYaml(inventoryPath, inventory);

@@ -45,18 +45,13 @@ class Chart extends Action {
       await this.chartUpdate.metadata(allCharts);
       await this.chartService.lint(allCharts);
       await this.docsService.generate(allCharts);
-      const deletedCharts = Object.keys(files)
-        .filter(file => file.endsWith('Chart.yaml') && files[file] === 'removed');
-      for (const filePath of deletedCharts) {
-        const chartName = path.basename(path.dirname(filePath));
-        const chartType = path.dirname(filePath).split('/')[0];
-        await this.chartUpdate.inventory(chartType, chartName, 'deleted');
-      }
-      for (const chartPath of allCharts) {
-        const chartName = path.basename(chartPath);
-        const chartType = chartPath.startsWith('application') ? 'application' : 'library';
-        await this.chartUpdate.inventory(chartType, chartName, 'released');
-      }
+      const chartFiles = Object.keys(files)
+        .filter(file => file.endsWith('Chart.yaml'))
+        .reduce((obj, file) => {
+          obj[file] = files[file];
+          return obj;
+        }, {});
+      await this.chartUpdate.inventory(chartFiles);
       return { charts: charts.total, updated: charts.total };
     });
   }

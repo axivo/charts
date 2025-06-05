@@ -1,9 +1,9 @@
 application:
   - name: sealed-secrets
     description: Kubernetes secrets controller used for secure Git storage
-    state: released
+    status: added
     version: 1.0.0
   - name: ubuntu
     description: Ubuntu Server LTS troubleshooting container for Kubernetes
-    state: released
+    status: modified
     version: 1.0.2
