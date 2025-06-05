@@ -207,15 +207,15 @@ class UpdateService extends Action {
       if (init.skip) return init.skip;
       const { files: updatedFiles, type } = init;
       const updatePromises = Object.entries(files)
-        .map(async ([path, status]) => {
+        .map(async ([filePath, status]) => {
           try {
-            const inventoryPath = await this.#updateEntry(path, status);
-            if (!updatedFiles.includes(inventoryPath)) updatedFiles.push(inventoryPath);
-            this.logger.info(`Successfully updated '${path.dirname(path)}' ${type} file`);
+            const entry = await this.#updateEntry(filePath, status);
+            if (!updatedFiles.includes(entry)) updatedFiles.push(entry);
+            this.logger.info(`Successfully updated '${path.dirname(filePath)}' ${type} file`);
             return true;
           } catch (error) {
             this.actionError.report({
-              operation: `update '${path}' ${type} file`,
+              operation: `update '${filePath}' ${type} file`,
               fatal: false
             }, error);
             return false;
