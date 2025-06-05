@@ -8,7 +8,7 @@
  */
 const Action = require('../core/Action');
 
-class Shell extends Action {
+class ShellService extends Action {
   /**
    * Creates a new Shell service instance
    * 
@@ -66,4 +66,4 @@ class Shell extends Action {
   }
 }
 
-module.exports = Shell;
+module.exports = ShellService;

@@ -7,10 +7,10 @@
  * @license BSD-3-Clause
  */
 const Action = require('../core/Action');
-const GraphQL = require('./github/GraphQL');
-const Rest = require('./github/Rest');
+const GraphQLService = require('./github/GraphQL');
+const RestService = require('./github/Rest');
 
-class Issue extends Action {
+class IssueService extends Action {
   /**
    * Creates a new Issue instance
    * 
@@ -18,8 +18,8 @@ class Issue extends Action {
    */
   constructor(params) {
     super(params);
-    this.graphqlService = new GraphQL(params);
-    this.restService = new Rest(params);
+    this.graphqlService = new GraphQLService(params);
+    this.restService = new RestService(params);
   }
 
   /**
@@ -32,7 +32,11 @@ class Issue extends Action {
   async #validate(context) {
     try {
       let hasFailures = false;
-      const jobs = await this.restService.listJobs(context);
+      const workflowRun = await this.restService.getWorkflowRun(context.runId);
+      if (['cancelled', 'failure'].includes(workflowRun.conclusion)) {
+        return true;
+      }
+      const jobs = await this.restService.listJobs();
       for (const job of jobs) {
         if (job.steps) {
           const failedSteps = job.steps.filter(step => step.conclusion !== 'success');
@@ -93,26 +97,19 @@ class Issue extends Action {
    * Gets chart-specific issues since the last release
    * 
    * @param {Object} params - Function parameters
-   * @param {Object} params.context - GitHub Actions context
    * @param {Object} params.chart - Chart configuration
    * @param {string} params.chart.name - Chart name
    * @param {string} params.chart.type - Chart type (application or library)
    * @returns {Promise<Array<Object>>} - Issues with chart-specific filtering
    */
-  async get({ context, chart }) {
+  async get({ chart }) {
     return this.execute('get chart release issues', async () => {
       const chartPath = `${chart.type}/${chart.name}`;
       this.logger.info(`Fetching '${chartPath}' chart issues...`);
       const tagPrefix = `${chart.name}-`;
-      const releases = await this.graphqlService.getReleases({
-        context,
-        prefix: tagPrefix,
-        limit: 1
-      });
+      const releases = await this.graphqlService.getReleases(tagPrefix, 1);
       const lastReleaseDate = releases.length > 0 ? new Date(releases[0].createdAt) : null;
-      const allIssues = await this.graphqlService.getReleaseIssues({
-        context,
-        chart,
+      const allIssues = await this.graphqlService.getReleaseIssues(chart, {
         since: lastReleaseDate
       });
       const chartNameRegex = new RegExp(`chart:\\s*${chart.name}\\b`, 'i');
@@ -183,4 +180,4 @@ class Issue extends Action {
   }
 }
 
-module.exports = Issue;
+module.exports = IssueService;

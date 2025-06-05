@@ -31,11 +31,34 @@ class Logger {
   /**
    * Determines if a log level should be displayed
    * 
+   * @private
    * @param {String} level - The log level to check
    * @returns {Boolean} Whether the log level should be displayed
    */
-  allowLevel(level) {
+  #allow(level) {
     return this.levelPriority[level] >= this.levelPriority[this.level];
+  }
+
+  /**
+   * Formats a log message with metadata
+   * 
+   * @private
+   * @param {String} message - The message to format
+   * @param {Object} meta - Additional metadata
+   * @returns {String} The formatted message
+   */
+  #format(message, meta = {}) {
+    const parts = [`[${this.context}]`];
+    if (meta.level && meta.level !== 'info') {
+      parts.push(`[${meta.level.toUpperCase()}]`);
+    }
+    if (this.timestamp) {
+      parts.push(`[${new Date().toISOString()}]`);
+    }
+    if (meta.component) {
+      parts.push(`[${meta.component}]`);
+    }
+    return `${parts.join(' ')} ${message}`;
   }
 
   /**
@@ -45,9 +68,9 @@ class Logger {
    * @param {Object} meta - Additional metadata
    */
   error(message, meta = {}) {
-    if (!this.allowLevel('error')) return;
+    if (!this.#allow('error')) return;
     const logMeta = { level: 'error', ...meta };
-    const formattedMessage = this.formatMessage(message, logMeta);
+    const formattedMessage = this.#format(message, logMeta);
     if (meta.file) {
       const params = {
         file: meta.file,
@@ -63,36 +86,15 @@ class Logger {
   }
 
   /**
-   * Formats a log message with metadata
-   * 
-   * @param {String} message - The message to format
-   * @param {Object} meta - Additional metadata
-   * @returns {String} The formatted message
-   */
-  formatMessage(message, meta) {
-    const parts = [`[${this.context}]`];
-    if (meta.level && meta.level !== 'info') {
-      parts.push(`[${meta.level.toUpperCase()}]`);
-    }
-    if (this.timestamp) {
-      parts.push(`[${new Date().toISOString()}]`);
-    }
-    if (meta.component) {
-      parts.push(`[${meta.component}]`);
-    }
-    return `${parts.join(' ')} ${message}`;
-  }
-
-  /**
    * Logs an info message
    * 
    * @param {String} message - The message to log
    * @param {Object} meta - Additional metadata
    */
   info(message, meta = {}) {
-    if (!this.allowLevel('info')) return;
+    if (!this.#allow('info')) return;
     const logMeta = { level: 'info', ...meta };
-    this.core.info(this.formatMessage(message, logMeta));
+    this.core.info(this.#format(message, logMeta));
   }
 
   /**
@@ -102,9 +104,9 @@ class Logger {
    * @param {Object} meta - Additional metadata
    */
   warning(message, meta = {}) {
-    if (!this.allowLevel('warning')) return;
+    if (!this.#allow('warning')) return;
     const logMeta = { level: 'warning', ...meta };
-    const formattedMessage = this.formatMessage(message, logMeta);
+    const formattedMessage = this.#format(message, logMeta);
     if (meta.file) {
       const params = {
         file: meta.file,

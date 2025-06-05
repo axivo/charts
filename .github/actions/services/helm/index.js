@@ -8,9 +8,9 @@
  */
 const path = require('path');
 const Action = require('../../core/Action');
-const Shell = require('../Shell');
+const ShellService = require('../Shell');
 
-class Helm extends Action {
+class HelmService extends Action {
   /**
    * Creates a new Helm service instance
    * 
@@ -18,19 +18,18 @@ class Helm extends Action {
    */
   constructor(params) {
     super(params);
-    this.shellService = new Shell(params);
+    this.shellService = new ShellService(params);
   }
 
   /**
    * Logs into an OCI registry
    * 
-   * @param {Object} params - Login parameters
-   * @param {string} params.registry - OCI registry URL
-   * @param {string} params.username - Registry username
-   * @param {string} params.password - Registry password
+   * @param {string} registry - OCI registry URL
+   * @param {string} username - Registry username
+   * @param {string} password - Registry password
    * @returns {Promise<boolean>} - True if login was successful
    */
-  async login({ registry, username, password }) {
+  async login(registry, username, password) {
     return this.execute(`login to '${registry}' OCI registry`, async () => {
       this.logger.info(`Logging into '${registry}' OCI registry...`);
       await this.shellService.execute('helm', ['registry', 'login', registry, '-u', username, '--password-stdin'], {
@@ -65,10 +64,10 @@ class Helm extends Action {
       this.logger.info(`Successfully generated index file for ${directory} directory`);
       return true;
     } catch (error) {
-      this.actionError.handle(error, {
+      this.actionError.report({
         operation: `generate index file for '${directory}' directory`,
         fatal: false
-      });
+      }, error);
       return false;
     }
   }
@@ -102,10 +101,10 @@ class Helm extends Action {
       this.logger.info(`Successfully packaged chart to '${packagePath}' directory`);
       return packagePath;
     } catch (error) {
-      this.actionError.handle(error, {
+      this.actionError.report({
         operation: `package chart to '${directory}' directory`,
         fatal: false
-      });
+      }, error);
       return null;
     }
   }
@@ -144,13 +143,13 @@ class Helm extends Action {
       });
       return true;
     } catch (error) {
-      this.actionError.handle(error, {
+      this.actionError.report({
         operation: `update '${directory}' chart dependencies`,
         fatal: false
-      });
+      }, error);
       return false;
     }
   }
 }
 
-module.exports = Helm;
+module.exports = HelmService;

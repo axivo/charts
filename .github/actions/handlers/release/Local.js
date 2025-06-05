@@ -7,10 +7,14 @@
  * @license BSD-3-Clause
  */
 const path = require('path');
-const Action = require('../../core/Action');
-const { File, GitHub, Helm, Release: ReleaseService } = require('../../services');
 
-class Local extends Action {
+const Action = require('../../core/Action');
+const FileService = require('../../services/File');
+const GitHubService = require('../../services/github');
+const HelmService = require('../../services/helm');
+const ReleaseService = require('../../services/release');
+
+class LocalHandler extends Action {
   /**
    * Creates a new Local instance
    * 
@@ -18,9 +22,9 @@ class Local extends Action {
    */
   constructor(params) {
     super(params);
-    this.fileService = new File(params);
-    this.githubService = new GitHub.Rest(params);
-    this.helmService = new Helm(params);
+    this.fileService = new FileService(params);
+    this.githubService = new GitHubService.Rest(params);
+    this.helmService = new HelmService(params);
     this.localService = new ReleaseService.Local(params);
     this.packageService = new ReleaseService.Package(params);
     this.releaseService = new ReleaseService(params);
@@ -44,7 +48,7 @@ class Local extends Action {
       }
       this.logger.info('Starting local chart release process...');
       const files = await this.localService.getLocalFiles();
-      const charts = await this.releaseService.find({ files });
+      const charts = await this.releaseService.find(files);
       if (!charts.total && !charts.deleted.length) {
         this.logger.info(`No ${charts.total === 1 ? 'chart' : 'charts'} chart releases found`);
         return { processed: 0, published: 0 };
@@ -61,10 +65,7 @@ class Local extends Action {
         packages = await this.packageService.get(packagesDir);
       }
       if (charts.deleted.length) {
-        await this.releaseService.delete({
-          context: this.context,
-          files: charts.deleted
-        });
+        await this.releaseService.delete(charts.deleted);
       }
       this.logger.info('Successfully completed the local chart release process');
       return result;
@@ -72,4 +73,4 @@ class Local extends Action {
   }
 }
 
-module.exports = Local;
+module.exports = LocalHandler;

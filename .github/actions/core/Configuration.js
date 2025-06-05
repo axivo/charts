@@ -24,10 +24,10 @@ class Configuration {
    * Gets a configuration value using dot notation
    * 
    * @param {string} path - Dot notation path to configuration value
-   * @param {*} defaultValue - Value to return if path not found
-   * @returns {*} - Configuration value or defaultValue
+   * @param {*} fallback - Value to return if path not found
+   * @returns {*} - Configuration value or fallback
    */
-  get(path, defaultValue = undefined) {
+  get(path, fallback = undefined) {
     if (this.cache.has(path)) {
       return this.cache.get(path);
     }
@@ -37,7 +37,7 @@ class Configuration {
       if (current && typeof current === 'object' && part in current) {
         current = current[part];
       } else {
-        return defaultValue;
+        return fallback;
       }
     }
     this.cache.set(path, current);

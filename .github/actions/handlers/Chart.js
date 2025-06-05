@@ -7,9 +7,13 @@
  * @license BSD-3-Clause
  */
 const Action = require('../core/Action');
-const { Chart: ChartService, Docs, File, Git, GitHub } = require('../services');
+const ChartService = require('../services/chart');
+const DocsService = require('../services/helm/Docs');
+const FileService = require('../services/File');
+const GitService = require('../services/Git');
+const GitHubService = require('../services/github');
 
-class Chart extends Action {
+class ChartHandler extends Action {
   /**
    * Creates a new Chart instance
    * 
@@ -19,10 +23,10 @@ class Chart extends Action {
     super(params);
     this.chartService = new ChartService(params);
     this.chartUpdate = new ChartService.Update(params);
-    this.docsService = new Docs(params);
-    this.fileService = new File(params);
-    this.gitService = new Git(params);
-    this.githubService = new GitHub.Rest(params);
+    this.docsService = new DocsService(params);
+    this.fileService = new FileService(params);
+    this.gitService = new GitService(params);
+    this.githubService = new GitHubService.Rest(params);
   }
 
   /**
@@ -32,7 +36,7 @@ class Chart extends Action {
    */
   async process() {
     return this.execute('process charts', async () => {
-      const files = Object.keys(await this.githubService.getUpdatedFiles({ context: this.context }));
+      const files = Object.keys(await this.githubService.getUpdatedFiles());
       const charts = await this.chartService.find(files);
       if (charts.total === 0) {
         this.logger.info('No chart updates found');
@@ -44,9 +48,16 @@ class Chart extends Action {
       await this.chartUpdate.metadata(allCharts);
       await this.chartService.lint(allCharts);
       await this.docsService.generate(allCharts);
+      const chartFiles = Object.keys(files)
+        .filter(file => file.endsWith('Chart.yaml'))
+        .reduce((obj, file) => {
+          obj[file] = files[file];
+          return obj;
+        }, {});
+      await this.chartUpdate.inventory(chartFiles);
       return { charts: charts.total, updated: charts.total };
     });
   }
 }
 
-module.exports = Chart;
+module.exports = ChartHandler;

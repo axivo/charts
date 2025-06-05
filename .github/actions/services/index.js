@@ -5,28 +5,28 @@
  * @author AXIVO
  * @license BSD-3-Clause
  */
-const Chart = require('./chart');
-const Docs = require('./helm/Docs');
-const File = require('./File');
-const Git = require('./Git');
-const GitHub = require('./github');
-const Helm = require('./helm');
-const Issue = require('./Issue');
-const Label = require('./Label');
-const Release = require('./release');
-const Shell = require('./Shell');
-const Template = require('./Template');
+const ChartService = require('./chart');
+const DocsService = require('./helm/Docs');
+const FileService = require('./File');
+const GitService = require('./Git');
+const GitHubService = require('./github');
+const HelmService = require('./helm');
+const IssueService = require('./Issue');
+const LabelService = require('./Label');
+const ReleaseService = require('./release');
+const ShellService = require('./Shell');
+const TemplateService = require('./Template');
 
 module.exports = {
-  Chart,
-  Docs,
-  File,
-  Git,
-  GitHub,
-  Helm,
-  Issue,
-  Label,
-  Release,
-  Shell,
-  Template
+  Chart: ChartService,
+  Docs: DocsService,
+  File: FileService,
+  Git: GitService,
+  GitHub: GitHubService,
+  Helm: HelmService,
+  Issue: IssueService,
+  Label: LabelService,
+  Release: ReleaseService,
+  Shell: ShellService,
+  Template: TemplateService
 };

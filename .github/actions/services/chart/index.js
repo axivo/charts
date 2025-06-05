@@ -8,12 +8,12 @@
  */
 const path = require('path');
 const Action = require('../../core/Action');
-const File = require('../File');
-const Helm = require('../helm');
-const Shell = require('../Shell');
-const Update = require('./Update');
+const FileService = require('../File');
+const HelmService = require('../helm');
+const ShellService = require('../Shell');
+const UpdateService = require('./Update');
 
-class Chart extends Action {
+class ChartService extends Action {
   /**
    * Creates a new Chart instance
    * 
@@ -21,9 +21,34 @@ class Chart extends Action {
    */
   constructor(params) {
     super(params);
-    this.fileService = new File(params);
-    this.helmService = new Helm(params);
-    this.shellService = new Shell(params);
+    this.fileService = new FileService(params);
+    this.helmService = new HelmService(params);
+    this.shellService = new ShellService(params);
+  }
+
+  /**
+   * Removes all charts with specific status from inventory
+   * 
+   * @param {string} type - Chart type ('application' or 'library')
+   * @param {string} status - Status to remove ('removed' typically)
+   * @returns {Promise<void>}
+   */
+  async deleteInventory(type, status) {
+    return this.execute(`delete '${status}' charts from '${type}' inventory`, async () => {
+      const inventoryPath = `${type}/inventory.yaml`;
+      const inventory = await this.fileService.readYaml(inventoryPath);
+      if (!inventory || !inventory[type]) {
+        this.logger.info(`No '${type}' inventory found`);
+        return;
+      }
+      const originalCount = inventory[type].length;
+      inventory[type] = inventory[type].filter(chart => chart.status !== status);
+      const removedCount = originalCount - inventory[type].length;
+      if (removedCount > 0) {
+        await this.fileService.writeYaml(inventoryPath, inventory);
+        this.logger.info(`Removed ${removedCount} '${status}' charts from '${type}' inventory`);
+      }
+    }, false);
   }
 
   /**
@@ -62,9 +87,10 @@ class Chart extends Action {
    * @param {Array<string>} files - List of changed files to check
    * @returns {Promise<Object>} - Object containing application and library chart paths
    */
-  async find(files) {
+  async find(files = []) {
     return this.execute('find modified charts', async () => {
       const charts = { application: [], library: [], total: 0 };
+      if (!files || !files.length) return charts;
       const chartTypes = this.config.get('repository.chart.type');
       const chartDirs = this.fileService.filterPath(files, chartTypes);
       for (const chartDir of chartDirs) {
@@ -84,14 +110,41 @@ class Chart extends Action {
   }
 
   /**
+   * Returns all charts from inventory file for that type
+   * 
+   * @param {string} type - Chart type ('application' or 'library')
+   * @returns {Promise<Array<Object>>} - Array of chart objects with name and state
+   */
+  async getInventory(type) {
+    return this.execute(`get '${type}' charts`, async () => {
+      const inventoryPath = `${type}/inventory.yaml`;
+      let inventory = await this.fileService.readYaml(inventoryPath);
+      const charts = inventory && inventory[type] ? inventory[type] : [];
+      const needsBootstrap = !inventory || !Array.isArray(charts) || charts.length === 0;
+      if (needsBootstrap) {
+        this.logger.info(`Bootstrapping inventory for '${type}' charts...`);
+        const discoveredCharts = await this.discover();
+        const initialCharts = discoveredCharts[type].map(chartPath => ({
+          name: path.basename(chartPath),
+          status: 'modified'
+        }));
+        inventory = { [type]: initialCharts };
+        await this.fileService.writeYaml(inventoryPath, inventory);
+        this.logger.info(`Bootstrapped ${initialCharts.length} '${type}' charts`);
+      }
+      return inventory[type] || [];
+    }, false);
+  }
+
+  /**
    * Lints multiple charts
    * 
    * @param {Array<string>} charts - Charts to lint
    * @returns {Promise<boolean>} - True if all charts passed linting
    */
-  async lint(charts) {
-    if (!charts || !charts.length) return true;
+  async lint(charts = []) {
     return this.execute('lint charts', async () => {
+      if (!charts || !charts.length) return true;
       const word = charts.length === 1 ? 'chart' : 'charts';
       this.logger.info(`Linting ${charts.length} ${word}...`);
       await this.shellService.execute('ct', ['lint', '--charts', charts.join(','), '--skip-helm-dependencies']);
@@ -116,6 +169,6 @@ class Chart extends Action {
   }
 }
 
-Chart.Update = Update;
+ChartService.Update = UpdateService;
 
-module.exports = Chart;
+module.exports = ChartService;

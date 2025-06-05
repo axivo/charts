@@ -41,6 +41,7 @@
   "editor.rulers": [
     120
   ],
+  "editor.showUnused": true,
   "files.associations": {
     "*.gotmpl": "helm",
     "*.hbs": "handlebars",
@@ -61,6 +62,7 @@
     "**/.git/objects/**": true,
     "**/.git/subtree-cache/**": true
   },
+  "javascript.validate.enable": true,
   "json.schemas": [
     {
       "fileMatch": [

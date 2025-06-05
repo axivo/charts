@@ -25,22 +25,23 @@ class ActionError {
   /**
    * Creates GitHub annotation for errors
    * 
-   * @param {Object} errorInfo - Error information
+   * @private
+   * @param {Object} error - Error information
    * @param {string} type - Annotation type (warning/error)
    */
-  createAnnotation(errorInfo, type) {
-    if (errorInfo.file) {
+  #createAnnotation(error, type) {
+    if (error.file) {
       const params = {
-        file: errorInfo.file,
-        startLine: errorInfo.line || 1,
-        startColumn: errorInfo.col || 1,
-        title: `Operation Failed: ${errorInfo.operation}`,
-        message: errorInfo.message
+        file: error.file,
+        startLine: error.line || 1,
+        startColumn: error.col || 1,
+        title: `Operation Failed: ${error.operation}`,
+        message: error.message
       };
       if (type === 'error') {
-        this.core.error(errorInfo.message, params);
+        this.core.error(error.message, params);
       } else {
-        this.core.warning(errorInfo.message, params);
+        this.core.warning(error.message, params);
       }
     }
   }
@@ -48,11 +49,12 @@ class ActionError {
   /**
    * Extracts detailed information from an error
    * 
-   * @param {Error} error - The error object
+   * @private
    * @param {Object} context - Error context
+   * @param {Error} error - The error object
    * @returns {Object} - Formatted error information
    */
-  extractErrorInfo(context, error) {
+  #extractErrorInfo(context, error) {
     return {
       message: `Failed to ${context.operation}: ${error.message}`,
       operation: context.operation,
@@ -68,7 +70,6 @@ class ActionError {
   /**
    * Reports errors in a standardized way
    * 
-   * @param {Error} error - The error object that was caught
    * @param {Object} context - Error context information
    * @param {string} context.operation - Operation that failed
    * @param {boolean} [context.fatal=true] - Whether the error is fatal
@@ -76,18 +77,19 @@ class ActionError {
    * @param {string} [context.file] - Related file path
    * @param {number} [context.line] - Related line number
    * @param {number} [context.col] - Related column number
+   * @param {Error} error - The error object that was caught
    * @returns {string} - The formatted error message
    */
   report(context, error) {
-    const errorInfo = this.extractErrorInfo(context, error);
+    const errorInfo = this.#extractErrorInfo(context, error);
     if (this.config.get('workflow.logLevel') === 'debug') {
       console.error(errorInfo.stack);
     }
     if (context.fatal !== false) {
-      this.createAnnotation(errorInfo, 'error');
+      this.#createAnnotation(errorInfo, 'error');
       this.core.setFailed(errorInfo.message);
     } else {
-      this.createAnnotation(errorInfo, context.annotationType || 'warning');
+      this.#createAnnotation(errorInfo, context.annotationType || 'warning');
       this.core.warning(errorInfo.message);
     }
     return errorInfo.message;

@@ -5,12 +5,12 @@
  * @author AXIVO
  * @license BSD-3-Clause
  */
-const Chart = require('./Chart');
-const Release = require('./release');
-const Workflow = require('./Workflow');
+const ChartHandler = require('./Chart');
+const ReleaseHandler = require('./release');
+const WorkflowHandler = require('./Workflow');
 
 module.exports = {
-  Chart,
-  Release,
-  Workflow
+  Chart: ChartHandler,
+  Release: ReleaseHandler,
+  Workflow: WorkflowHandler
 };

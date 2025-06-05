@@ -7,13 +7,18 @@
  * @license BSD-3-Clause
  */
 const Action = require('../core/Action');
-const Chart = require('./Chart');
+const ChartHandler = require('./Chart');
 const config = require('../config');
-const Release = require('./release');
-const Frontpage = require('../services/Frontpage');
-const { Docs, File, Git, Issue, Label, Template } = require('../services');
+const DocsService = require('../services/helm/Docs');
+const FileService = require('../services/File');
+const FrontpageService = require('../services/Frontpage');
+const GitService = require('../services/Git');
+const IssueService = require('../services/Issue');
+const LabelService = require('../services/Label');
+const ReleaseService = require('../services/release');
+const TemplateService = require('../services/Template');
 
-class Workflow extends Action {
+class WorkflowHandler extends Action {
   /**
    * Creates a new Workflow instance
    * 
@@ -22,15 +27,15 @@ class Workflow extends Action {
   constructor(params) {
     params.config = config;
     super(params);
-    this.chartService = new Chart(params);
-    this.docsService = new Docs(params);
-    this.fileService = new File(params);
-    this.frontpageService = new Frontpage(params);
-    this.gitService = new Git(params);
-    this.issueService = new Issue(params);
-    this.labelService = new Label(params);
-    this.releaseService = new Release(params);
-    this.templateService = new Template(params);
+    this.chartHandler = new ChartHandler(params);
+    this.docsService = new DocsService(params);
+    this.fileService = new FileService(params);
+    this.frontpageService = new FrontpageService(params);
+    this.gitService = new GitService(params);
+    this.issueService = new IssueService(params);
+    this.labelService = new LabelService(params);
+    this.releaseService = new ReleaseService(params);
+    this.templateService = new TemplateService(params);
   }
 
   /**
@@ -123,7 +128,7 @@ class Workflow extends Action {
   async updateCharts() {
     return this.execute('update charts', async () => {
       this.logger.info('Starting the charts update process...');
-      const result = await this.chartService.process();
+      const result = await this.chartHandler.process();
       this.logger.info('Successfully completed the charts update process');
       return result;
     });
@@ -144,4 +149,4 @@ class Workflow extends Action {
   }
 }
 
-module.exports = Workflow;
+module.exports = WorkflowHandler;
