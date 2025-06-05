@@ -2,7 +2,7 @@
 
 <img align="right" width="250" height="250" src="https://raw.githubusercontent.com/axivo/charts/main/application/ubuntu/icon.png" alt="ubuntu" />
 
-![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square)  ![Version: 1.0.2](https://img.shields.io/badge/Version-1.0.2-informational?style=flat-square)  ![AppVersion: 24.04](https://img.shields.io/badge/AppVersion-24.04-informational?style=flat-square)
+![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square)  ![Version: 1.0.3](https://img.shields.io/badge/Version-1.0.3-informational?style=flat-square)  ![AppVersion: 24.04](https://img.shields.io/badge/AppVersion-24.04-informational?style=flat-square)
 
 ArgoCD application for the minimal Ubuntu `24.04` LTS container, deployed into AXIVO [K3s Cluster](https://github.com/axivo/k3s-cluster). Review the cluster [documentation](https://axivo.com/k3s-cluster/), for additional details. The application deployment is also compatible with a generic Kubernetes cluster.
 
@@ -26,7 +26,7 @@ $ kubectl apply -f application/ubuntu/application.yaml
 Alternatively, the chart can be deployed using Helm directly:
 
 ```shell
-$ helm install ubuntu oci://ghcr.io/axivo/application/ubuntu:1.0.2 -n kube-system
+$ helm install ubuntu oci://ghcr.io/axivo/application/ubuntu:1.0.3 -n kube-system
 ```
 
 ### Chart Dependencies
