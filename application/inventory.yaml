@@ -5,5 +5,5 @@ application:
     version: 1.0.0
   - name: ubuntu
     description: Ubuntu Server LTS troubleshooting container for Kubernetes
-    status: modified
+    status: added
     version: 1.0.2
