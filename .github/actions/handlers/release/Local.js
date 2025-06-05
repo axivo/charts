@@ -8,7 +8,8 @@
  */
 const path = require('path');
 const Action = require('../../core/Action');
-const { File, GitHub, Helm, Release: ReleaseService } = require('../../services');
+const Release = require('../../services/release');
+const { File, GitHub, Helm } = require('../../services');
 
 class Local extends Action {
   /**
@@ -21,9 +22,9 @@ class Local extends Action {
     this.fileService = new File(params);
     this.githubService = new GitHub.Rest(params);
     this.helmService = new Helm(params);
-    this.localService = new ReleaseService.Local(params);
-    this.packageService = new ReleaseService.Package(params);
-    this.releaseService = new ReleaseService(params);
+    this.localService = new Release.Local(params);
+    this.packageService = new Release.Package(params);
+    this.releaseService = new Release(params);
   }
 
   /**

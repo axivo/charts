@@ -7,7 +7,8 @@
  * @license BSD-3-Clause
  */
 const Action = require('../../core/Action');
-const { Chart, File, GitHub, Release: ReleaseService } = require('../../services');
+const Release = require('../../services/release');
+const { Chart, File, GitHub } = require('../../services');
 
 class Release extends Action {
   /**
@@ -20,9 +21,9 @@ class Release extends Action {
     this.chartService = new Chart(params);
     this.fileService = new File(params);
     this.githubService = new GitHub.Rest(params);
-    this.packageService = new ReleaseService.Package(params);
-    this.publishService = new ReleaseService.Publish(params);
-    this.releaseService = new ReleaseService(params);
+    this.packageService = new Release.Package(params);
+    this.publishService = new Release.Publish(params);
+    this.releaseService = new Release(params);
   }
 
   /**
