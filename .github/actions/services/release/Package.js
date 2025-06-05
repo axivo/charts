@@ -93,14 +93,14 @@ class PackageService extends Action {
    * Publishes a package to OCI registry
    * 
    * @param {string} registry - OCI registry URL
-   * @param {Object} package - Package object with source and type
-   * @param {string} package.source - Package source file
-   * @param {string} package.type - Package type
+   * @param {Object} name - Package object with source and type
+   * @param {string} name.source - Package source file
+   * @param {string} name.type - Package type
    * @param {string} directory - Path to packages directory
    * @returns {Promise<Object|null>} Package publish result or null on failure
    */
-  async publish(registry, package, directory) {
-    const { source, type } = package;
+  async publish(registry, name, directory) {
+    const { source, type } = name;
     let result = null;
     return this.execute(`publish '${source}' package`, async () => {
       const chartPath = path.join(directory, type, source);
