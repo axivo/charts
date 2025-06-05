@@ -1,7 +1,7 @@
 /**
  * Chart update service for updating chart files
  * 
- * @class Update
+ * @class UpdateService
  * @module services/chart/Update
  * @author AXIVO
  * @license BSD-3-Clause
@@ -10,21 +10,21 @@ const fs = require('fs/promises');
 const os = require('os');
 const path = require('path');
 const Action = require('../../core/Action');
-const File = require('../File');
-const Git = require('../Git');
-const Helm = require('../helm');
+const FileService = require('../File');
+const GitService = require('../Git');
+const HelmService = require('../helm');
 
-class Update extends Action {
+class UpdateService extends Action {
   /**
-   * Creates a new Chart Update service instance
+   * Creates a new Chart UpdateService instance
    * 
    * @param {Object} params - Service parameters
    */
   constructor(params) {
     super(params);
-    this.fileService = new File(params);
-    this.gitService = new Git(params);
-    this.helmService = new Helm(params);
+    this.fileService = new FileService(params);
+    this.gitService = new GitService(params);
+    this.helmService = new HelmService(params);
   }
 
   /**
@@ -313,4 +313,4 @@ class Update extends Action {
   }
 }
 
-module.exports = Update;
+module.exports = UpdateService;

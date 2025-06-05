@@ -7,11 +7,11 @@
  * @license BSD-3-Clause
  */
 const Action = require('../core/Action');
-const File = require('./File');
-const GitHub = require('./github');
-const Shell = require('./Shell');
+const FileService = require('./File');
+const GitHubService = require('./github');
+const ShellService = require('./Shell');
 
-class Git extends Action {
+class GitService extends Action {
   /**
    * Creates a new Git service instance
    * 
@@ -19,9 +19,9 @@ class Git extends Action {
    */
   constructor(params) {
     super(params);
-    this.fileService = new File(params);
-    this.graphqlService = new GitHub.GraphQL(params);
-    this.shellService = new Shell(params);
+    this.fileService = new FileService(params);
+    this.graphqlService = new GitHubService.GraphQL(params);
+    this.shellService = new ShellService(params);
   }
 
   /**
@@ -217,4 +217,4 @@ class Git extends Action {
   }
 }
 
-module.exports = Git;
+module.exports = GitService;

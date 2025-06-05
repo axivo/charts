@@ -1,7 +1,7 @@
 /**
  * Template service for template rendering operations
  * 
- * @class Template
+ * @class TemplateService
  * @module services/Template
  * @author AXIVO
  * @license BSD-3-Clause
@@ -9,9 +9,9 @@
 const Handlebars = require('handlebars');
 const Action = require('../core/Action');
 
-class Template extends Action {
+class TemplateService extends Action {
   /**
-   * Creates a new Template instance
+   * Creates a new TemplateService instance
    * 
    * @param {Object} params - Service parameters
    */
@@ -93,4 +93,4 @@ class Template extends Action {
   }
 }
 
-module.exports = Template;
+module.exports = TemplateService;

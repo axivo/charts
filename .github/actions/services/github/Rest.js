@@ -1,24 +1,24 @@
 /**
  * GitHub REST API service
  * 
- * @class Rest
+ * @class RestService
  * @module services/github/Rest
  * @author AXIVO
  * @license BSD-3-Clause
  */
 const fs = require('fs');
-const Api = require('./Api');
-const GraphQL = require('./GraphQL');
+const ApiService = require('./Api');
+const GraphQLService = require('./GraphQL');
 
-class Rest extends Api {
+class RestService extends ApiService {
   /**
-   * Creates a new Rest service instance
+   * Creates a new RestService instance
    * 
    * @param {Object} params - Service parameters
    */
   constructor(params) {
     super(params);
-    this.graphqlService = new GraphQL(params);
+    this.graphqlService = new GraphQLService(params);
   }
 
   /**
@@ -408,4 +408,4 @@ class Rest extends Api {
   }
 }
 
-module.exports = Rest;
+module.exports = RestService;

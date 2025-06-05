@@ -1,7 +1,7 @@
 /**
  * Helm documentation service for helm-docs operations
  * 
- * @class Docs
+ * @class DocsService
  * @module services/helm/Docs
  * @author AXIVO
  * @license BSD-3-Clause
@@ -10,19 +10,19 @@ const fs = require('fs/promises');
 const os = require('os');
 const path = require('path');
 const Action = require('../../core/Action');
-const Git = require('../Git');
-const Shell = require('../Shell');
+const GitService = require('../Git');
+const ShellService = require('../Shell');
 
-class Docs extends Action {
+class DocsService extends Action {
   /**
-   * Creates a new Helm Docs service instance
+   * Creates a new DocsService instance
    * 
    * @param {Object} params - Service parameters
    */
   constructor(params) {
     super(params);
-    this.gitService = new Git(params);
-    this.shellService = new Shell(params);
+    this.gitService = new GitService(params);
+    this.shellService = new ShellService(params);
   }
 
   /**
@@ -74,4 +74,4 @@ class Docs extends Action {
   }
 }
 
-module.exports = Docs;
+module.exports = DocsService;

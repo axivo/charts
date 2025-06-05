@@ -1,14 +1,14 @@
 /**
  * Base GitHub API service
  * 
- * @class Api
+ * @class ApiService
  * @module services/github/Api
  * @author AXIVO
  * @license BSD-3-Clause
  */
 const Action = require('../../core/Action');
 
-class Api extends Action {
+class ApiService extends Action {
   /**
    * Transforms raw data using the provided transformer function
    * 
@@ -21,4 +21,4 @@ class Api extends Action {
   }
 }
 
-module.exports = Api;
+module.exports = ApiService;

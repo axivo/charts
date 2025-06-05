@@ -1,28 +1,28 @@
 /**
  * Chart packaging service
  * 
- * @class Package
+ * @class PackageService
  * @module services/release/Package
  * @author AXIVO
  * @license BSD-3-Clause
  */
 const path = require('path');
 const Action = require('../../core/Action');
-const File = require('../File');
-const GitHub = require('../github');
-const Shell = require('../Shell');
+const FileService = require('../File');
+const GitHubService = require('../github');
+const ShellService = require('../Shell');
 
-class Package extends Action {
+class PackageService extends Action {
   /**
-   * Creates a new Package service instance
+   * Creates a new PackageService instance
    * 
    * @param {Object} params - Service parameters
    */
   constructor(params) {
     super(params);
-    this.fileService = new File(params);
-    this.restService = new GitHub.Rest(params);
-    this.shellService = new Shell(params);
+    this.fileService = new FileService(params);
+    this.restService = new GitHubService.Rest(params);
+    this.shellService = new ShellService(params);
   }
 
   /**
@@ -117,4 +117,4 @@ class Package extends Action {
   }
 }
 
-module.exports = Package;
+module.exports = PackageService;

@@ -6,12 +6,14 @@
  * @author AXIVO
  * @license BSD-3-Clause
  */
-const path = require('path');
 const Action = require('../core/Action');
-const Chart = require('../services/chart');
-const { Docs, File, Git, GitHub } = require('../services');
+const ChartService = require('../services/chart');
+const DocsService = require('../services/helm/Docs');
+const FileService = require('../services/File');
+const GitService = require('../services/Git');
+const GitHubService = require('../services/github');
 
-class Chart extends Action {
+class ChartHandler extends Action {
   /**
    * Creates a new Chart instance
    * 
@@ -19,12 +21,12 @@ class Chart extends Action {
    */
   constructor(params) {
     super(params);
-    this.chartService = new Chart(params);
-    this.chartUpdate = new Chart.Update(params);
-    this.docsService = new Docs(params);
-    this.fileService = new File(params);
-    this.gitService = new Git(params);
-    this.githubService = new GitHub.Rest(params);
+    this.chartService = new ChartService(params);
+    this.chartUpdate = new ChartService.Update(params);
+    this.docsService = new DocsService(params);
+    this.fileService = new FileService(params);
+    this.gitService = new GitService(params);
+    this.githubService = new GitHubService.Rest(params);
   }
 
   /**
@@ -58,4 +60,4 @@ class Chart extends Action {
   }
 }
 
-module.exports = Chart;
+module.exports = ChartHandler;

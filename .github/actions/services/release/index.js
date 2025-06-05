@@ -8,12 +8,12 @@
  */
 const path = require('path');
 const Action = require('../../core/Action');
-const Chart = require('../chart');
-const File = require('../File');
-const GitHub = require('../github');
-const Helm = require('../helm');
+const ChartService = require('../chart');
+const FileService = require('../File');
+const GitHubService = require('../github');
+const HelmService = require('../helm');
 
-class Release extends Action {
+class ReleaseService extends Action {
   /**
    * Creates a new Release service instance
    * 
@@ -21,10 +21,10 @@ class Release extends Action {
    */
   constructor(params) {
     super(params);
-    this.chartService = new Chart(params);
-    this.fileService = new File(params);
-    this.githubService = new GitHub.Rest(params);
-    this.helmService = new Helm(params);
+    this.chartService = new ChartService(params);
+    this.fileService = new FileService(params);
+    this.githubService = new GitHubService.Rest(params);
+    this.helmService = new HelmService(params);
   }
 
   /**
@@ -169,8 +169,8 @@ class Release extends Action {
 }
 
 // Attach specialized services
-Release.Local = require('./Local');
-Release.Package = require('./Package');
-Release.Publish = require('./Publish');
+ReleaseService.Local = require('./Local');
+ReleaseService.Package = require('./Package');
+ReleaseService.Publish = require('./Publish');
 
-module.exports = Release;
+module.exports = ReleaseService;

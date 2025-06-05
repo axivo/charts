@@ -8,12 +8,12 @@
  */
 const path = require('path');
 const Action = require('../../core/Action');
-const File = require('../File');
-const Helm = require('../helm');
-const Shell = require('../Shell');
-const Update = require('./Update');
+const FileService = require('../File');
+const HelmService = require('../helm');
+const ShellService = require('../Shell');
+const UpdateService = require('./Update');
 
-class Chart extends Action {
+class ChartService extends Action {
   /**
    * Creates a new Chart instance
    * 
@@ -21,9 +21,9 @@ class Chart extends Action {
    */
   constructor(params) {
     super(params);
-    this.fileService = new File(params);
-    this.helmService = new Helm(params);
-    this.shellService = new Shell(params);
+    this.fileService = new FileService(params);
+    this.helmService = new HelmService(params);
+    this.shellService = new ShellService(params);
   }
 
   /**
@@ -169,6 +169,6 @@ class Chart extends Action {
   }
 }
 
-Chart.Update = Update;
+ChartService.Update = UpdateService;
 
-module.exports = Chart;
+module.exports = ChartService;

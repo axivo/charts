@@ -7,10 +7,10 @@
  * @license BSD-3-Clause
  */
 const Action = require('../core/Action');
-const GraphQL = require('./github/GraphQL');
-const Rest = require('./github/Rest');
+const GraphQLService = require('./github/GraphQL');
+const RestService = require('./github/Rest');
 
-class Issue extends Action {
+class IssueService extends Action {
   /**
    * Creates a new Issue instance
    * 
@@ -18,8 +18,8 @@ class Issue extends Action {
    */
   constructor(params) {
     super(params);
-    this.graphqlService = new GraphQL(params);
-    this.restService = new Rest(params);
+    this.graphqlService = new GraphQLService(params);
+    this.restService = new RestService(params);
   }
 
   /**
@@ -180,4 +180,4 @@ class Issue extends Action {
   }
 }
 
-module.exports = Issue;
+module.exports = IssueService;

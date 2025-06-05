@@ -12,7 +12,7 @@ const glob = require('glob');
 const yaml = require('js-yaml');
 const Action = require('../core/Action');
 
-class File extends Action {
+class FileService extends Action {
   /**
    * Extracts path from file, based on pattern
    * 
@@ -285,4 +285,4 @@ class File extends Action {
   }
 }
 
-module.exports = File;
+module.exports = FileService;

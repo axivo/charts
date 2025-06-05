@@ -8,9 +8,9 @@
  */
 const path = require('path');
 const Action = require('../../core/Action');
-const Shell = require('../Shell');
+const ShellService = require('../Shell');
 
-class Helm extends Action {
+class HelmService extends Action {
   /**
    * Creates a new Helm service instance
    * 
@@ -18,7 +18,7 @@ class Helm extends Action {
    */
   constructor(params) {
     super(params);
-    this.shellService = new Shell(params);
+    this.shellService = new ShellService(params);
   }
 
   /**
@@ -152,4 +152,4 @@ class Helm extends Action {
   }
 }
 
-module.exports = Helm;
+module.exports = HelmService;

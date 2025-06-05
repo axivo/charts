@@ -1,32 +1,32 @@
 /**
  * Local release service for local development chart operations
  * 
- * @class Local
+ * @class LocalService
  * @module services/release/Local
  * @author AXIVO
  * @license BSD-3-Clause
  */
 const path = require('path');
 const Action = require('../../core/Action');
-const Chart = require('../chart');
-const File = require('../File');
-const Git = require('../Git');
-const Helm = require('../helm');
-const Shell = require('../Shell');
+const ChartService = require('../chart');
+const FileService = require('../File');
+const GitService = require('../Git');
+const HelmService = require('../helm');
+const ShellService = require('../Shell');
 
-class Local extends Action {
+class LocalService extends Action {
   /**
-   * Creates a new Local service instance
+   * Creates a new LocalService instance
    * 
    * @param {Object} params - Service parameters
    */
   constructor(params) {
     super(params);
-    this.chartService = new Chart(params);
-    this.fileService = new File(params);
-    this.gitService = new Git(params);
-    this.helmService = new Helm(params);
-    this.shellService = new Shell(params);
+    this.chartService = new ChartService(params);
+    this.fileService = new FileService(params);
+    this.gitService = new GitService(params);
+    this.helmService = new HelmService(params);
+    this.shellService = new ShellService(params);
   }
 
   /**
@@ -194,4 +194,4 @@ class Local extends Action {
   }
 }
 
-module.exports = Local;
+module.exports = LocalService;

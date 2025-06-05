@@ -1,36 +1,35 @@
 /**
  * Release publishing service
  * 
- * @class Publish
+ * @class PublishService
  * @module services/release/Publish
  * @author AXIVO
  * @license BSD-3-Clause
  */
 const path = require('path');
-const yaml = require('js-yaml');
 const Action = require('../../core/Action');
-const File = require('../File');
-const GitHub = require('../github');
-const Helm = require('../helm');
-const Issue = require('../Issue');
-const Package = require('./Package');
-const Template = require('../Template');
+const FileService = require('../File');
+const GitHubService = require('../github');
+const HelmService = require('../helm');
+const IssueService = require('../Issue');
+const PackageService = require('./Package');
+const TemplateService = require('../Template');
 
-class Publish extends Action {
+class PublishService extends Action {
   /**
-   * Creates a new Publish service instance
+   * Creates a new PublishService instance
    * 
    * @param {Object} params - Service parameters
    */
   constructor(params) {
     super(params);
-    this.fileService = new File(params);
-    this.graphqlService = new GitHub.GraphQL(params);
-    this.helmService = new Helm(params);
-    this.issueService = new Issue(params);
-    this.packageService = new Package(params);
-    this.restService = new GitHub.Rest(params);
-    this.templateService = new Template(params);
+    this.fileService = new FileService(params);
+    this.graphqlService = new GitHubService.GraphQL(params);
+    this.helmService = new HelmService(params);
+    this.issueService = new IssueService(params);
+    this.packageService = new PackageService(params);
+    this.restService = new GitHubService.Rest(params);
+    this.templateService = new TemplateService(params);
   }
 
   /**
@@ -359,4 +358,4 @@ class Publish extends Action {
   }
 }
 
-module.exports = Publish;
+module.exports = PublishService;

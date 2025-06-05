@@ -1,29 +1,28 @@
 /**
  * Frontpage service for repository frontpage operations
  * 
- * @class Frontpage
+ * @class FrontpageService
  * @module services/Frontpage
  * @author AXIVO
  * @license BSD-3-Clause
  */
 const path = require('path');
-const yaml = require('js-yaml');
 const Action = require('../core/Action');
-const Chart = require('./chart');
-const File = require('./File');
-const Template = require('./Template');
+const ChartService = require('./chart');
+const FileService = require('./File');
+const TemplateService = require('./Template');
 
-class Frontpage extends Action {
+class FrontpageService extends Action {
   /**
-   * Creates a new Frontpage instance
+   * Creates a new FrontpageService instance
    * 
    * @param {Object} params - Service parameters
    */
   constructor(params) {
     super(params);
-    this.chartService = new Chart(params);
-    this.fileService = new File(params);
-    this.templateService = new Template(params);
+    this.chartService = new ChartService(params);
+    this.fileService = new FileService(params);
+    this.templateService = new TemplateService(params);
   }
 
   /**
@@ -43,8 +42,7 @@ class Frontpage extends Action {
       await Promise.all(allCharts.map(async ({ directory, type }) => {
         const chartName = path.basename(directory);
         const chartYamlPath = path.join(directory, 'Chart.yaml');
-        const chartContent = await this.fileService.read(chartYamlPath);
-        const chartYaml = yaml.load(chartContent);
+        const chartYaml = await this.fileService.readYaml(chartYamlPath);
         chartEntries[chartName] = {
           description: chartYaml.description || '',
           type,
@@ -94,4 +92,4 @@ class Frontpage extends Action {
   }
 }
 
-module.exports = Frontpage;
+module.exports = FrontpageService;

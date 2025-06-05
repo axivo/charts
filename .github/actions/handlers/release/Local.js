@@ -7,11 +7,14 @@
  * @license BSD-3-Clause
  */
 const path = require('path');
-const Action = require('../../core/Action');
-const Release = require('../../services/release');
-const { File, GitHub, Helm } = require('../../services');
 
-class Local extends Action {
+const Action = require('../../core/Action');
+const FileService = require('../../services/File');
+const GitHubService = require('../../services/github');
+const HelmService = require('../../services/helm');
+const ReleaseService = require('../../services/release');
+
+class LocalHandler extends Action {
   /**
    * Creates a new Local instance
    * 
@@ -19,12 +22,12 @@ class Local extends Action {
    */
   constructor(params) {
     super(params);
-    this.fileService = new File(params);
-    this.githubService = new GitHub.Rest(params);
-    this.helmService = new Helm(params);
-    this.localService = new Release.Local(params);
-    this.packageService = new Release.Package(params);
-    this.releaseService = new Release(params);
+    this.fileService = new FileService(params);
+    this.githubService = new GitHubService.Rest(params);
+    this.helmService = new HelmService(params);
+    this.localService = new ReleaseService.Local(params);
+    this.packageService = new ReleaseService.Package(params);
+    this.releaseService = new ReleaseService(params);
   }
 
   /**
@@ -70,4 +73,4 @@ class Local extends Action {
   }
 }
 
-module.exports = Local;
+module.exports = LocalHandler;

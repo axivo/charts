@@ -7,12 +7,12 @@
  * @author AXIVO
  * @license BSD-3-Clause
  */
-const Api = require('./Api');
-const GraphQL = require('./GraphQL');
-const Rest = require('./Rest');
+const ApiService = require('./Api');
+const GraphQLService = require('./GraphQL');
+const RestService = require('./Rest');
 
 module.exports = {
-  Api,
-  GraphQL,
-  Rest
+  Api: ApiService,
+  GraphQL: GraphQLService,
+  Rest: RestService
 };

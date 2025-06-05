@@ -7,9 +7,9 @@
  * @license BSD-3-Clause
  */
 const Action = require('../core/Action');
-const GitHub = require('./github');
+const GitHubService = require('./github');
 
-class Label extends Action {
+class LabelService extends Action {
   /**
    * Creates a new Label instance
    * 
@@ -17,7 +17,7 @@ class Label extends Action {
    */
   constructor(params) {
     super(params);
-    this.restService = new GitHub.Rest(params);
+    this.restService = new GitHubService.Rest(params);
   }
 
   /**
@@ -89,4 +89,4 @@ class Label extends Action {
   }
 }
 
-module.exports = Label;
+module.exports = LabelService;

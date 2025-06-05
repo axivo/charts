@@ -7,10 +7,12 @@
  * @license BSD-3-Clause
  */
 const Action = require('../../core/Action');
-const Release = require('../../services/release');
-const { Chart, File, GitHub } = require('../../services');
+const ChartService = require('../../services/chart');
+const FileService = require('../../services/File');
+const GitHubService = require('../../services/github');
+const ReleaseService = require('../../services/release');
 
-class Release extends Action {
+class ReleaseHandler extends Action {
   /**
    * Creates a new Release instance
    * 
@@ -18,12 +20,12 @@ class Release extends Action {
    */
   constructor(params) {
     super(params);
-    this.chartService = new Chart(params);
-    this.fileService = new File(params);
-    this.githubService = new GitHub.Rest(params);
-    this.packageService = new Release.Package(params);
-    this.publishService = new Release.Publish(params);
-    this.releaseService = new Release(params);
+    this.chartService = new ChartService(params);
+    this.fileService = new FileService(params);
+    this.githubService = new GitHubService.Rest(params);
+    this.packageService = new ReleaseService.Package(params);
+    this.publishService = new ReleaseService.Publish(params);
+    this.releaseService = new ReleaseService(params);
   }
 
   /**
@@ -107,6 +109,6 @@ class Release extends Action {
   }
 }
 
-Release.Local = require('./Local');
+ReleaseHandler.Local = require('./Local');
 
-module.exports = Release;
+module.exports = ReleaseHandler;

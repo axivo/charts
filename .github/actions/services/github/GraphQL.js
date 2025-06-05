@@ -1,16 +1,16 @@
 /**
  * GitHub GraphQL API service
  * 
- * @class GraphQL
+ * @class GraphQLService
  * @module services/github/GraphQL
  * @author AXIVO
  * @license BSD-3-Clause
  */
-const Api = require('./Api');
+const ApiService = require('./Api');
 
-class GraphQL extends Api {
+class GraphQLService extends ApiService {
   /**
-   * Creates a new GraphQL service instance
+   * Creates a new GraphQLService instance
    * 
    * @param {Object} params - Service parameters
    */
@@ -272,4 +272,4 @@ class GraphQL extends Api {
   }
 }
 
-module.exports = GraphQL;
+module.exports = GraphQLService;
