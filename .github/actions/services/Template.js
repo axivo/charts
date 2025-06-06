@@ -17,7 +17,7 @@ class TemplateService extends Action {
    */
   constructor(params) {
     super(params);
-    this.handlebars = Handlebars.create();
+    this.handlebars = Handlebars;
   }
 
   /**
