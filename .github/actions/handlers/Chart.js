@@ -53,15 +53,13 @@ class ChartHandler extends Action {
       await this.docsService.generate(allCharts);
       const chartFiles = Object.keys(files)
         .filter(file => file.endsWith('Chart.yaml'))
-        // DEBUG start
-        this.logger.info(`[DEBUG] Chart.process() files before filter: ${JSON.stringify(files)}`);
-        this.logger.info(`[DEBUG] Chart.process() Chart.yaml files found: ${JSON.stringify(Object.keys(files).filter(file => file.endsWith('Chart.yaml')))}`);
-        // DEBUG end
         .reduce((obj, file) => {
           obj[file] = files[file];
           return obj;
         }, {});
       // DEBUG start
+      this.logger.info(`[DEBUG] Chart.process() files before filter: ${JSON.stringify(files)}`);
+      this.logger.info(`[DEBUG] Chart.process() Chart.yaml files found: ${JSON.stringify(Object.keys(files).filter(file => file.endsWith('Chart.yaml')))}`);
       this.logger.info(`[DEBUG] Chart.process() final chartFiles object: ${JSON.stringify(chartFiles)}`);
       // DEBUG end
       await this.chartUpdate.inventory(chartFiles);
