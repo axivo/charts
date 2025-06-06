@@ -203,23 +203,13 @@ class UpdateService extends Action {
    */
   async inventory(files = {}) {
     return this.execute('update inventory files', async () => {
-      // DEBUG start
-      this.logger.info(`[DEBUG] inventory() called with files: ${JSON.stringify(files)}`);
-      this.logger.info(`[DEBUG] Object.keys(files): ${JSON.stringify(Object.keys(files))}`);
-      // DEBUG end
       const init = await this.#initialize(Object.keys(files), 'inventory');
       if (init.skip) return init.skip;
       const { files: updatedFiles, type } = init;
       const updatePromises = Object.entries(files)
         .map(async ([filePath, status]) => {
           try {
-            // DEBUG start
-            this.logger.info(`[DEBUG] Processing file: ${filePath} with status: ${status}`);
-            // DEBUG end
             const entry = await this.#updateEntry(filePath, status);
-            // DEBUG start
-            this.logger.info(`[DEBUG] updateEntry returned: ${entry}`);
-            // DEBUG end
             if (!updatedFiles.includes(entry)) updatedFiles.push(entry);
             this.logger.info(`Successfully updated '${path.dirname(filePath)}' ${type} file`);
             return true;
@@ -232,10 +222,6 @@ class UpdateService extends Action {
           }
         });
       const results = await Promise.all(updatePromises);
-      // DEBUG start
-      this.logger.info(`[DEBUG] inventory() updatedFiles: ${JSON.stringify(updatedFiles)}`);
-      this.logger.info(`[DEBUG] inventory() results: ${JSON.stringify(results)}`);
-      // DEBUG end
       return this.#commit('inventory', updatedFiles, results);
     });
   }
@@ -248,48 +234,22 @@ class UpdateService extends Action {
    */
   async lock(charts = []) {
     return this.execute('update dependency lock files', async () => {
-      // DEBUG start
-      this.logger.info(`[DEBUG] lock() called with ${charts.length} charts: ${JSON.stringify(charts)}`);
-      // DEBUG end
       const init = await this.#initialize(charts, 'dependency lock');
       if (init.skip) return init.skip;
       const { files, type } = init;
       const updatePromises = charts.map(async (chartDir) => {
         try {
-          // DEBUG start
-          this.logger.info(`[DEBUG] Processing chart: ${chartDir}`);
-          // DEBUG end
           const chartLockPath = path.join(chartDir, 'Chart.lock');
           const chartYamlPath = path.join(chartDir, 'Chart.yaml');
-          // DEBUG start
-          this.logger.info(`[DEBUG] Chart.lock path: ${chartLockPath}`);
-          this.logger.info(`[DEBUG] Chart.lock exists before: ${await this.fileService.exists(chartLockPath)}`);
-          // DEBUG end
           const chart = await this.fileService.readYaml(chartYamlPath);
-          // DEBUG start
-          this.logger.info(`[DEBUG] Dependencies found: ${JSON.stringify(chart.dependencies)}`);
-          // DEBUG end
           if (chart.dependencies?.length) {
-            // DEBUG start
-            this.logger.info(`[DEBUG] Running helm dependency update for ${chartDir}`);
-            // DEBUG end
             await this.helmService.updateDependencies(chartDir);
-            // DEBUG start
-            this.logger.info(`[DEBUG] Chart.lock exists after helm: ${await this.fileService.exists(chartLockPath)}`);
-            // DEBUG end
             const status = await this.gitService.getStatus();
-            // DEBUG start
-            this.logger.info(`[DEBUG] Git status: ${JSON.stringify(status)}`);
-            this.logger.info(`[DEBUG] Looking for path in status: ${chartLockPath}`);
-            // DEBUG end
             if (!status.deleted.includes(chartLockPath)) {
               files.push(chartLockPath);
               this.logger.info(`Successfully updated '${chartDir}' ${type} file`);
             }
           } else if (await this.fileService.exists(chartLockPath)) {
-            // DEBUG start
-            this.logger.info(`[DEBUG] No dependencies found, deleting existing Chart.lock for ${chartDir}`);
-            // DEBUG end
             await this.fileService.delete(chartLockPath);
             files.push(chartLockPath);
             this.logger.info(`Successfully removed '${chartDir}' ${type} file`);

@@ -38,9 +38,6 @@ class ChartHandler extends Action {
     return this.execute('process charts', async () => {
       const updatedFilesMap = await this.githubService.getUpdatedFiles();
       const files = Object.keys(updatedFilesMap);
-      // DEBUG start
-      this.logger.info(`[DEBUG] Chart.process() files from getUpdatedFiles(): ${JSON.stringify(files)}`);
-      // DEBUG end
       const charts = await this.chartService.find(files);
       if (charts.total) {
         const updatedCharts = [...charts.application, ...charts.library];
@@ -56,11 +53,6 @@ class ChartHandler extends Action {
           obj[file] = updatedFilesMap[file];
           return obj;
         }, {});
-      // DEBUG start
-      this.logger.info(`[DEBUG] Chart.process() files before filter: ${JSON.stringify(files)}`);
-      this.logger.info(`[DEBUG] Chart.process() Chart.yaml files found: ${JSON.stringify(Object.keys(updatedFilesMap).filter(file => file.endsWith('Chart.yaml')))}`);
-      this.logger.info(`[DEBUG] Chart.process() final chartFiles object: ${JSON.stringify(updatedFiles)}`);
-      // DEBUG end
       await this.chartUpdate.inventory(updatedFiles);
     });
   }

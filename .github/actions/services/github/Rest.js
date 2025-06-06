@@ -273,21 +273,11 @@ class RestService extends ApiService {
   async getUpdatedFiles() {
     return this.execute('get updated files', async () => {
       const payload = this.validateContextPayload(this.context);
-      // DEBUG start
-      this.logger.info(`[DEBUG] getUpdatedFiles() payload: ${JSON.stringify(payload)}`);
-      // DEBUG end
       if (!payload.valid) return {};
       const eventName = payload.eventName;
-      // DEBUG start
-      this.logger.info(`[DEBUG] getUpdatedFiles() eventName: ${eventName}`);
-      // DEBUG end
       let result = {};
       switch (eventName) {
         case 'pull_request':
-          // DEBUG start
-          this.logger.info(`[DEBUG] getUpdatedFiles() processing pull_request event`);
-          this.logger.info(`[DEBUG] getUpdatedFiles() PR number: ${this.context.payload.pull_request.number}`);
-          // DEBUG end
           return await this.#paginate('pulls', 'listFiles', {
             params: {
               owner: this.context.repo.owner,
@@ -297,17 +287,10 @@ class RestService extends ApiService {
             transformer: (data, currentMap = {}) => {
               result = { ...currentMap };
               data.forEach(file => { result[file.filename] = file.status; });
-              // DEBUG start
-              this.logger.info(`[DEBUG] getUpdatedFiles() PR files batch: ${JSON.stringify(data.map(f => ({ filename: f.filename, status: f.status })))}`);
-              // DEBUG end
               return result;
             }
           });
         default:
-          // DEBUG start
-          this.logger.info(`[DEBUG] getUpdatedFiles() processing ${eventName} event`);
-          this.logger.info(`[DEBUG] getUpdatedFiles() comparing ${this.context.payload.before} to ${this.context.payload.after}`);
-          // DEBUG end
           const response = await this.github.rest.repos.compareCommits({
             owner: this.context.repo.owner,
             repo: this.context.repo.repo,
@@ -315,10 +298,6 @@ class RestService extends ApiService {
             head: this.context.payload.after
           });
           response.data.files.forEach(file => { result[file.filename] = file.status; });
-          // DEBUG start
-          this.logger.info(`[DEBUG] getUpdatedFiles() commit comparison files: ${JSON.stringify(response.data.files.map(f => ({ filename: f.filename, status: f.status })))}`);
-          this.logger.info(`[DEBUG] getUpdatedFiles() final result: ${JSON.stringify(result)}`);
-          // DEBUG end
           this.logger.info(`Found ${Object.keys(result).length} files in ${eventName} event`);
           return result;
       }
