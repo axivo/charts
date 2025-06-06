@@ -119,13 +119,13 @@ class IssueService extends Action {
       const commitSha = isPullRequest
         ? context.payload.pull_request.head.sha
         : context.payload.after;
-      const issueBody = service.render(content, {
+      const issueBody = await service.render(content, {
         Workflow: context.workflow,
         RunID: context.runId,
         Sha: commitSha,
         Branch: branchName,
         RepoURL: repoUrl
-      }, { repoUrl: repoUrl });
+      });
       if (!issueBody) return null;
       const labelNames = this.config.get('workflow.labels');
       if (this.config.get('issue.createLabels') && label) {
