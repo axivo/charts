@@ -58,7 +58,7 @@ class Logger {
     if (meta.component) {
       parts.push(`[${meta.component}]`);
     }
-    return `${parts.join(' ')} ${message}`;
+    return `${parts.join('')} ${message}`;
   }
 
   /**
