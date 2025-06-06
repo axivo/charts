@@ -48,9 +48,10 @@ class IssueService extends Action {
       }
       const hasWarnings = await this.execute('validate workflow warnings', async () => {
         const logsData = await this.restService.getWorkflowRunLogs(id);
+        if (!logsData) return false;
         const regex = /(^|:)warning:/i;
         return regex.test(logsData);
-      }, false) || false;
+      }, false);
       return hasFailures || hasWarnings;
     }, false);
   }
@@ -124,7 +125,8 @@ class IssueService extends Action {
         Sha: commitSha,
         Branch: branchName,
         RepoURL: repoUrl
-      }, { repoUrl });
+      });
+      if (!issueBody) return null;
       const labelNames = this.config.get('workflow.labels');
       if (this.config.get('issue.createLabels') && label) {
         await Promise.all(labelNames.map(labelName => label.add(labelName)));
