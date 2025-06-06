@@ -48,9 +48,21 @@ class Action {
    * @returns {Promise<any>} - Result of the operation or null on error
    */
   async execute(operation, action, fatal = true) {
+    const isDebug = this.config.get('workflow.logLevel') === 'debug';
+    const startTime = isDebug ? Date.now() : 0;
+    if (isDebug) this.logger.info(`→ ${operation}`, { level: 'debug' });
     try {
-      return await action();
+      const result = await action();
+      if (isDebug) {
+        const duration = ((Date.now() - startTime) / 1000).toFixed(2);
+        this.logger.info(`← ${operation} completed in ${duration}s`, { level: 'debug' });
+      }
+      return result;
     } catch (error) {
+      if (isDebug) {
+        const duration = ((Date.now() - startTime) / 1000).toFixed(2);
+        this.logger.info(`❌ ${operation} failed after ${duration}s`, { level: 'debug' });
+      }
       this.actionError.report({
         operation,
         fatal

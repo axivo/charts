@@ -30,7 +30,7 @@ class IssueService extends Action {
    * @returns {Promise<boolean>} - True if issues detected
    */
   async #validate(context) {
-    try {
+    return this.execute('validate workflow status', async () => {
       let hasFailures = false;
       const workflowRun = await this.restService.getWorkflowRun(context.runId);
       if (['cancelled', 'failure'].includes(workflowRun.conclusion)) {
@@ -54,14 +54,7 @@ class IssueService extends Action {
       const regex = /(^|:)warning:/i;
       const hasWarnings = regex.test(logsResponse.data);
       return hasFailures || hasWarnings;
-    } catch (error) {
-      if (error.status === 404) return false;
-      this.actionError.report({
-        operation: 'validate workflow status',
-        fatal: false
-      }, error);
-      return false;
-    }
+    }, false);
   }
 
   /**

@@ -80,7 +80,7 @@ class WorkflowHandler extends Action {
   /**
    * Report workflow issues
    * 
-   * @returns {Promise<Object>} - Issue creation result
+   * @returns {Promise<void>}
    */
   async reportIssue() {
     return this.execute('report workflow issue', async () => {
@@ -96,13 +96,9 @@ class WorkflowHandler extends Action {
         templateService: this.templateService,
         labelService: this.labelService
       });
-      if (issue) {
-        this.logger.info('Successfully reported workflow issue');
-        return { created: true, issue };
-      } else {
-        this.logger.info('No workflow issues to report');
-        return { created: false };
-      }
+      let message = 'No workflow issues to report';
+      if (issue) message = 'Successfully reported workflow issue';
+      this.logger.info(`${message}`);
     }, false);
   }
 
@@ -136,14 +132,13 @@ class WorkflowHandler extends Action {
   /**
    * Update issue labels
    * 
-   * @returns {Promise<string[]>} - Array of created label names
+   * @returns {Promise<void>}
    */
   async updateLabels() {
     return this.execute('update issue labels', async () => {
       this.logger.info('Updating repository issue labels...');
-      const result = await this.labelService.update();
+      await this.labelService.update();
       this.logger.info('Repository issue labels update complete');
-      return result;
     }, false);
   }
 }
