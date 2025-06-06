@@ -82,7 +82,15 @@ class TemplateService extends Action {
       if (options.repoUrl) {
         this.#registerRepoRawUrl(options.repoUrl);
       }
+      // DEBUG start
+      this.logger.info(`Template content: ${template}`);
+      this.logger.info(`Template context: ${JSON.stringify(context)}`);
+      this.logger.info(`Template options: ${JSON.stringify(options)}`);
+      // DEBUG end
       const result = this.handlebars.compile(template)(context);
+      // DEBUG start
+      this.logger.info(`Template result type: ${typeof result}, value: ${JSON.stringify(result)}`);
+      // DEBUG end
       this.logger.info('Successfully rendered template');
       return result;
     }, false);
