@@ -125,7 +125,7 @@ class IssueService extends Action {
         Sha: commitSha,
         Branch: branchName,
         RepoURL: repoUrl
-      });
+      }, { repoUrl: repoUrl });
       if (!issueBody) return null;
       const labelNames = this.config.get('workflow.labels');
       if (this.config.get('issue.createLabels') && label) {
