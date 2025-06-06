@@ -1,0 +1,6 @@
+dependencies:
+- name: common
+  repository: oci://ghcr.io/axivo/charts/library
+  version: 1.0.0
+digest: sha256:0212ec928c5a5d49849a4c152e0e0418898e01aaa6648c35b8933d303a6efa1e
+generated: "2025-06-06T01:58:43.339626567Z"
