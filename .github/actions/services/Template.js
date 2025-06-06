@@ -24,15 +24,13 @@ class TemplateService extends Action {
    * Registers helper for equality comparison
    * 
    * @private
-   * @returns {*} - Result of the execute operation
+   * @returns {void}
    */
   #registerEqual() {
-    return this.execute('register equal helper', () => {
-      this.handlebars.registerHelper('equal', function (key, value) {
-        return key === value;
-      });
-      this.logger.info(`Successfully registered 'equal' helper`);
+    this.handlebars.registerHelper('equal', function (key, value) {
+      return key === value;
     });
+    this.logger.info(`Successfully registered 'equal' helper`);
   }
 
   /**
@@ -40,15 +38,13 @@ class TemplateService extends Action {
    * 
    * @private
    * @param {string} url - Repository URL
-   * @returns {*} - Result of the execute operation
+   * @returns {void}
    */
   #registerRepoRawUrl(url) {
-    return this.execute('register RepoRawURL helper', () => {
-      this.handlebars.registerHelper('RepoRawURL', function () {
-        return String(url).replace('github.com', 'raw.githubusercontent.com');
-      });
-      this.logger.info(`Successfully registered 'RepoRawURL' helper`);
+    this.handlebars.registerHelper('RepoRawURL', function () {
+      return String(url).replace('github.com', 'raw.githubusercontent.com');
     });
+    this.logger.info(`Successfully registered 'RepoRawURL' helper`);
   }
 
   /**
