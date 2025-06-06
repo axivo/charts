@@ -229,6 +229,10 @@ class UpdateService extends Action {
           if (chart.dependencies?.length) {
             await this.helmService.updateDependencies(chartDir);
             const status = await this.gitService.getStatus();
+            // DEBUG start
+            console.log('DEBUG - status:', status);
+            console.log('DEBUG - Chart.lock exists:', await this.fileService.exists(chartLockPath));
+            // DEBUG end
             if (!status.deleted.includes(chartLockPath)) {
               files.push(chartLockPath);
               this.logger.info(`Successfully updated '${chartDir}' ${type} file`);
