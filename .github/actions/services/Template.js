@@ -21,52 +21,6 @@ class TemplateService extends Action {
   }
 
   /**
-   * Registers helper for equality comparison
-   * 
-   * @private
-   * @returns {void}
-   */
-  #registerEqual() {
-    this.handlebars.registerHelper('equal', function (key, value) {
-      return key === value;
-    });
-    this.logger.info(`Successfully registered 'equal' helper`);
-  }
-
-  /**
-   * Registers helper for repository URL transformation
-   * 
-   * @private
-   * @param {string} url - Repository URL
-   * @returns {void}
-   */
-  #registerRepoRawUrl(url) {
-    this.handlebars.registerHelper('RepoRawURL', function () {
-      return String(url).replace('github.com', 'raw.githubusercontent.com');
-    });
-    this.logger.info(`Successfully registered 'RepoRawURL' helper`);
-  }
-
-  /**
-   * Compiles a template
-   * 
-   * @param {string} template - Template string to compile
-   * @returns {Function} - Compiled template function
-   */
-  compile(template) {
-    return this.execute('compile template', () => this.handlebars.compile(template));
-  }
-
-  /**
-   * Gets the configured Handlebars instance
-   * 
-   * @returns {Object} - Handlebars instance
-   */
-  get() {
-    return this.handlebars;
-  }
-
-  /**
    * Renders a template with provided context
    * 
    * @param {string} template - Template string to render
@@ -77,23 +31,16 @@ class TemplateService extends Action {
    */
   render(template, context, options = {}) {
     return this.execute('render template', () => {
-      this.logger.info('Rendering template...');
-      this.#registerEqual();
+      this.handlebars.registerHelper('equal', function (key, value) {
+        return key === value;
+      });
       if (options.repoUrl) {
-        this.#registerRepoRawUrl(options.repoUrl);
+        this.handlebars.registerHelper('RepoRawURL', function () {
+          return String(options.repoUrl).replace('github.com', 'raw.githubusercontent.com');
+        });
       }
-      // DEBUG start
-      this.logger.info(`Template content: ${template}`);
-      this.logger.info(`Template context: ${JSON.stringify(context)}`);
-      this.logger.info(`Template options: ${JSON.stringify(options)}`);
-      // DEBUG end
-      const result = this.handlebars.compile(template)(context);
-      // DEBUG start
-      this.logger.info(`Template result type: ${typeof result}, value: ${JSON.stringify(result)}`);
-      // DEBUG end
-      this.logger.info('Successfully rendered template');
-      return result;
-    }, false);
+      return this.handlebars.compile(template)(context);
+    });
   }
 }
 
