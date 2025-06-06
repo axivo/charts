@@ -282,7 +282,7 @@ class UpdateService extends Action {
             this.logger.info(`[DEBUG] Git status: ${JSON.stringify(status)}`);
             this.logger.info(`[DEBUG] Looking for path in status: ${chartLockPath}`);
             // DEBUG end
-            if (status.modified.includes(chartLockPath)) {
+            if (!status.deleted.includes(chartLockPath)) {
               files.push(chartLockPath);
               this.logger.info(`Successfully updated '${chartDir}' ${type} file`);
             }
