@@ -26,13 +26,13 @@ class IssueService extends Action {
    * Validates if workflow has issues that warrant creating an issue
    * 
    * @private
-   * @param {Object} context - GitHub Actions context
+   * @param {number} id - Workflow run ID
    * @returns {Promise<boolean>} - True if issues detected
    */
-  async #validate(context) {
+  async #validate(id) {
     return this.execute('validate workflow status', async () => {
       let hasFailures = false;
-      const workflowRun = await this.restService.getWorkflowRun(context.runId);
+      const workflowRun = await this.restService.getWorkflowRun(id);
       if (['cancelled', 'failure'].includes(workflowRun.conclusion)) {
         return true;
       }
@@ -46,56 +46,24 @@ class IssueService extends Action {
           }
         }
       }
-      const logsResponse = await this.github.rest.actions.downloadWorkflowRunLogs({
-        owner: context.repo.owner,
-        repo: context.repo.repo,
-        run_id: parseInt(context.runId, 10)
-      });
-      const regex = /(^|:)warning:/i;
-      const hasWarnings = regex.test(logsResponse.data);
+      const hasWarnings = await this.execute('validate workflow warnings', async () => {
+        const logsData = await this.restService.getWorkflowRunLogs(id);
+        const regex = /(^|:)warning:/i;
+        return regex.test(logsData);
+      }, false) || false;
       return hasFailures || hasWarnings;
-    }, false);
-  }
-
-  /**
-   * Creates a GitHub issue
-   * 
-   * @param {Object} params - Issue creation parameters
-   * @param {string} params.title - Issue title
-   * @param {string} params.body - Issue body
-   * @param {Array<string>} params.labels - Issue labels
-   * @returns {Promise<Object|null>} - Created issue data or null on failure
-   */
-  async create(params) {
-    return this.execute(`create issue: '${params.title}'`, async () => {
-      this.logger.info(`Creating issue: ${params.title}`);
-      const response = await this.github.rest.issues.create({
-        owner: this.context.repo.owner,
-        repo: this.context.repo.repo,
-        title: params.title,
-        body: params.body,
-        labels: params.labels || []
-      });
-      this.logger.info(`Created issue #${response.data.number}: ${response.data.title}`);
-      return {
-        id: response.data.id,
-        number: response.data.number,
-        title: response.data.title,
-        url: response.data.html_url
-      };
     }, false);
   }
 
   /**
    * Gets chart-specific issues since the last release
    * 
-   * @param {Object} params - Function parameters
-   * @param {Object} params.chart - Chart configuration
-   * @param {string} params.chart.name - Chart name
-   * @param {string} params.chart.type - Chart type (application or library)
+   * @param {Object} chart - Chart configuration
+   * @param {string} chart.name - Chart name
+   * @param {string} chart.type - Chart type (application or library)
    * @returns {Promise<Array<Object>>} - Issues with chart-specific filtering
    */
-  async get({ chart }) {
+  async get(chart) {
     return this.execute('get chart release issues', async () => {
       const chartPath = `${chart.type}/${chart.name}`;
       this.logger.info(`Fetching '${chartPath}' chart issues...`);
@@ -130,20 +98,18 @@ class IssueService extends Action {
   /**
    * Prepares and creates a workflow issue
    * 
-   * @param {Object} params - Parameters for workflow issue
-   * @param {Object} params.context - GitHub Actions context
-   * @param {string} params.templateContent - Issue template content
-   * @param {Object} params.templateService - Template service instance
-   * @param {Object} params.labelService - Label service instance
+   * @param {Object} context - GitHub Actions context
+   * @param {Object} label - Label service instance
+   * @param {Object} [template={}] - Template configuration
+   * @param {string} template.content - Issue template content
+   * @param {Object} template.service - Template service instance
    * @returns {Promise<Object|null>} - Created issue data or null on failure
    */
-  async report(params) {
+  async report(context, label, template = {}) {
     return this.execute('report workflow issue', async () => {
-      const hasIssues = await this.#validate(params.context);
-      if (!hasIssues) {
-        return null;
-      }
-      const context = params.context || this.context;
+      const { content, service } = template;
+      const hasIssues = await this.#validate(context.runId);
+      if (!hasIssues) return null;
       const repoUrl = context.payload.repository.html_url;
       const isPullRequest = Boolean(context.payload.pull_request);
       const branchName = isPullRequest
@@ -152,8 +118,7 @@ class IssueService extends Action {
       const commitSha = isPullRequest
         ? context.payload.pull_request.head.sha
         : context.payload.after;
-      const templateContent = params.templateContent;
-      const issueBody = params.templateService.render(templateContent, {
+      const issueBody = service.render(content, {
         Workflow: context.workflow,
         RunID: context.runId,
         Sha: commitSha,
@@ -161,14 +126,14 @@ class IssueService extends Action {
         RepoURL: repoUrl
       }, { repoUrl });
       const labelNames = this.config.get('workflow.labels');
-      if (this.config.get('issue.createLabels') && params.labelService) {
-        await Promise.all(labelNames.map(label => params.labelService.add(label)));
+      if (this.config.get('issue.createLabels') && label) {
+        await Promise.all(labelNames.map(labelName => label.add(labelName)));
       }
-      return this.create({
-        title: this.config.get('workflow.title'),
-        body: issueBody,
-        labels: labelNames
-      });
+      return this.restService.createIssue(
+        this.config.get('workflow.title'),
+        issueBody,
+        labelNames
+      );
     }, false);
   }
 }

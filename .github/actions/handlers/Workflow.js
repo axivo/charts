@@ -90,12 +90,14 @@ class WorkflowHandler extends Action {
       }
       const templatePath = this.config.get('workflow.template');
       const templateContent = await this.fileService.read(templatePath);
-      const issue = await this.issueService.report({
-        context: this.context,
-        templateContent,
-        templateService: this.templateService,
-        labelService: this.labelService
-      });
+      const issue = await this.issueService.report(
+        this.context,
+        this.labelService,
+        {
+          content: templateContent,
+          service: this.templateService
+        }
+      );
       let message = 'No workflow issues to report';
       if (issue) message = 'Successfully reported workflow issue';
       this.logger.info(`${message}`);

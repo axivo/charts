@@ -81,6 +81,33 @@ class RestService extends ApiService {
   }
 
   /**
+  * Creates a GitHub issue
+  *
+  * @param {string} title - Issue title
+  * @param {string} body - Issue body
+  * @param {Array<string>} [labels=[]] - Issue labels
+  * @returns {Promise<Object>} - Created issue
+  */
+  async createIssue(title, body, labels = []) {
+    return this.execute(`create issue: '${title}'`, async () => {
+      const response = await this.github.rest.issues.create({
+        owner: this.context.repo.owner,
+        repo: this.context.repo.repo,
+        title,
+        body,
+        labels
+      });
+      this.logger.info(`Successfully created issue #${response.data.number}: ${response.data.title}`);
+      return {
+        id: response.data.id,
+        number: response.data.number,
+        title: response.data.title,
+        url: response.data.html_url
+      };
+    });
+  }
+
+  /**
   * Creates a label in a repository
   *
   * @param {string} name - Label name
@@ -325,6 +352,23 @@ class RestService extends ApiService {
         createdAt: response.data.created_at,
         updatedAt: response.data.updated_at
       };
+    }, false);
+  }
+
+  /**
+   * Gets workflow run logs
+   * 
+   * @param {number} id - Workflow run ID
+   * @returns {Promise<string>} - Workflow run logs data
+   */
+  async getWorkflowRunLogs(id) {
+    return this.execute(`get workflow run '${id}' logs`, async () => {
+      const response = await this.github.rest.actions.downloadWorkflowRunLogs({
+        owner: this.context.repo.owner,
+        repo: this.context.repo.repo,
+        run_id: parseInt(id, 10)
+      });
+      return response.data;
     }, false);
   }
 

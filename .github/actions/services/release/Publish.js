@@ -219,7 +219,8 @@ class PublishService extends Action {
       const releaseTemplate = this.config.get('repository.release.template');
       const templateContent = await this.fileService.read(releaseTemplate);
       const issues = await this.issueService.get({
-        chart: { name: chart.name, type: chart.type }
+        name: chart.name,
+        type: chart.type
       });
       const tagName = this.config.get('repository.release.title')
         .replace('{{ .Name }}', chart.name)
