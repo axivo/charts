@@ -36,7 +36,8 @@ class ChartHandler extends Action {
    */
   async process() {
     return this.execute('process charts', async () => {
-      const files = Object.keys(await this.githubService.getUpdatedFiles());
+      const updatedFilesMap = await this.githubService.getUpdatedFiles();
+      const files = Object.keys(updatedFilesMap);
       // DEBUG start
       this.logger.info(`[DEBUG] Chart.process() files from getUpdatedFiles(): ${JSON.stringify(files)}`);
       // DEBUG end
@@ -49,15 +50,15 @@ class ChartHandler extends Action {
         await this.chartService.lint(updatedCharts);
         await this.docsService.generate(updatedCharts);
       }
-      const updatedFiles = Object.keys(files)
+      const updatedFiles = Object.keys(updatedFilesMap)
         .filter(file => file.endsWith('Chart.yaml'))
         .reduce((obj, file) => {
-          obj[file] = files[file];
+          obj[file] = updatedFilesMap[file];
           return obj;
         }, {});
       // DEBUG start
       this.logger.info(`[DEBUG] Chart.process() files before filter: ${JSON.stringify(files)}`);
-      this.logger.info(`[DEBUG] Chart.process() Chart.yaml files found: ${JSON.stringify(Object.keys(files).filter(file => file.endsWith('Chart.yaml')))}`);
+      this.logger.info(`[DEBUG] Chart.process() Chart.yaml files found: ${JSON.stringify(Object.keys(updatedFilesMap).filter(file => file.endsWith('Chart.yaml')))}`);
       this.logger.info(`[DEBUG] Chart.process() final chartFiles object: ${JSON.stringify(updatedFiles)}`);
       // DEBUG end
       await this.chartUpdate.inventory(updatedFiles);
