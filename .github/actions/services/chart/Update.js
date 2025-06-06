@@ -113,43 +113,35 @@ class UpdateService extends Action {
    * Updates a single chart entry in inventory file
    * 
    * @private
-   * @param {string} directory - Chart directory path
+   * @param {string} chart - Chart file path
+   * @param {string} inventory - Inventory file path
    * @param {string} status - Git status
    * @returns {Promise<string>} - Inventory file path that was updated
    */
-  async #updateEntry(directory, status) {
-    const chartName = path.basename(path.dirname(directory));
-    const chartType = path.dirname(directory).split('/')[0];
-    const inventoryPath = `${chartType}/inventory.yaml`;
+  async #updateEntry(chart, inventory, status) {
+    const chartName = path.basename(path.dirname(chart));
+    const chartType = path.dirname(chart).split('/')[0];
+    let content = await this.fileService.readYaml(inventory);
+    if (!content) content = { [chartType]: [] };
+    if (!content[chartType]) content[chartType] = [];
+    const existingIndex = content[chartType].findIndex(content => content.name === chartName);
+    if (existingIndex >= 0 && content[chartType][existingIndex].status === status) return false;
     let chartData = {};
     if (status !== 'removed') {
-      const chartYamlPath = `${chartType}/${chartName}/Chart.yaml`;
-      const chartMetadata = await this.fileService.readYaml(chartYamlPath);
+      const chartMetadata = await this.fileService.readYaml(chart);
       chartData = {
         description: chartMetadata.description,
         version: chartMetadata.version
       };
     }
-    let inventory = await this.fileService.readYaml(inventoryPath);
-    if (!inventory) inventory = { [chartType]: [] };
-    if (!inventory[chartType]) inventory[chartType] = [];
-    const existingIndex = inventory[chartType].findIndex(entry => entry.name === chartName);
     if (existingIndex >= 0) {
-      inventory[chartType][existingIndex] = {
-        ...inventory[chartType][existingIndex],
-        status,
-        ...chartData
-      };
+      content[chartType][existingIndex] = { name: chartName, status, ...chartData };
     } else {
-      inventory[chartType].push({
-        name: chartName,
-        status,
-        ...chartData
-      });
+      content[chartType].push({ name: chartName, status, ...chartData });
     }
-    inventory[chartType].sort((current, updated) => current.name.localeCompare(updated.name));
-    await this.fileService.writeYaml(inventoryPath, inventory);
-    return inventoryPath;
+    content[chartType].sort((current, updated) => current.name.localeCompare(updated.name));
+    await this.fileService.writeYaml(inventory, content);
+    return true;
   }
 
   /**
@@ -190,8 +182,8 @@ class UpdateService extends Action {
           return false;
         }
       });
-      const results = await Promise.all(updatePromises);
-      return this.#commit('application', files, results);
+      const result = await Promise.all(updatePromises);
+      return this.#commit('application', files, result);
     });
   }
 
@@ -205,19 +197,22 @@ class UpdateService extends Action {
     return this.execute('update inventory files', async () => {
       const init = await this.#initialize(Object.keys(files), 'inventory');
       if (init.skip) return init.skip;
-      const { files: updatedFiles, type } = init;
+      const type = init.type;
+      const updatedFiles = [];
       const updatePromises = Object.entries(files)
         .map(async ([filePath, status]) => {
           const chartType = path.dirname(filePath).split('/')[0];
+          const inventoryPath = `${chartType}/inventory.yaml`;
           return this.execute(`update '${chartType}' ${type} file`, async () => {
-            const entry = await this.#updateEntry(filePath, status);
-            if (!updatedFiles.includes(entry)) updatedFiles.push(entry);
-            this.logger.info(`Successfully updated '${chartType}' ${type} file`);
+            if (await this.#updateEntry(filePath, inventoryPath, status)) {
+              updatedFiles.push(inventoryPath);
+              this.logger.info(`Successfully updated '${chartType}' ${type} file`);
+            }
             return true;
           }, false);
         });
-      const results = await Promise.all(updatePromises);
-      return this.#commit('inventory', updatedFiles, results);
+      const result = await Promise.all(updatePromises);
+      return this.#commit('inventory', [...new Set(updatedFiles)], result);
     });
   }
 
@@ -258,8 +253,8 @@ class UpdateService extends Action {
           return false;
         }
       });
-      const results = await Promise.all(updatePromises);
-      return this.#commit('dependency lock', files, results);
+      const result = await Promise.all(updatePromises);
+      return this.#commit('dependency lock', files, result);
     });
   }
 
@@ -302,8 +297,8 @@ class UpdateService extends Action {
           return false;
         }
       });
-      const results = await Promise.all(updatePromises);
-      return this.#commit('metadata', files, results);
+      const result = await Promise.all(updatePromises);
+      return this.#commit('metadata', files, result);
     });
   }
 }
