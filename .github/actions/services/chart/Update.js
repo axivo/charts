@@ -156,7 +156,7 @@ class UpdateService extends Action {
       if (init.skip) return init.skip;
       const { files, type } = init;
       const updatePromises = charts.map(async (chartDir) => {
-        try {
+        return this.execute(`update '${chartDir}' ${type} file`, async () => {
           const appFilePath = path.join(chartDir, 'application.yaml');
           if (!await this.fileService.exists(appFilePath)) return true;
           const chartName = path.basename(chartDir);
@@ -174,13 +174,7 @@ class UpdateService extends Action {
           files.push(appFilePath);
           this.logger.info(`Successfully updated '${chartDir}' ${type} file`);
           return true;
-        } catch (error) {
-          this.actionError.report({
-            operation: `update '${chartDir}' ${type} file`,
-            fatal: false
-          }, error);
-          return false;
-        }
+        }, false);
       });
       const result = await Promise.all(updatePromises);
       return this.#commit('application', files, result);
@@ -228,7 +222,7 @@ class UpdateService extends Action {
       if (init.skip) return init.skip;
       const { files, type } = init;
       const updatePromises = charts.map(async (chartDir) => {
-        try {
+        return this.execute(`update '${chartDir}' ${type} file`, async () => {
           const chartLockPath = path.join(chartDir, 'Chart.lock');
           const chartYamlPath = path.join(chartDir, 'Chart.yaml');
           const chart = await this.fileService.readYaml(chartYamlPath);
@@ -245,13 +239,7 @@ class UpdateService extends Action {
             this.logger.info(`Successfully removed '${chartDir}' ${type} file`);
           }
           return true;
-        } catch (error) {
-          this.actionError.report({
-            operation: `update '${chartDir}' ${type} file`,
-            fatal: false
-          }, error);
-          return false;
-        }
+        }, false);
       });
       const result = await Promise.all(updatePromises);
       return this.#commit('dependency lock', files, result);
@@ -270,7 +258,7 @@ class UpdateService extends Action {
       if (init.skip) return init.skip;
       const { files, type } = init;
       const updatePromises = charts.map(async (chartDir) => {
-        try {
+        return this.execute(`update '${chartDir}' ${type} file`, async () => {
           const chartName = path.basename(chartDir);
           const metadataPath = path.join(chartDir, 'metadata.yaml');
           const chartYamlPath = path.join(chartDir, 'Chart.yaml');
@@ -289,13 +277,7 @@ class UpdateService extends Action {
           files.push(metadataPath);
           this.logger.info(`Successfully updated '${chartDir}' ${type} file`);
           return true;
-        } catch (error) {
-          this.actionError.report({
-            operation: `update '${chartDir}' ${type} file`,
-            fatal: false
-          }, error);
-          return false;
-        }
+        }, false);
       });
       const result = await Promise.all(updatePromises);
       return this.#commit('metadata', files, result);
