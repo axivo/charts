@@ -128,9 +128,8 @@ class WorkflowHandler extends Action {
   async updateCharts() {
     return this.execute('update charts', async () => {
       this.logger.info('Starting the charts update process...');
-      const result = await this.chartHandler.process();
+      await this.chartHandler.process();
       this.logger.info('Successfully completed the charts update process');
-      return result;
     });
   }
 

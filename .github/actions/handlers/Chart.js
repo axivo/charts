@@ -32,7 +32,7 @@ class ChartHandler extends Action {
   /**
    * Main process method for chart updates
    * 
-   * @returns {Promise<Object>} - Update results
+   * @returns {Promise<void>}
    */
   async process() {
     return this.execute('process charts', async () => {
@@ -41,17 +41,15 @@ class ChartHandler extends Action {
       this.logger.info(`[DEBUG] Chart.process() files from getUpdatedFiles(): ${JSON.stringify(files)}`);
       // DEBUG end
       const charts = await this.chartService.find(files);
-      if (charts.total === 0) {
-        this.logger.info('No chart updates found');
-        return { charts: 0, updated: 0 };
+      if (charts.total) {
+        const updatedCharts = [...charts.application, ...charts.library];
+        await this.chartUpdate.application(updatedCharts);
+        await this.chartUpdate.lock(updatedCharts);
+        await this.chartUpdate.metadata(updatedCharts);
+        await this.chartService.lint(updatedCharts);
+        await this.docsService.generate(updatedCharts);
       }
-      const allCharts = [...charts.application, ...charts.library];
-      await this.chartUpdate.application(allCharts);
-      await this.chartUpdate.lock(allCharts);
-      await this.chartUpdate.metadata(allCharts);
-      await this.chartService.lint(allCharts);
-      await this.docsService.generate(allCharts);
-      const chartFiles = Object.keys(files)
+      const updatedFiles = Object.keys(files)
         .filter(file => file.endsWith('Chart.yaml'))
         .reduce((obj, file) => {
           obj[file] = files[file];
@@ -60,10 +58,9 @@ class ChartHandler extends Action {
       // DEBUG start
       this.logger.info(`[DEBUG] Chart.process() files before filter: ${JSON.stringify(files)}`);
       this.logger.info(`[DEBUG] Chart.process() Chart.yaml files found: ${JSON.stringify(Object.keys(files).filter(file => file.endsWith('Chart.yaml')))}`);
-      this.logger.info(`[DEBUG] Chart.process() final chartFiles object: ${JSON.stringify(chartFiles)}`);
+      this.logger.info(`[DEBUG] Chart.process() final chartFiles object: ${JSON.stringify(updatedFiles)}`);
       // DEBUG end
-      await this.chartUpdate.inventory(chartFiles);
-      return { charts: charts.total, updated: charts.total };
+      await this.chartUpdate.inventory(updatedFiles);
     });
   }
 }
