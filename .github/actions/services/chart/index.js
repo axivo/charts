@@ -91,11 +91,20 @@ class ChartService extends Action {
     return this.execute('find modified charts', async () => {
       const charts = { application: [], library: [], total: 0 };
       if (!files || !files.length) return charts;
+      // DEBUG start
+      this.logger.info(`[DEBUG] ChartService.find() input files: ${JSON.stringify(files)}`);
+      // DEBUG end
       const chartTypes = this.config.get('repository.chart.type');
       const chartDirs = this.fileService.filterPath(files, chartTypes);
+      // DEBUG start
+      this.logger.info(`[DEBUG] ChartService.find() chartDirs: ${JSON.stringify([...chartDirs])}`);
+      // DEBUG end
       for (const chartDir of chartDirs) {
         const [type, chartPath] = chartDir.split(':');
         const chartYamlPath = path.join(chartPath, 'Chart.yaml');
+        // DEBUG start
+        this.logger.info(`[DEBUG] ChartService.find() checking ${chartYamlPath}, exists: ${await this.fileService.exists(chartYamlPath)}`);
+        // DEBUG end
         if (await this.fileService.exists(chartYamlPath)) {
           charts[type].push(chartPath);
           charts.total++;
@@ -105,6 +114,9 @@ class ChartService extends Action {
         const word = charts.total === 1 ? 'chart' : 'charts';
         this.logger.info(`Found ${charts.total} modified ${word}`);
       }
+      // DEBUG start
+      this.logger.info(`[DEBUG] ChartService.find() final result: ${JSON.stringify(charts)}`);
+      // DEBUG end
       return charts;
     }, false);
   }
