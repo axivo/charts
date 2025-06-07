@@ -45,9 +45,10 @@ class Action {
    * @param {string} operation - Operation name for error reporting
    * @param {Function} action - Action to execute
    * @param {boolean} fatal - Whether errors should be fatal
+   * @param {boolean} silent - Whether to silently return null on 404 errors
    * @returns {Promise<any>} - Result of the operation or null on error
    */
-  async execute(operation, action, fatal = true) {
+  async execute(operation, action, fatal = true, silent = false) {
     const isDebug = this.config.get('workflow.logLevel') === 'debug';
     const startTime = isDebug ? Date.now() : 0;
     if (isDebug) this.logger.info(`→ ${operation}`, { level: 'debug' });
@@ -59,6 +60,7 @@ class Action {
       }
       return result;
     } catch (error) {
+      if (silent && error.status === 404) return null;
       if (isDebug) {
         const duration = ((Date.now() - startTime) / 1000).toFixed(2);
         this.logger.info(`❌ ${operation} failed after ${duration}s`, { level: 'debug' });

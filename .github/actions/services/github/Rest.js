@@ -131,7 +131,7 @@ class RestService extends ApiService {
         color: response.data.color,
         description: response.data.description
       };
-    }, false);
+    }, false, true);
   }
 
   /**
@@ -369,7 +369,7 @@ class RestService extends ApiService {
         run_id: parseInt(id, 10)
       });
       return response.data;
-    }, false);
+    }, false, true);
   }
 
   /**
