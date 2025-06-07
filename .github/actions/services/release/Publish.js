@@ -163,21 +163,18 @@ class PublishService extends Action {
           return 0;
         }
         this.logger.info('Generating chart indexes...');
-        const appType = this.config.get('repository.chart.type.application');
-        const libType = this.config.get('repository.chart.type.library');
-        const [appChartFiles, libChartFiles] = await Promise.all([
-          this.fileService.find(`${appType}/*/Chart.yaml`),
-          this.fileService.find(`${libType}/*/Chart.yaml`)
-        ]);
-        const appChartDirs = appChartFiles.map(file => ({
-          dir: path.dirname(file),
-          type: appType
-        }));
-        const libChartDirs = libChartFiles.map(file => ({
-          dir: path.dirname(file),
-          type: libType
-        }));
-        const chartDirs = [...appChartDirs, ...libChartDirs];
+        const chartTypes = this.config.getChartTypes();
+        const inventories = await Promise.all(
+          chartTypes.map(type => this.chartService.getInventory(type))
+        );
+        const chartDirs = [];
+        chartTypes.forEach((type, index) => {
+          const charts = inventories[index].filter(chart => chart.status !== 'removed');
+          const typePath = this.config.get(`repository.chart.type.${type}`);
+          charts.forEach(chart => {
+            chartDirs.push({ dir: path.join(typePath, chart.name), type: typePath });
+          });
+        });
         const results = await Promise.all(chartDirs.map(async (chart) => {
           const outputDir = path.join('./', chart.type, path.basename(chart.dir));
           try {

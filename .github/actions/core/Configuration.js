@@ -1,13 +1,25 @@
 /**
+ * Configuration management module
+ * 
+ * @module core/Configuration
+ * @author AXIVO
+ * @license BSD-3-Clause
+ */
+
+/**
+ * Helm-defined chart types supported by the repository
+ * 
+ * @type {Array<string>}
+ */
+const CHART_TYPES = ['application', 'library'];
+
+/**
  * Configuration management class
  * 
  * Provides object-oriented configuration management with features for
  * dot notation access, environment variables, and validation.
  * 
  * @class Configuration
- * @module core
- * @author AXIVO
- * @license BSD-3-Clause
  */
 class Configuration {
   /**
@@ -42,6 +54,15 @@ class Configuration {
     }
     this.cache.set(path, current);
     return current;
+  }
+
+  /**
+   * Gets supported chart types
+   * 
+   * @returns {Array<string>} Array of chart type names
+   */
+  getChartTypes() {
+    return CHART_TYPES;
   }
 }
 

@@ -37,27 +37,19 @@ class LabelService extends Action {
         this.logger.warning(`Label configuration not found for '${name}'`);
         return false;
       }
-      try {
-        const existingLabel = await this.restService.getLabel(name);
-        if (existingLabel) return true;
-        if (!this.config.get('issue.createLabels')) {
-          this.logger.warning(`Label '${name}' not found and createLabels is disabled`);
-          return false;
-        }
-        await this.restService.createLabel(
-          name,
-          labelConfig.color,
-          labelConfig.description
-        );
-        this.logger.info(`Successfully created '${name}' label`);
-        return true;
-      } catch (error) {
-        this.actionError.report({
-          operation: `add '${name}' label`,
-          fatal: false
-        }, error);
+      const existingLabel = await this.restService.getLabel(name);
+      if (existingLabel) return true;
+      if (!this.config.get('issue.createLabels')) {
+        this.logger.warning(`Label '${name}' not found and createLabels is disabled`);
         return false;
       }
+      await this.restService.createLabel(
+        name,
+        labelConfig.color,
+        labelConfig.description
+      );
+      this.logger.info(`Successfully created '${name}' label`);
+      return true;
     }, false);
   }
 
