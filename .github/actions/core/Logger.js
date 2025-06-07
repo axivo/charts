@@ -49,15 +49,9 @@ class Logger {
    */
   #format(message, meta = {}) {
     const parts = [`[${this.context}]`];
-    if (meta.level && meta.level !== 'info') {
-      parts.push(`[${meta.level.toUpperCase()}]`);
-    }
-    if (this.timestamp) {
-      parts.push(`[${new Date().toISOString()}]`);
-    }
-    if (meta.component) {
-      parts.push(`[${meta.component}]`);
-    }
+    if (meta.level && meta.level !== 'info') parts.push(`[${meta.level.toUpperCase()}]`);
+    if (this.timestamp && meta.level === 'debug') parts.push(`[${new Date().toISOString()}]`);
+    if (meta.component) parts.push(`[${meta.component}]`);
     return `${parts.join('')} ${message}`;
   }
 
