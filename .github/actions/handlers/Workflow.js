@@ -15,7 +15,7 @@ const FrontpageService = require('../services/Frontpage');
 const GitService = require('../services/Git');
 const IssueService = require('../services/Issue');
 const LabelService = require('../services/Label');
-const ReleaseService = require('../services/release');
+const ReleaseHandler = require('./release');
 const TemplateService = require('../services/Template');
 
 class WorkflowHandler extends Action {
@@ -34,7 +34,7 @@ class WorkflowHandler extends Action {
     this.gitService = new GitService(params);
     this.issueService = new IssueService(params);
     this.labelService = new LabelService(params);
-    this.releaseService = new ReleaseService(params);
+    this.releaseHandler = new ReleaseHandler(params);
     this.templateService = new TemplateService(params);
   }
 
@@ -72,7 +72,7 @@ class WorkflowHandler extends Action {
   async processReleases() {
     return this.execute('process chart releases', async () => {
       this.logger.info('Processing chart releases...');
-      await this.releaseService.process();
+      await this.releaseHandler.process();
       this.logger.info('Chart release process complete');
     });
   }
