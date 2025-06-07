@@ -16,7 +16,7 @@ sources:
 dependencies:
   - name: common
     repository: oci://ghcr.io/axivo/charts/library
-    version: 1.0.0
+    version: 1.0.2
 maintainers:
   - name: AXIVO
     url: https://axivo.com
