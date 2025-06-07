@@ -1,13 +1,20 @@
 /**
  * GitHub GraphQL API service
  * 
- * @class GraphQLService
  * @module services/github/GraphQL
  * @author AXIVO
  * @license BSD-3-Clause
  */
 const ApiService = require('./Api');
 
+/**
+ * GitHub GraphQL API service
+ * 
+ * Provides GitHub GraphQL API operations including signed commits,
+ * complex queries, pagination, and batch operations.
+ * 
+ * @class GraphQLService
+ */
 class GraphQLService extends ApiService {
   /**
    * Creates a new GraphQLService instance
@@ -28,7 +35,7 @@ class GraphQLService extends ApiService {
    * @param {Object} [options={}] - Pagination options
    * @param {Function} [options.filter] - Function to filter results
    * @param {number} [options.limit] - Maximum number of results to return
-   * @returns {Promise<Array<Object>>} - Paginated results
+   * @returns {Promise<Array<Object>>} Paginated results
    */
   async #paginate(query, variables, extractor, options = {}) {
     const { filter = () => true, limit = Infinity } = options;
@@ -56,12 +63,12 @@ class GraphQLService extends ApiService {
    * Creates a signed commit using GitHub API
    * 
    * @param {string} branch - Branch name
-   * @param {Object} options - Function options
+   * @param {Object} [options={}] - Function options
    * @param {string} options.oid - Expected HEAD OID
    * @param {Array<Object>} options.additions - Files to add/modify
    * @param {Array<Object>} options.deletions - Files to delete
    * @param {string} options.message - Commit message
-   * @returns {Promise<Object>} - Commit details
+   * @returns {Promise<Object>} Commit details
    */
   async createSignedCommit(branch, options = {}) {
     const { oid, additions, deletions, message } = options;
@@ -120,7 +127,7 @@ class GraphQLService extends ApiService {
    * @param {Object} [options={}] - Function options
    * @param {Date} [options.since] - Date to get issues since
    * @param {number} [options.issues=50] - Maximum number of issues to return
-   * @returns {Promise<Array<Object>>} - Issues
+   * @returns {Promise<Array<Object>>} Issues
    */
   async getReleaseIssues(chart, options = {}) {
     const { since, issues = 50 } = options;
@@ -181,7 +188,7 @@ class GraphQLService extends ApiService {
    * 
    * @param {string} [prefix] - Optional tag prefix to filter releases
    * @param {number} [limit=100] - Maximum number of releases to return
-   * @returns {Promise<Array<Object>>} - Releases
+   * @returns {Promise<Array<Object>>} Releases
    */
   async getReleases(prefix, limit = 100) {
     return this.execute(`get releases`, async () => {
@@ -220,7 +227,7 @@ class GraphQLService extends ApiService {
           }
         }
       `;
-      const releases = await this.#paginate(query, 
+      const releases = await this.#paginate(query,
         { owner: this.context.repo.owner, repo: this.context.repo.repo },
         (data) => data.repository.releases,
         {
@@ -252,7 +259,7 @@ class GraphQLService extends ApiService {
    * Determines repository owner type for API routing
    * 
    * @param {string} owner - Repository owner
-   * @returns {Promise<string>} - 'organization' or 'user'
+   * @returns {Promise<string>} 'organization' or 'user'
    */
   async getRepositoryType(owner) {
     return this.execute('get repository type', async () => {
@@ -265,9 +272,9 @@ class GraphQLService extends ApiService {
       `;
       const variables = { owner };
       const response = await this.github.graphql(query, variables);
-      const ownerType = response.repositoryOwner.__typename.toLowerCase();
-      this.logger.info(`Repository is '${ownerType}' type`);
-      return ownerType;
+      const result = response.repositoryOwner.__typename.toLowerCase();
+      this.logger.info(`Repository is '${result}' type`);
+      return result;
     }, false);
   }
 }

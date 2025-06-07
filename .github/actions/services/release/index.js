@@ -1,7 +1,6 @@
 /**
  * Release service for managing chart releases
  * 
- * @class Release
  * @module services/release
  * @author AXIVO
  * @license BSD-3-Clause
@@ -13,9 +12,17 @@ const FileService = require('../File');
 const GitHubService = require('../github');
 const HelmService = require('../helm');
 
+/**
+ * Release service for managing chart releases
+ * 
+ * Provides comprehensive chart release management including packaging,
+ * validation, deletion, and file-based chart discovery.
+ * 
+ * @class ReleaseService
+ */
 class ReleaseService extends Action {
   /**
-   * Creates a new Release service instance
+   * Creates a new ReleaseService instance
    * 
    * @param {Object} params - Service parameters
    */
@@ -40,7 +47,7 @@ class ReleaseService extends Action {
       const word = files.length === 1 ? 'release' : 'releases';
       this.logger.info(`Deleting ${files.length} chart ${word}...`);
       for (const filePath of files) {
-        try {
+        const deleted = await this.execute(`delete releases for '${filePath}' chart`, async () => {
           const appType = this.config.get('repository.chart.type.application');
           const chartPath = path.dirname(filePath);
           const name = path.basename(chartPath);
@@ -51,10 +58,9 @@ class ReleaseService extends Action {
           if (this.config.get('repository.oci.packages.enabled')) {
             await this.githubService.deletePackage(name, type);
           }
-          result++;
-        } catch (error) {
-          this.logger.error(`Failed to delete releases for '${filePath}' chart: ${error.message}`);
-        }
+          return true;
+        }, false);
+        if (deleted) result++;
       }
       return result;
     }, false);
@@ -65,10 +71,6 @@ class ReleaseService extends Action {
    * 
    * @param {Object} [files={}] - Object mapping file paths to their Git change status
    * @returns {Promise<Object>} Object containing categorized charts
-   * @returns {Array<string>} returns.application - Array of application chart directory paths
-   * @returns {Array<string>} returns.library - Array of library chart directory paths
-   * @returns {Array<string>} returns.deleted - Array of deleted Chart.yaml file paths
-   * @returns {number} returns.total - Total count of eligible charts (application + library)
    */
   async find(files = {}) {
     let result = { application: [], library: [], deleted: [], total: 0 };
@@ -123,8 +125,8 @@ class ReleaseService extends Action {
       const directory = { root, application, library };
       const chartDirs = [...charts.application, ...charts.library];
       this.logger.info(`Packaging ${chartDirs.length} charts...`);
-      result = await Promise.all(chartDirs.map(async (chartDir) => {
-        try {
+      const packageResults = await Promise.all(chartDirs.map(async (chartDir) => {
+        return this.execute(`package '${chartDir}' chart`, async () => {
           this.logger.info(`Packaging '${chartDir}' chart...`);
           this.logger.info(`Updating dependencies for '${chartDir}' chart...`);
           await this.helmService.updateDependencies(chartDir);
@@ -136,22 +138,13 @@ class ReleaseService extends Action {
             success: true,
             type: isAppChartType ? 'application' : 'library'
           };
-        } catch (error) {
-          this.actionError.report({
-            operation: `package ${chartDir} chart`,
-            fatal: false
-          }, error);
-          return {
-            chartDir,
-            success: false,
-            type: chartDir.startsWith(appType) ? 'application' : 'library'
-          };
-        }
+        }, false);
       }));
-      const successCount = result.filter(operation => operation.success).length;
+      result = packageResults.filter(operation => operation && operation.success);
+      const successCount = result.length;
       const word = successCount === 1 ? 'chart' : 'charts';
       this.logger.info(`Successfully packaged ${successCount} ${word}`);
-      return result.filter(operation => operation.success);
+      return result;
     }, false);
   }
 

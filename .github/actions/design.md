@@ -1,3 +1,44 @@
+## 📊 **PARAMETER PATTERN DECISION MATRIX**
+
+### **When to Use Individual Parameters:**
+- Method has 1-3 required parameters
+- All parameters are required (no optional values)
+- Method signature is unlikely to change
+- Parameters have clear, distinct types
+
+**Examples:**
+```javascript
+async copy(source, destination)
+async validate(directory)
+async delete(file)
+```
+
+### **When to Use Parameter Objects:**
+- Method has 3+ parameters
+- Method includes optional configurations
+- Method may need future extensibility
+- Parameters form logical groups
+
+**Examples:**
+```javascript
+async report(context, label, template = {})
+async createIndex(directory, options = {})
+async generateContent(chart, config = {})
+```
+
+### **Decision Flow:**
+```
+Method has >3 parameters? → YES → Use parameter object
+    ↓ NO
+Has optional parameters? → YES → Use parameter object
+    ↓ NO
+Needs future extensibility? → YES → Consider parameter object
+    ↓ NO
+Use individual parameters
+```
+
+---
+
 # GitHub Actions Architecture Design Document
 
 This document provides the essential architectural understanding needed to work effectively with the GitHub Actions codebase and maintain code uniformity.
@@ -218,17 +259,75 @@ if (this.config.get('repository.release.deployment') === 'local') {
 **Reason**: Consistent error reporting, GitHub Actions integration, context preservation
 **Implementation**: Replace any try/catch with execute() pattern
 
-### **2. Individual Parameters Philosophy**
-**Decision**: Methods use individual parameters, not parameter objects
-**Reason**: Type safety, clarity, consistent signatures
-**Implementation**: `method(param1, param2)` NOT `method({param1, param2})`
+### **2. Parameter Pattern Guidelines**
+**Decision**: Methods use appropriate parameter patterns based on complexity
+**Reason**: Maintainability, industry standards, flexibility for complex configurations
+**Implementation**: Individual parameters for simple methods, parameter objects for complex methods (3+ parameters)
+
+**Guidelines:**
+```javascript
+// ✅ ACCEPTABLE: Simple methods with individual parameters
+async validate(directory, options) {
+  // Direct parameter usage
+}
+
+// ✅ ACCEPTABLE: Complex methods with parameter objects (3+ parameters)
+async report(context, label, template = {}) {
+  const { content, service } = template;
+}
+
+// ✅ ACCEPTABLE: Configuration objects for optional parameters
+async createIndex(directory, options = {}) {
+  const { url, merge, generateMetadata } = options;
+}
+```
 
 ### **3. Stateless Services Philosophy**
 **Decision**: Services maintain no instance state between operations
 **Reason**: Predictability, testability, scalability
 **Implementation**: All data passed through method parameters
 
-### **4. Alphabetical Method Ordering Philosophy**
+### **4. Parameter Pattern Best Practices**
+
+**Key Principle**: Choose parameter patterns based on method complexity and maintainability.
+
+**Simple Methods (1-3 parameters)**:
+```javascript
+// ✅ PREFERRED: Individual parameters for clarity
+async validate(directory, options) {
+  return this.execute('validate', async () => {
+    // Simple validation logic
+  });
+}
+
+async copy(source, destination) {
+  // Direct parameter usage
+}
+```
+
+**Complex Methods (3+ parameters or optional configurations)**:
+```javascript
+// ✅ PREFERRED: Parameter objects for maintainability
+async report(context, labelService, template = {}) {
+  const { content, service } = template;
+  return this.execute('report workflow issue', async () => {
+    // Complex reporting logic with optional configurations
+  });
+}
+
+async createIndex(directory, options = {}) {
+  const { url, merge, generateMetadata } = options;
+  // Method can evolve without breaking existing calls
+}
+```
+
+**Architectural Benefits**:
+- **Extensibility**: Parameter objects allow adding new options without breaking existing code
+- **Readability**: `{ content, service }` is more self-documenting than positional parameters
+- **Industry Standard**: Kubernetes projects and Node.js libraries commonly use this pattern
+- **Optional Parameters**: Natural support for optional configurations and default values
+
+### **5. Alphabetical Method Ordering Philosophy**
 **Decision**: All methods ordered alphabetically after constructor
 **Reason**: Consistency, maintainability, easy navigation
 **Implementation**: Constructor first, then A-Z method ordering
@@ -291,13 +390,20 @@ if (chart.type === this.config.get('repository.chart.type.application')) {}
 if (chart.type === 'application') {}
 ```
 
-### **2. Parameter Object Anti-Pattern**
+### **2. Parameter Pattern Guidelines**
 ```javascript
-// WRONG: Parameter objects
-async method({param1, param2, param3}) {}
+// ✅ ACCEPTABLE: Simple methods with individual parameters
+async validate(directory, options) {
+  // Direct parameter usage
+}
 
-// CORRECT: Individual parameters
-async method(param1, param2, param3) {}
+// ✅ ACCEPTABLE: Complex methods with parameter objects (3+ parameters)
+async report(context, label, template = {}) {
+  const { content, service } = template;
+}
+
+// ✅ WRONG: Mixed approach without clear justification
+async method(param1, {param2, param3}) {}
 ```
 
 ### **3. Error Handling Anti-Pattern**
@@ -322,7 +428,7 @@ await this.execute('operation', async () => {
 ### **1. When Adding New Methods**
 - Extend Action base class
 - Use execute() pattern for all operations
-- Follow individual parameter pattern
+- Follow appropriate parameter patterns (individual for simple, objects for complex)
 - Maintain alphabetical ordering
 - No comments in method body
 - No blank lines in method body
@@ -346,7 +452,7 @@ await this.execute('operation', async () => {
 ### **Before Making Any Changes:**
 - [ ] Is this a chart type or directory path operation?
 - [ ] Am I using the execute() pattern?
-- [ ] Are parameters individual (not objects)?
+- [ ] Are parameters appropriate for the method complexity?
 - [ ] Am I following existing patterns exactly?
 - [ ] Do I understand the service boundaries?
 

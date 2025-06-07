@@ -1,7 +1,6 @@
 /**
  * Local release service for local development chart operations
  * 
- * @class LocalService
  * @module services/release/Local
  * @author AXIVO
  * @license BSD-3-Clause
@@ -14,6 +13,14 @@ const GitService = require('../Git');
 const HelmService = require('../helm');
 const ShellService = require('../Shell');
 
+/**
+ * Local release service for local development chart operations
+ * 
+ * Provides specialized handling for local development workflows including
+ * dependency validation, chart processing, and local packaging operations.
+ * 
+ * @class LocalService
+ */
 class LocalService extends Action {
   /**
    * Creates a new LocalService instance

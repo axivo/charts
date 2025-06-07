@@ -1,7 +1,6 @@
 /**
  * Frontpage service for repository frontpage operations
  * 
- * @class FrontpageService
  * @module services/Frontpage
  * @author AXIVO
  * @license BSD-3-Clause
@@ -12,6 +11,14 @@ const ChartService = require('./chart');
 const FileService = require('./File');
 const TemplateService = require('./Template');
 
+/**
+ * Frontpage service for repository frontpage operations
+ * 
+ * Provides repository frontpage generation and Jekyll theme setup
+ * for GitHub Pages deployment with chart inventory integration.
+ * 
+ * @class FrontpageService
+ */
 class FrontpageService extends Action {
   /**
    * Creates a new FrontpageService instance

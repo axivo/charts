@@ -1,7 +1,6 @@
 /**
  * Helm documentation service for helm-docs operations
  * 
- * @class DocsService
  * @module services/helm/Docs
  * @author AXIVO
  * @license BSD-3-Clause
@@ -13,6 +12,14 @@ const Action = require('../../core/Action');
 const GitService = require('../Git');
 const ShellService = require('../Shell');
 
+/**
+ * Helm documentation service for helm-docs operations
+ * 
+ * Provides helm-docs integration including installation,
+ * documentation generation, and Git commit management.
+ * 
+ * @class DocsService
+ */
 class DocsService extends Action {
   /**
    * Creates a new DocsService instance
@@ -29,7 +36,7 @@ class DocsService extends Action {
    * Generates documentation for charts
    * 
    * @param {Array<string>} directories - Chart directories to generate documentation for
-   * @returns {Promise<Object>} - Documentation generation results
+   * @returns {Promise<Object>} Documentation generation results
    */
   async generate(directories) {
     return this.execute('generate documentation', async () => {
@@ -56,7 +63,7 @@ class DocsService extends Action {
    * Installs helm-docs binary
    * 
    * @param {string} version - Helm-docs version to install
-   * @returns {Promise<boolean>} - True if installation succeeded
+   * @returns {Promise<boolean>} True if installation succeeded
    */
   async install(version) {
     return this.execute('install helm-docs', async () => {

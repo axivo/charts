@@ -1,22 +1,28 @@
 /**
  * Local Release handler for local development chart operations
  * 
- * @class Local
- * @module handlers/release
+ * @module handlers/release/Local
  * @author AXIVO
  * @license BSD-3-Clause
  */
 const path = require('path');
-
 const Action = require('../../core/Action');
 const FileService = require('../../services/File');
 const GitHubService = require('../../services/github');
 const HelmService = require('../../services/helm');
 const ReleaseService = require('../../services/release');
 
+/**
+ * Local Release handler for local development chart operations
+ * 
+ * Provides specialized handling for local development workflows including
+ * dependency validation, chart processing, and local packaging operations.
+ * 
+ * @class LocalHandler
+ */
 class LocalHandler extends Action {
   /**
-   * Creates a new Local instance
+   * Creates a new LocalHandler instance
    * 
    * @param {Object} params - Handler parameters
    */

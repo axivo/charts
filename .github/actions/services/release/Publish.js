@@ -1,7 +1,6 @@
 /**
  * Release publishing service
  * 
- * @class PublishService
  * @module services/release/Publish
  * @author AXIVO
  * @license BSD-3-Clause
@@ -16,6 +15,14 @@ const IssueService = require('../Issue');
 const PackageService = require('./Package');
 const TemplateService = require('../Template');
 
+/**
+ * Release publishing service
+ * 
+ * Provides comprehensive release publishing including GitHub releases,
+ * OCI registry publishing, index generation, and content creation.
+ * 
+ * @class PublishService
+ */
 class PublishService extends Action {
   /**
    * Creates a new PublishService instance
@@ -37,6 +44,7 @@ class PublishService extends Action {
   /**
    * Creates a GitHub release for a chart
    * 
+   * @private
    * @param {Object} chart - Chart information
    * @param {string} chart.name - Chart name
    * @param {string} chart.version - Chart version
@@ -75,6 +83,7 @@ class PublishService extends Action {
   /**
    * Prepares chart data for publishing
    * 
+   * @private
    * @param {Object} object - Package object
    * @param {string} object.source - Chart package filename
    * @param {string} object.type - Chart type
@@ -157,51 +166,38 @@ class PublishService extends Action {
    */
   async generateIndexes() {
     return this.execute('generate chart indexes', async () => {
-      try {
-        if (!this.config.get('repository.chart.packages.enabled')) {
-          this.logger.info('Chart indexes generation is disabled');
-          return 0;
-        }
-        this.logger.info('Generating chart indexes...');
-        const chartTypes = this.config.getChartTypes();
-        const inventories = await Promise.all(
-          chartTypes.map(type => this.chartService.getInventory(type))
-        );
-        const chartDirs = [];
-        chartTypes.forEach((type, index) => {
-          const charts = inventories[index].filter(chart => chart.status !== 'removed');
-          const typePath = this.config.get(`repository.chart.type.${type}`);
-          charts.forEach(chart => {
-            chartDirs.push({ dir: path.join(typePath, chart.name), type: typePath });
-          });
-        });
-        const results = await Promise.all(chartDirs.map(async (chart) => {
-          const outputDir = path.join('./', chart.type, path.basename(chart.dir));
-          try {
-            await this.fileService.createDir(outputDir);
-            return await this.createIndex(chart, outputDir);
-          } catch (error) {
-            this.actionError.report({
-              operation: `create output directory for ${chart.dir}`,
-              fatal: false
-            }, error);
-            return false;
-          }
-        }));
-        const successCount = results.filter(Boolean).length;
-        if (successCount) {
-          const word = successCount === 1 ? 'index' : 'indexes';
-          this.logger.info(`Successfully generated ${successCount} chart ${word}`);
-        }
-        return successCount;
-      } catch (error) {
-        this.actionError.report({
-          operation: 'generate chart indexes',
-          fatal: false
-        }, error);
-        return 0;
+      let result = 0;
+      if (!this.config.get('repository.chart.packages.enabled')) {
+        this.logger.info('Chart indexes generation is disabled');
+        return result;
       }
-    });
+      this.logger.info('Generating chart indexes...');
+      const chartTypes = this.config.getChartTypes();
+      const inventories = await Promise.all(
+        chartTypes.map(type => this.chartService.getInventory(type))
+      );
+      const chartDirs = [];
+      chartTypes.forEach((type, index) => {
+        const charts = inventories[index].filter(chart => chart.status !== 'removed');
+        const typePath = this.config.get(`repository.chart.type.${type}`);
+        charts.forEach(chart => {
+          chartDirs.push({ dir: path.join(typePath, chart.name), type: typePath });
+        });
+      });
+      const results = await Promise.all(chartDirs.map(async (chart) => {
+        const outputDir = path.join('./', chart.type, path.basename(chart.dir));
+        return this.execute(`create output directory for ${chart.dir}`, async () => {
+          await this.fileService.createDir(outputDir);
+          return await this.createIndex(chart, outputDir);
+        }, false);
+      }));
+      result = results.filter(Boolean).length;
+      if (result) {
+        const word = result === 1 ? 'index' : 'indexes';
+        this.logger.info(`Successfully generated ${result} chart ${word}`);
+      }
+      return result;
+    }, false);
   }
 
   /**
@@ -250,21 +246,25 @@ class PublishService extends Action {
    * Publishes charts to GitHub
    * 
    * @param {Array} packages - List of packaged charts
-   * @param {string} packagesPath - Path to packages directory
+   * @param {string} directory - Path to packages directory
    * @returns {Promise<Array>} List of published releases
    */
-  async github(packages, packagesPath) {
+  async github(packages, directory) {
     return this.execute('publish to GitHub', async () => {
+      let result = [];
+      if (!this.config.get('repository.chart.packages.enabled')) {
+        this.logger.info('Publishing of chart packages is disabled');
+        return result;
+      }
       if (!packages.length) {
-        this.logger.info('No packages to publish to GitHub');
-        return [];
+        this.logger.info('No charts to publish to GitHub');
+        return result;
       }
       const appType = this.config.get('repository.chart.type.application');
       const word = packages.length === 1 ? 'release' : 'releases';
       this.logger.info(`Publishing ${packages.length} GitHub ${word}...`);
-      const result = [];
-      for (const pkg of packages) {
-        const chart = await this.#publish(pkg, packagesPath, appType);
+      for (const release of packages) {
+        const chart = await this.#publish(release, directory, appType);
         if (!chart) continue;
         const tagName = this.config.get('repository.release.title')
           .replace('{{ .Name }}', chart.name)
@@ -274,10 +274,8 @@ class PublishService extends Action {
           this.logger.info(`Release '${tagName}' already exists, skipping`);
           continue;
         }
-        const publishResult = await this.#create(chart, tagName);
-        if (publishResult) {
-          result.push(publishResult);
-        }
+        const publish = await this.#create(chart, tagName);
+        if (publish) result.push(publish);
       }
       if (result.length) {
         const keyword = result.length === 1 ? 'release' : 'releases';
@@ -291,23 +289,24 @@ class PublishService extends Action {
    * Publishes charts to OCI registry
    * 
    * @param {Array} packages - List of packaged charts
-   * @param {string} packagesPath - Path to packages directory
+   * @param {string} directory - Path to packages directory
    * @returns {Promise<Array>} List of published OCI packages
    */
-  async registry(packages, packagesPath) {
+  async registry(packages, directory) {
     return this.execute('publish to OCI registry', async () => {
+      let result = [];
       if (!this.config.get('repository.oci.packages.enabled')) {
         this.logger.info('Publishing of OCI packages is disabled');
-        return [];
+        return result;
       }
       if (!packages.length) {
         this.logger.info('No packages to publish to OCI registry');
-        return [];
+        return result;
       }
       const authenticated = await this.authenticate();
       if (!authenticated) {
         this.logger.warning('OCI authentication failed, skipping OCI publishing');
-        return [];
+        return result;
       }
       this.logger.info('Cleaning up existing OCI packages...');
       for (const pkg of packages) {
@@ -317,12 +316,9 @@ class PublishService extends Action {
       const ociRegistry = this.config.get('repository.oci.registry');
       const word = packages.length === 1 ? 'package' : 'packages';
       this.logger.info(`Publishing ${packages.length} OCI ${word}...`);
-      const result = [];
       for (const pkg of packages) {
-        const publish = await this.packageService.publish(ociRegistry, pkg, packagesPath);
-        if (publish) {
-          result.push(publish);
-        }
+        const publish = await this.packageService.publish(ociRegistry, pkg, directory);
+        if (publish) result.push(publish);
       }
       if (result.length) {
         const keyword = result.length === 1 ? 'package' : 'packages';

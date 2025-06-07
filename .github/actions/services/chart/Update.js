@@ -1,7 +1,6 @@
 /**
  * Chart update service for updating chart files
  * 
- * @class UpdateService
  * @module services/chart/Update
  * @author AXIVO
  * @license BSD-3-Clause
@@ -14,9 +13,17 @@ const FileService = require('../File');
 const GitService = require('../Git');
 const HelmService = require('../helm');
 
+/**
+ * Chart update service for updating chart files
+ * 
+ * Provides comprehensive chart file update operations including
+ * application files, dependency locks, metadata, and inventory management.
+ * 
+ * @class UpdateService
+ */
 class UpdateService extends Action {
   /**
-   * Creates a new Chart UpdateService instance
+   * Creates a new UpdateService instance
    * 
    * @param {Object} params - Service parameters
    */
@@ -34,7 +41,7 @@ class UpdateService extends Action {
    * @param {string} type - Type of files (application, dependency lock, metadata)
    * @param {Array<string>} files - Files to commit
    * @param {Array<boolean>} results - Update operation results
-   * @returns {Promise<boolean>} - True if all operations succeeded
+   * @returns {Promise<boolean>} True if all operations succeeded
    */
   async #commit(type, files, results) {
     if (!files.length) {
@@ -53,7 +60,7 @@ class UpdateService extends Action {
    * @private
    * @param {Array} charts - Charts to initialize
    * @param {string} type - Operation type
-   * @returns {Object} - Initialization result with files array and logging info
+   * @returns {Object} Initialization result with files array and logging info
    */
   async #initialize(charts, type) {
     if (!charts || !charts.length) return { skip: true };
@@ -116,7 +123,7 @@ class UpdateService extends Action {
    * @param {string} chart - Chart file path
    * @param {string} inventory - Inventory file path
    * @param {string} status - Git status
-   * @returns {Promise<string>} - Inventory file path that was updated
+   * @returns {Promise<string>} Inventory file path that was updated
    */
   async #updateEntry(chart, inventory, status) {
     const chartName = path.basename(path.dirname(chart));
@@ -147,8 +154,8 @@ class UpdateService extends Action {
   /**
    * Updates application files for charts
    * 
-   * @param {Array<string>} charts - Chart directories to update
-   * @returns {Promise<boolean>} - True if all application files were updated successfully
+   * @param {Array<string>} [charts=[]] - Chart directories to update
+   * @returns {Promise<boolean>} True if all application files were updated successfully
    */
   async application(charts = []) {
     return this.execute('update application files', async () => {
@@ -184,8 +191,8 @@ class UpdateService extends Action {
   /**
    * Updates inventory files for charts
    * 
-   * @param {Object} files - Chart files object mapping file paths to Git status
-   * @returns {Promise<boolean>} - True if all inventory files were updated successfully
+   * @param {Object} [files={}] - Chart files object mapping file paths to Git status
+   * @returns {Promise<boolean>} True if all inventory files were updated successfully
    */
   async inventory(files = {}) {
     return this.execute('update inventory files', async () => {
@@ -213,8 +220,8 @@ class UpdateService extends Action {
   /**
    * Updates dependency lock files for charts
    * 
-   * @param {Array<string>} charts - Chart directories to update
-   * @returns {Promise<boolean>} - True if all lock files were updated successfully
+   * @param {Array<string>} [charts=[]] - Chart directories to update
+   * @returns {Promise<boolean>} True if all lock files were updated successfully
    */
   async lock(charts = []) {
     return this.execute('update dependency lock files', async () => {
@@ -250,8 +257,8 @@ class UpdateService extends Action {
   /**
    * Updates metadata files for charts
    * 
-   * @param {Array<string>} charts - Chart directories to update
-   * @returns {Promise<boolean>} - True if all metadata files were updated successfully
+   * @param {Array<string>} [charts=[]] - Chart directories to update
+   * @returns {Promise<boolean>} True if all metadata files were updated successfully
    */
   async metadata(charts = []) {
     return this.execute('update metadata files', async () => {

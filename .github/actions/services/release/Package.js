@@ -1,7 +1,6 @@
 /**
  * Chart packaging service
  * 
- * @class PackageService
  * @module services/release/Package
  * @author AXIVO
  * @license BSD-3-Clause
@@ -12,6 +11,14 @@ const FileService = require('../File');
 const GitHubService = require('../github');
 const ShellService = require('../Shell');
 
+/**
+ * Chart packaging service
+ * 
+ * Provides chart package management including retrieval,
+ * deletion, and OCI registry publishing operations.
+ * 
+ * @class PackageService
+ */
 class PackageService extends Action {
   /**
    * Creates a new PackageService instance

@@ -1,7 +1,6 @@
 /**
  * Template service for template rendering operations
  * 
- * @class TemplateService
  * @module services/Template
  * @author AXIVO
  * @license BSD-3-Clause
@@ -9,6 +8,14 @@
 const Handlebars = require('handlebars');
 const Action = require('../core/Action');
 
+/**
+ * Template service for template rendering operations
+ * 
+ * Provides Handlebars template rendering with custom helpers
+ * and repository-specific functionality.
+ * 
+ * @class TemplateService
+ */
 class TemplateService extends Action {
   /**
    * Creates a new TemplateService instance
@@ -25,9 +32,9 @@ class TemplateService extends Action {
    * 
    * @param {string} template - Template string to render
    * @param {Object} context - Data context for the template
-   * @param {Object} options - Additional options
-   * @param {string} options.repoUrl - Repository URL for repo-specific helpers
-   * @returns {string} - Rendered template
+   * @param {Object} [options={}] - Additional options
+   * @param {string} [options.repoUrl] - Repository URL for repo-specific helpers
+   * @returns {string} Rendered template
    */
   render(template, context, options = {}) {
     return this.execute('render template', () => {

@@ -1,7 +1,6 @@
 /**
  * Workflow handler for common workflow operations
  * 
- * @class Workflow
  * @module handlers/Workflow
  * @author AXIVO
  * @license BSD-3-Clause
@@ -18,9 +17,17 @@ const LabelService = require('../services/Label');
 const ReleaseHandler = require('./release');
 const TemplateService = require('../services/Template');
 
+/**
+ * Workflow handler for common workflow operations
+ * 
+ * Provides orchestration for repository configuration, chart processing,
+ * release management, and issue reporting across different workflow contexts.
+ * 
+ * @class WorkflowHandler
+ */
 class WorkflowHandler extends Action {
   /**
-   * Creates a new Workflow instance
+   * Creates a new WorkflowHandler instance
    * 
    * @param {Object} params - Handler parameters
    */
@@ -121,7 +128,7 @@ class WorkflowHandler extends Action {
   /**
    * Update charts
    * 
-   * @returns {Promise<Object>} - Update results
+   * @returns {Promise<Object>} Update results
    */
   async updateCharts() {
     return this.execute('update charts', async () => {

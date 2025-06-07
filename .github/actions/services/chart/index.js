@@ -1,7 +1,6 @@
 /**
  * Chart service for managing Helm charts
  * 
- * @class Chart
  * @module services/chart
  * @author AXIVO
  * @license BSD-3-Clause
@@ -13,9 +12,17 @@ const HelmService = require('../helm');
 const ShellService = require('../Shell');
 const UpdateService = require('./Update');
 
+/**
+ * Chart service for managing Helm charts
+ * 
+ * Provides comprehensive Helm chart management including discovery,
+ * validation, linting, and inventory operations.
+ * 
+ * @class ChartService
+ */
 class ChartService extends Action {
   /**
-   * Creates a new Chart instance
+   * Creates a new ChartService instance
    * 
    * @param {Object} params - Service parameters
    */
@@ -54,7 +61,7 @@ class ChartService extends Action {
   /**
    * Discovers all charts in the repository
    * 
-   * @returns {Promise<Object>} - Object containing application and library chart paths
+   * @returns {Promise<Object>} Object containing application and library chart paths
    */
   async discover() {
     return this.execute('discover charts', async () => {
@@ -81,8 +88,8 @@ class ChartService extends Action {
   /**
    * Finds charts affected by file changes
    * 
-   * @param {Array<string>} files - List of changed files to check
-   * @returns {Promise<Object>} - Object containing application and library chart paths
+   * @param {Array<string>} [files=[]] - List of changed files to check
+   * @returns {Promise<Object>} Object containing application and library chart paths
    */
   async find(files = []) {
     return this.execute('find modified charts', async () => {
@@ -110,7 +117,7 @@ class ChartService extends Action {
    * Returns all charts from inventory file
    * 
    * @param {string} type - Chart type ('application' or 'library')
-   * @returns {Promise<Array<Object>>} - Array of chart objects with metadata
+   * @returns {Promise<Array<Object>>} Array of chart objects with metadata
    */
   async getInventory(type) {
     return this.execute(`get '${type}' charts`, async () => {
@@ -123,8 +130,8 @@ class ChartService extends Action {
   /**
    * Lints multiple charts
    * 
-   * @param {Array<string>} charts - Charts to lint
-   * @returns {Promise<boolean>} - True if all charts passed linting
+   * @param {Array<string>} [charts=[]] - Charts to lint
+   * @returns {Promise<boolean>} True if all charts passed linting
    */
   async lint(charts = []) {
     return this.execute('lint charts', async () => {
@@ -141,7 +148,7 @@ class ChartService extends Action {
    * Validates a chart for release
    * 
    * @param {string} directory - Chart directory
-   * @returns {Promise<boolean>} - True if validation passed
+   * @returns {Promise<boolean>} True if validation passed
    */
   async validate(directory) {
     return this.execute('validate chart', async () => {
