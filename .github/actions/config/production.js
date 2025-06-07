@@ -715,7 +715,7 @@ module.exports = {
      * @type {string}
      * @default 'info'
      */
-    logLevel: 'debug',
+    logLevel: 'info',
 
     /**
      * Standard labels to apply to workflow-generated issues
