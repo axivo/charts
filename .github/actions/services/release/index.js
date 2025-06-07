@@ -161,7 +161,6 @@ class ReleaseService extends Action {
   }
 }
 
-// Attach specialized services
 ReleaseService.Local = require('./Local');
 ReleaseService.Package = require('./Package');
 ReleaseService.Publish = require('./Publish');

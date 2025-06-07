@@ -67,7 +67,6 @@ class RestService extends ApiService {
    * @param {Function} [options.transformer] - Function to transform and merge page results
    * @param {number} [options.size=100] - Number of items per page
    * @returns {Promise<Object>} Aggregated results
-   * TODO: check transformer option
    */
   async #paginate(namespace, method, options = {}) {
     const { params, transformer, size = 100 } = options;
@@ -153,7 +152,6 @@ class RestService extends ApiService {
   * @param {boolean} [options.draft=false] - Whether the release is a draft
   * @param {boolean} [options.prerelease=false] - Whether the release is a prerelease
   * @returns {Promise<Object>} Created release
-  * TODO: Should use release = { tag, name, body }, to review
   */
   async createRelease(tag, name, body, options = {}) {
     const { draft = false, prerelease = false } = options;
