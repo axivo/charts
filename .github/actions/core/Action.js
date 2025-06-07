@@ -51,19 +51,19 @@ class Action {
   async execute(operation, action, fatal = true, silent = false) {
     const isDebug = this.config.get('workflow.logLevel') === 'debug';
     const startTime = isDebug ? Date.now() : 0;
-    if (isDebug) this.logger.info(`→ ${operation}`, { level: 'debug' });
+    if (isDebug) this.logger.debug(`→ ${operation}`);
     try {
       const result = await action();
       if (isDebug) {
         const duration = ((Date.now() - startTime) / 1000).toFixed(2);
-        this.logger.info(`← ${operation} completed in ${duration}s`, { level: 'debug' });
+        this.logger.debug(`← ${operation} completed in ${duration}s`);
       }
       return result;
     } catch (error) {
       if (silent && error.status === 404) return null;
       if (isDebug) {
         const duration = ((Date.now() - startTime) / 1000).toFixed(2);
-        this.logger.info(`❌ ${operation} failed after ${duration}s`, { level: 'debug' });
+        this.logger.debug(`❌ ${operation} failed after ${duration}s`);
       }
       this.actionError.report({
         operation,

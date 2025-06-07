@@ -50,7 +50,7 @@ class Logger {
   #format(message, meta = {}) {
     const parts = [`[${this.context}]`];
     if (meta.level && meta.level !== 'info') parts.push(`[${meta.level.toUpperCase()}]`);
-    if (this.timestamp) parts.push(`[${new Date().toISOString()}]`);
+    if (meta.timestamp) parts.push(`[${new Date().toISOString()}]`);
     if (meta.component) parts.push(`[${meta.component}]`);
     return `${parts.join('')} ${message}`;
   }
@@ -88,6 +88,18 @@ class Logger {
   info(message, meta = {}) {
     if (!this.#allow('info')) return;
     const logMeta = { level: 'info', ...meta };
+    this.core.info(this.#format(message, logMeta));
+  }
+
+  /**
+   * Logs a debug message
+   * 
+   * @param {String} message - The message to log
+   * @param {Object} meta - Additional metadata
+   */
+  debug(message, meta = {}) {
+    if (!this.#allow('debug')) return;
+    const logMeta = { level: 'debug', timestamp: true, ...meta };
     this.core.info(this.#format(message, logMeta));
   }
 
