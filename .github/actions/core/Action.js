@@ -33,7 +33,6 @@ class Action {
     this.github = github;
     this.logger = new Logger(params, {
       context: this.constructor.name,
-      timestamp: this.config.get('workflow.logLevel') === 'debug',
       level: this.config.get('workflow.logLevel') || 'info'
     });
     this.actionError.setHandler();

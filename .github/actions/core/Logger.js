@@ -56,6 +56,18 @@ class Logger {
   }
 
   /**
+   * Logs a debug message
+   * 
+   * @param {String} message - The message to log
+   * @param {Object} meta - Additional metadata
+   */
+  debug(message, meta = {}) {
+    if (!this.#allow('debug')) return;
+    const logMeta = { level: 'debug', timestamp: true, ...meta };
+    this.core.info(this.#format(message, logMeta));
+  }
+
+  /**
    * Logs an error message
    * 
    * @param {String} message - The message to log
@@ -88,18 +100,6 @@ class Logger {
   info(message, meta = {}) {
     if (!this.#allow('info')) return;
     const logMeta = { level: 'info', ...meta };
-    this.core.info(this.#format(message, logMeta));
-  }
-
-  /**
-   * Logs a debug message
-   * 
-   * @param {String} message - The message to log
-   * @param {Object} meta - Additional metadata
-   */
-  debug(message, meta = {}) {
-    if (!this.#allow('debug')) return;
-    const logMeta = { level: 'debug', timestamp: true, ...meta };
     this.core.info(this.#format(message, logMeta));
   }
 
