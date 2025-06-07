@@ -80,7 +80,7 @@ class WorkflowHandler extends Action {
   /**
    * Report workflow issues
    * 
-   * @returns {Promise<Object>} - Issue creation result
+   * @returns {Promise<void>}
    */
   async reportIssue() {
     return this.execute('report workflow issue', async () => {
@@ -90,19 +90,17 @@ class WorkflowHandler extends Action {
       }
       const templatePath = this.config.get('workflow.template');
       const templateContent = await this.fileService.read(templatePath);
-      const issue = await this.issueService.report({
-        context: this.context,
-        templateContent,
-        templateService: this.templateService,
-        labelService: this.labelService
-      });
-      if (issue) {
-        this.logger.info('Successfully reported workflow issue');
-        return { created: true, issue };
-      } else {
-        this.logger.info('No workflow issues to report');
-        return { created: false };
-      }
+      const issue = await this.issueService.report(
+        this.context,
+        this.labelService,
+        {
+          content: templateContent,
+          service: this.templateService
+        }
+      );
+      let message = 'No workflow issues to report';
+      if (issue) message = 'Successfully reported workflow issue';
+      this.logger.info(`${message}`);
     }, false);
   }
 
@@ -128,23 +126,21 @@ class WorkflowHandler extends Action {
   async updateCharts() {
     return this.execute('update charts', async () => {
       this.logger.info('Starting the charts update process...');
-      const result = await this.chartHandler.process();
+      await this.chartHandler.process();
       this.logger.info('Successfully completed the charts update process');
-      return result;
     });
   }
 
   /**
    * Update issue labels
    * 
-   * @returns {Promise<string[]>} - Array of created label names
+   * @returns {Promise<void>}
    */
   async updateLabels() {
     return this.execute('update issue labels', async () => {
       this.logger.info('Updating repository issue labels...');
-      const result = await this.labelService.update();
+      await this.labelService.update();
       this.logger.info('Repository issue labels update complete');
-      return result;
     }, false);
   }
 }

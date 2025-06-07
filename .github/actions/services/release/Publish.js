@@ -8,6 +8,7 @@
  */
 const path = require('path');
 const Action = require('../../core/Action');
+const ChartService = require('../chart');
 const FileService = require('../File');
 const GitHubService = require('../github');
 const HelmService = require('../helm');
@@ -23,6 +24,7 @@ class PublishService extends Action {
    */
   constructor(params) {
     super(params);
+    this.chartService = new ChartService(params);
     this.fileService = new FileService(params);
     this.graphqlService = new GitHubService.GraphQL(params);
     this.helmService = new HelmService(params);
@@ -119,11 +121,11 @@ class PublishService extends Action {
    * Creates index files from chart metadata
    * 
    * @param {Object} chart - Chart directory information
-   * @param {string} outputDir - Output directory path
+   * @param {string} directory - Output directory path
    * @returns {Promise<boolean>} Success status
    */
-  async createIndex(chart, outputDir) {
-    try {
+  async createIndex(chart, directory) {
+    return this.execute(`generate index for chart`, async () => {
       const chartName = path.basename(chart.dir);
       const metadataPath = path.join(chart.dir, 'metadata.yaml');
       const metadataExists = await this.fileService.exists(metadataPath);
@@ -131,7 +133,7 @@ class PublishService extends Action {
         this.logger.warning(`No metadata.yaml found for ${chart.dir}, skipping index generation`);
         return false;
       }
-      const indexPath = path.join(outputDir, 'index.yaml');
+      const indexPath = path.join(directory, 'index.yaml');
       await this.fileService.copy(metadataPath, indexPath);
       this.logger.info(`Generated index for '${chart.type}/${chartName}'`);
       const redirectTemplate = this.config.get('repository.chart.redirect.template');
@@ -142,42 +144,10 @@ class PublishService extends Action {
         Name: chartName
       };
       const redirectHtml = this.templateService.render(redirectContent, redirectContext);
-      const redirectPath = path.join(outputDir, 'index.html');
+      const redirectPath = path.join(directory, 'index.html');
       await this.fileService.write(redirectPath, redirectHtml);
       return true;
-    } catch (error) {
-      this.actionError.report({
-        operation: `generate index for '${chart.type}/${path.basename(chart.dir)}'`,
-        fatal: false
-      }, error);
-      return false;
-    }
-  }
-
-  /**
-   * Finds available charts in specified directory type
-   * 
-   * @param {string} type - Chart type to find
-   * @returns {Promise<Array>} List of chart directories with type information
-   */
-  async find(type) {
-    return this.execute('find available charts', async () => {
-      const result = [];
-      try {
-        const dirs = await this.fileService.listDir(type);
-        const filtered = dirs.filter(dir => !dir.startsWith('.'));
-        result.push(...filtered.map(dir => ({
-          dir: path.join(type, dir),
-          type: type
-        })));
-      } catch (error) {
-        this.actionError.report({
-          operation: `list ${type} directory`,
-          fatal: false
-        }, error);
-      }
-      return result;
-    });
+    }, false);
   }
 
   /**
@@ -195,12 +165,19 @@ class PublishService extends Action {
         this.logger.info('Generating chart indexes...');
         const appType = this.config.get('repository.chart.type.application');
         const libType = this.config.get('repository.chart.type.library');
-        const chartDirs = [].concat(
-          ...(await Promise.all([
-            this.find(appType),
-            this.find(libType)
-          ]))
-        );
+        const [appChartFiles, libChartFiles] = await Promise.all([
+          this.fileService.find(`${appType}/*/Chart.yaml`),
+          this.fileService.find(`${libType}/*/Chart.yaml`)
+        ]);
+        const appChartDirs = appChartFiles.map(file => ({
+          dir: path.dirname(file),
+          type: appType
+        }));
+        const libChartDirs = libChartFiles.map(file => ({
+          dir: path.dirname(file),
+          type: libType
+        }));
+        const chartDirs = [...appChartDirs, ...libChartDirs];
         const results = await Promise.all(chartDirs.map(async (chart) => {
           const outputDir = path.join('./', chart.type, path.basename(chart.dir));
           try {
@@ -242,7 +219,8 @@ class PublishService extends Action {
       const releaseTemplate = this.config.get('repository.release.template');
       const templateContent = await this.fileService.read(releaseTemplate);
       const issues = await this.issueService.get({
-        chart: { name: chart.name, type: chart.type }
+        name: chart.name,
+        type: chart.type
       });
       const tagName = this.config.get('repository.release.title')
         .replace('{{ .Name }}', chart.name)

@@ -262,7 +262,6 @@ class FileService extends Action {
         await this.createDir(path.dirname(file), { silent: true });
       }
       await fs.writeFile(file, content);
-      this.logger.info(`Successfully wrote '${file}' file`);
     });
   }
 

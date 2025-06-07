@@ -52,24 +52,16 @@ class HelmService extends Action {
    * @returns {Promise<boolean>} - True if index was generated successfully
    */
   async generateIndex(directory, options = {}) {
-    try {
+    return this.execute(`generate index file for '${directory}' directory`, async () => {
       const args = ['repo', 'index', directory];
       if (options.url) args.push('--url', options.url);
       if (options.merge) args.push('--merge', options.merge);
       if (options.generateMetadata) args.push('--generate-metadata');
       this.logger.info(`Generating index file for '${directory}' directory...`);
-      await this.execute('generate index file', async () => {
-        return await this.shellService.execute('helm', args);
-      });
+      await this.shellService.execute('helm', args);
       this.logger.info(`Successfully generated index file for ${directory} directory`);
       return true;
-    } catch (error) {
-      this.actionError.report({
-        operation: `generate index file for '${directory}' directory`,
-        fatal: false
-      }, error);
-      return false;
-    }
+    }, false);
   }
 
   /**
@@ -81,15 +73,13 @@ class HelmService extends Action {
    * @returns {Promise<string>} - Path to packaged chart
    */
   async package(directory, options = {}) {
-    try {
+    return this.execute(`package chart from '${directory}' directory`, async () => {
       const args = ['package', directory];
       if (options.destination) args.push('--destination', options.destination);
       if (options.version) args.push('--version', options.version);
       if (options.appVersion) args.push('--app-version', options.appVersion);
       this.logger.info(`Packaging chart to '${directory}' directory...`);
-      const output = await this.execute('package chart', async () => {
-        return await this.shellService.execute('helm', args, { output: true });
-      });
+      const output = await this.shellService.execute('helm', args, { output: true });
       const lines = output.split('\n');
       let packagePath = null;
       for (const line of lines) {
@@ -100,13 +90,7 @@ class HelmService extends Action {
       }
       this.logger.info(`Successfully packaged chart to '${packagePath}' directory`);
       return packagePath;
-    } catch (error) {
-      this.actionError.report({
-        operation: `package chart to '${directory}' directory`,
-        fatal: false
-      }, error);
-      return null;
-    }
+    }, false);
   }
 
   /**
@@ -137,18 +121,10 @@ class HelmService extends Action {
    * @returns {Promise<boolean>} - True if dependencies were updated
    */
   async updateDependencies(directory) {
-    try {
-      await this.execute('update dependencies', async () => {
-        return await this.shellService.execute('helm', ['dependency', 'update', directory]);
-      });
+    return this.execute(`update '${directory}' chart dependencies`, async () => {
+      await this.shellService.execute('helm', ['dependency', 'update', directory]);
       return true;
-    } catch (error) {
-      this.actionError.report({
-        operation: `update '${directory}' chart dependencies`,
-        fatal: false
-      }, error);
-      return false;
-    }
+    }, false);
   }
 }
 

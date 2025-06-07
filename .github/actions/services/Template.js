@@ -17,57 +17,7 @@ class TemplateService extends Action {
    */
   constructor(params) {
     super(params);
-    this.handlebars = Handlebars.create();
-  }
-
-  /**
-   * Registers helper for equality comparison
-   * 
-   * @private
-   * @returns {*} - Result of the execute operation
-   */
-  #registerEqual() {
-    return this.execute('register equal helper', () => {
-      this.handlebars.registerHelper('equal', function (key, value) {
-        return key === value;
-      });
-      this.logger.info(`Successfully registered 'equal' helper`);
-    });
-  }
-
-  /**
-   * Registers helper for repository URL transformation
-   * 
-   * @private
-   * @param {string} url - Repository URL
-   * @returns {*} - Result of the execute operation
-   */
-  #registerRepoRawUrl(url) {
-    return this.execute('register RepoRawURL helper', () => {
-      this.handlebars.registerHelper('RepoRawURL', function () {
-        return String(url).replace('github.com', 'raw.githubusercontent.com');
-      });
-      this.logger.info(`Successfully registered 'RepoRawURL' helper`);
-    });
-  }
-
-  /**
-   * Compiles a template
-   * 
-   * @param {string} template - Template string to compile
-   * @returns {Function} - Compiled template function
-   */
-  compile(template) {
-    return this.execute('compile template', () => this.handlebars.compile(template));
-  }
-
-  /**
-   * Gets the configured Handlebars instance
-   * 
-   * @returns {Object} - Handlebars instance
-   */
-  get() {
-    return this.handlebars;
+    this.handlebars = Handlebars;
   }
 
   /**
@@ -81,15 +31,16 @@ class TemplateService extends Action {
    */
   render(template, context, options = {}) {
     return this.execute('render template', () => {
-      this.logger.info('Rendering template...');
-      this.#registerEqual();
+      this.handlebars.registerHelper('equal', function (key, value) {
+        return key === value;
+      });
       if (options.repoUrl) {
-        this.#registerRepoRawUrl(options.repoUrl);
+        this.handlebars.registerHelper('RepoRawURL', function () {
+          return String(options.repoUrl).replace('github.com', 'raw.githubusercontent.com');
+        });
       }
-      const result = this.handlebars.compile(template)(context);
-      this.logger.info('Successfully rendered template');
-      return result;
-    }, false);
+      return this.handlebars.compile(template)(context);
+    });
   }
 }
 

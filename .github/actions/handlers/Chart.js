@@ -32,30 +32,28 @@ class ChartHandler extends Action {
   /**
    * Main process method for chart updates
    * 
-   * @returns {Promise<Object>} - Update results
+   * @returns {Promise<void>}
    */
   async process() {
     return this.execute('process charts', async () => {
-      const files = Object.keys(await this.githubService.getUpdatedFiles());
+      const updatedFilesMap = await this.githubService.getUpdatedFiles();
+      const files = Object.keys(updatedFilesMap);
       const charts = await this.chartService.find(files);
-      if (charts.total === 0) {
-        this.logger.info('No chart updates found');
-        return { charts: 0, updated: 0 };
+      if (charts.total) {
+        const updatedCharts = [...charts.application, ...charts.library];
+        await this.chartUpdate.application(updatedCharts);
+        await this.chartUpdate.lock(updatedCharts);
+        await this.chartUpdate.metadata(updatedCharts);
+        await this.chartService.lint(updatedCharts);
+        await this.docsService.generate(updatedCharts);
       }
-      const allCharts = [...charts.application, ...charts.library];
-      await this.chartUpdate.application(allCharts);
-      await this.chartUpdate.lock(allCharts);
-      await this.chartUpdate.metadata(allCharts);
-      await this.chartService.lint(allCharts);
-      await this.docsService.generate(allCharts);
-      const chartFiles = Object.keys(files)
+      const updatedFiles = Object.keys(updatedFilesMap)
         .filter(file => file.endsWith('Chart.yaml'))
         .reduce((obj, file) => {
-          obj[file] = files[file];
+          obj[file] = updatedFilesMap[file];
           return obj;
         }, {});
-      await this.chartUpdate.inventory(chartFiles);
-      return { charts: charts.total, updated: charts.total };
+      await this.chartUpdate.inventory(updatedFiles);
     });
   }
 }

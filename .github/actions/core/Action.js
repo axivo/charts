@@ -33,7 +33,6 @@ class Action {
     this.github = github;
     this.logger = new Logger(params, {
       context: this.constructor.name,
-      timestamp: this.config.get('workflow.logLevel') === 'debug',
       level: this.config.get('workflow.logLevel') || 'info'
     });
     this.actionError.setHandler();
@@ -45,12 +44,26 @@ class Action {
    * @param {string} operation - Operation name for error reporting
    * @param {Function} action - Action to execute
    * @param {boolean} fatal - Whether errors should be fatal
+   * @param {boolean} silent - Whether to silently return null on 404 errors
    * @returns {Promise<any>} - Result of the operation or null on error
    */
-  async execute(operation, action, fatal = true) {
+  async execute(operation, action, fatal = true, silent = false) {
+    const isDebug = this.config.get('workflow.logLevel') === 'debug';
+    const startTime = isDebug ? Date.now() : 0;
+    if (isDebug) this.logger.debug(`→ ${operation}`);
     try {
-      return await action();
+      const result = await action();
+      if (isDebug) {
+        const duration = ((Date.now() - startTime) / 1000).toFixed(2);
+        this.logger.debug(`← ${operation} completed in ${duration}s`);
+      }
+      return result;
     } catch (error) {
+      if (silent && error.status === 404) return null;
+      if (isDebug) {
+        const duration = ((Date.now() - startTime) / 1000).toFixed(2);
+        this.logger.debug(`❌ ${operation} failed after ${duration}s`);
+      }
       this.actionError.report({
         operation,
         fatal
