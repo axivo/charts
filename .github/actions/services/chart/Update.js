@@ -127,29 +127,30 @@ class UpdateService extends Action {
    */
   async #updateEntry(chart, inventory, status) {
     let result = false;
-    let chartData = {};
+    let metadata;
     const chartName = path.basename(path.dirname(chart));
     const chartType = path.dirname(chart).split('/')[0];
     let content = await this.fileService.readYaml(inventory);
     if (!content) content = { [chartType]: [] };
     if (!content[chartType]) content[chartType] = [];
     const index = content[chartType].findIndex(content => content.name === chartName);
-    if (status !== 'removed') {
-      const metadata = await this.fileService.readYaml(chart);
-      chartData = {
-        description: metadata.description,
-        version: metadata.version
-      };
-    }
-    const entry = { name: chartName, status, ...chartData };
+    if (status !== 'removed') metadata = await this.fileService.readYaml(chart);
+    const entry = {
+      name: chartName,
+      description: status !== 'removed' ? metadata.description : content[chartType][index]?.description,
+      status,
+      version: status !== 'removed' ? metadata.version : content[chartType][index]?.version
+    };
     if (index >= 0) {
       if (JSON.stringify(entry) !== JSON.stringify(content[chartType][index])) {
         content[chartType][index] = entry;
         result = true;
       }
     } else {
-      content[chartType].push(entry);
-      result = true;
+      if (status !== 'removed') {
+        content[chartType].push(entry);
+        result = true;
+      }
     }
     if (result) {
       content[chartType].sort((current, updated) => current.name.localeCompare(updated.name));
