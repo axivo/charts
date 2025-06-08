@@ -126,29 +126,36 @@ class UpdateService extends Action {
    * @returns {Promise<string>} Inventory file path that was updated
    */
   async #updateEntry(chart, inventory, status) {
+    let result = false;
+    let chartData = {};
     const chartName = path.basename(path.dirname(chart));
     const chartType = path.dirname(chart).split('/')[0];
     let content = await this.fileService.readYaml(inventory);
     if (!content) content = { [chartType]: [] };
     if (!content[chartType]) content[chartType] = [];
-    const existingIndex = content[chartType].findIndex(content => content.name === chartName);
-    if (existingIndex >= 0 && content[chartType][existingIndex].status === status) return false;
-    let chartData = {};
+    const index = content[chartType].findIndex(content => content.name === chartName);
     if (status !== 'removed') {
-      const chartMetadata = await this.fileService.readYaml(chart);
+      const metadata = await this.fileService.readYaml(chart);
       chartData = {
-        description: chartMetadata.description,
-        version: chartMetadata.version
+        description: metadata.description,
+        version: metadata.version
       };
     }
-    if (existingIndex >= 0) {
-      content[chartType][existingIndex] = { name: chartName, status, ...chartData };
+    const entry = { name: chartName, status, ...chartData };
+    if (index >= 0) {
+      if (JSON.stringify(entry) !== JSON.stringify(content[chartType][index])) {
+        content[chartType][index] = entry;
+        result = true;
+      }
     } else {
-      content[chartType].push({ name: chartName, status, ...chartData });
+      content[chartType].push(entry);
+      result = true;
     }
-    content[chartType].sort((current, updated) => current.name.localeCompare(updated.name));
-    await this.fileService.writeYaml(inventory, content);
-    return true;
+    if (result) {
+      content[chartType].sort((current, updated) => current.name.localeCompare(updated.name));
+      await this.fileService.writeYaml(inventory, content);
+    }
+    return result;
   }
 
   /**
