@@ -93,23 +93,30 @@ class ChartService extends Action {
    */
   async find(files = []) {
     return this.execute('find modified charts', async () => {
-      const charts = { application: [], library: [], total: 0 };
-      if (!files || !files.length) return charts;
-      const chartTypes = this.config.get('repository.chart.type');
-      const chartDirs = this.fileService.filterPath(files, chartTypes);
-      for (const chartDir of chartDirs) {
-        const [type, chartPath] = chartDir.split(':');
-        const chartYamlPath = path.join(chartPath, 'Chart.yaml');
-        if (await this.fileService.exists(chartYamlPath)) {
-          charts[type].push(chartPath);
-          charts.total++;
+      const result = { application: [], library: [], total: 0 };
+      if (!files || !files.length) return result;
+      const chartPaths = new Set();
+      const chartTypes = this.config.getChartTypes();
+      const inventory = await Promise.all(chartTypes.map(type => this.getInventory(type)));
+      chartTypes.forEach((type, index) => {
+        const typePath = this.config.get(`repository.chart.type.${type}`);
+        inventory[index]
+          .filter(chart => chart.status !== 'removed')
+          .forEach(chart => chartPaths.add(`${typePath}/${chart.name}`));
+      });
+      const chartDirs = this.fileService.filterPath(files, this.config.get('repository.chart.type'));
+      for (const directory of chartDirs) {
+        const [type, chartPath] = directory.split(':');
+        if (chartPaths.has(chartPath)) {
+          result[type].push(chartPath);
+          result.total++;
         }
       }
-      if (charts.total) {
-        const word = charts.total === 1 ? 'chart' : 'charts';
-        this.logger.info(`Found ${charts.total} modified ${word}`);
+      if (result.total) {
+        const word = result.total === 1 ? 'chart' : 'charts';
+        this.logger.info(`Found ${result.total} modified ${word}`);
       }
-      return charts;
+      return result;
     }, false);
   }
 
