@@ -68,7 +68,7 @@ class ReleaseHandler extends Action {
     const directory = this.config.get('repository.release.packages');
     const allCharts = [...charts.application, ...charts.library];
     for (const chart of allCharts) {
-      const isValid = await this.releaseService.validate(chart);
+      const isValid = await this.chartService.validate(chart);
       if (!isValid) {
         this.logger.warning(`Chart '${chart}' failed validation, skipping release`);
         continue;
@@ -89,17 +89,7 @@ class ReleaseHandler extends Action {
       const chartTypes = this.config.getChartTypes();
       const inventory = await Promise.all(chartTypes.map(type => this.chartService.getInventory(type)));
       await this.#delete(inventory, chartTypes);
-      const charts = { application: [], library: [], total: 0 };
-      chartTypes.forEach((type, index) => {
-        const typeChart = inventory[index].filter(chart => chart.status !== 'removed');
-        const typePath = this.config.get(`repository.chart.type.${type}`);
-        charts[type] = typeChart.map(chart => path.join(typePath, chart.name));
-        charts.total += typeChart.length;
-      });
-      if (!charts.total) {
-        this.logger.info('No chart releases found');
-        return;
-      }
+      const charts = await this.releaseService.getCharts();
       const packages = await this.#package(charts);
       if (packages.length) {
         const directory = this.config.get('repository.release.packages');

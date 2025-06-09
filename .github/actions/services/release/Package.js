@@ -61,20 +61,14 @@ class PackageService extends Action {
    * @returns {Promise<Array>} List of package objects
    */
   async get(directory) {
-    let result = [];
     return this.execute('get packages', async () => {
-      const appType = this.config.get('repository.chart.type.application');
-      const libType = this.config.get('repository.chart.type.library');
-      const appPackagesDir = path.join(directory, appType);
-      const libPackagesDir = path.join(directory, libType);
-      const [appPackages, libPackages] = await Promise.all([
-        this.#getPackages(appPackagesDir),
-        this.#getPackages(libPackagesDir)
-      ]);
-      appPackages.forEach(pkg => pkg.type = appType);
-      libPackages.forEach(pkg => pkg.type = libType);
-      result.push(...appPackages, ...libPackages);
-      return result;
+      const allPackages = await Promise.all(
+        this.config.getChartTypes().map(async type => {
+          const packages = await this.#getPackages(path.join(directory, this.config.get(`repository.chart.type.${type}`)));
+          return packages.map(pkg => ({ ...pkg, type }));
+        })
+      );
+      return allPackages.flat();
     }, false);
   }
 
