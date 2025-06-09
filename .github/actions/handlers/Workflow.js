@@ -1,7 +1,6 @@
 /**
  * Workflow handler for common workflow operations
  * 
- * @class Workflow
  * @module handlers/Workflow
  * @author AXIVO
  * @license BSD-3-Clause
@@ -15,12 +14,20 @@ const FrontpageService = require('../services/Frontpage');
 const GitService = require('../services/Git');
 const IssueService = require('../services/Issue');
 const LabelService = require('../services/Label');
-const ReleaseService = require('../services/release');
+const ReleaseHandler = require('./release');
 const TemplateService = require('../services/Template');
 
+/**
+ * Workflow handler for common workflow operations
+ * 
+ * Provides orchestration for repository configuration, chart processing,
+ * release management, and issue reporting across different workflow contexts.
+ * 
+ * @class WorkflowHandler
+ */
 class WorkflowHandler extends Action {
   /**
-   * Creates a new Workflow instance
+   * Creates a new WorkflowHandler instance
    * 
    * @param {Object} params - Handler parameters
    */
@@ -34,7 +41,7 @@ class WorkflowHandler extends Action {
     this.gitService = new GitService(params);
     this.issueService = new IssueService(params);
     this.labelService = new LabelService(params);
-    this.releaseService = new ReleaseService(params);
+    this.releaseHandler = new ReleaseHandler(params);
     this.templateService = new TemplateService(params);
   }
 
@@ -72,7 +79,7 @@ class WorkflowHandler extends Action {
   async processReleases() {
     return this.execute('process chart releases', async () => {
       this.logger.info('Processing chart releases...');
-      await this.releaseService.process();
+      await this.releaseHandler.process();
       this.logger.info('Chart release process complete');
     });
   }
@@ -121,7 +128,7 @@ class WorkflowHandler extends Action {
   /**
    * Update charts
    * 
-   * @returns {Promise<Object>} - Update results
+   * @returns {Promise<Object>} Update results
    */
   async updateCharts() {
     return this.execute('update charts', async () => {

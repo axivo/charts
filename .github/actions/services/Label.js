@@ -1,7 +1,6 @@
 /**
  * Label service for repository label operations
  * 
- * @class Label
  * @module services/Label
  * @author AXIVO
  * @license BSD-3-Clause
@@ -9,9 +8,17 @@
 const Action = require('../core/Action');
 const GitHubService = require('./github');
 
+/**
+ * Label service for repository label operations
+ * 
+ * Provides repository label management including creation,
+ * validation, and bulk updates based on configuration.
+ * 
+ * @class LabelService
+ */
 class LabelService extends Action {
   /**
-   * Creates a new Label instance
+   * Creates a new LabelService instance
    * 
    * @param {Object} params - Service parameters
    */
@@ -24,7 +31,7 @@ class LabelService extends Action {
    * Adds a label to the repository if it doesn't exist
    * 
    * @param {string} name - Name of the label to add
-   * @returns {Promise<boolean>} - True if label was created or exists
+   * @returns {Promise<boolean>} True if label was created or exists
    */
   async add(name) {
     return this.execute(`add '${name}' label`, async () => {
@@ -37,27 +44,19 @@ class LabelService extends Action {
         this.logger.warning(`Label configuration not found for '${name}'`);
         return false;
       }
-      try {
-        const existingLabel = await this.restService.getLabel(name);
-        if (existingLabel) return true;
-        if (!this.config.get('issue.createLabels')) {
-          this.logger.warning(`Label '${name}' not found and createLabels is disabled`);
-          return false;
-        }
-        await this.restService.createLabel(
-          name,
-          labelConfig.color,
-          labelConfig.description
-        );
-        this.logger.info(`Successfully created '${name}' label`);
-        return true;
-      } catch (error) {
-        this.actionError.report({
-          operation: `add '${name}' label`,
-          fatal: false
-        }, error);
+      const existingLabel = await this.restService.getLabel(name);
+      if (existingLabel) return true;
+      if (!this.config.get('issue.createLabels')) {
+        this.logger.warning(`Label '${name}' not found and createLabels is disabled`);
         return false;
       }
+      await this.restService.createLabel(
+        name,
+        labelConfig.color,
+        labelConfig.description
+      );
+      this.logger.info(`Successfully created '${name}' label`);
+      return true;
     }, false);
   }
 

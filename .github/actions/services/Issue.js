@@ -1,7 +1,6 @@
 /**
  * Issue service for GitHub issue and label operations
  * 
- * @class Issue
  * @module services/Issue
  * @author AXIVO
  * @license BSD-3-Clause
@@ -10,9 +9,17 @@ const Action = require('../core/Action');
 const GraphQLService = require('./github/GraphQL');
 const RestService = require('./github/Rest');
 
+/**
+ * Issue service for GitHub issue and label operations
+ * 
+ * Provides GitHub issue management including workflow validation,
+ * chart-specific issue retrieval, and automated issue reporting.
+ * 
+ * @class IssueService
+ */
 class IssueService extends Action {
   /**
-   * Creates a new Issue instance
+   * Creates a new IssueService instance
    * 
    * @param {Object} params - Service parameters
    */
@@ -27,7 +34,7 @@ class IssueService extends Action {
    * 
    * @private
    * @param {number} id - Workflow run ID
-   * @returns {Promise<boolean>} - True if issues detected
+   * @returns {Promise<boolean>} True if issues detected
    */
   async #validate(id) {
     return this.execute('validate workflow status', async () => {
@@ -62,7 +69,7 @@ class IssueService extends Action {
    * @param {Object} chart - Chart configuration
    * @param {string} chart.name - Chart name
    * @param {string} chart.type - Chart type (application or library)
-   * @returns {Promise<Array<Object>>} - Issues with chart-specific filtering
+   * @returns {Promise<Array<Object>>} Issues with chart-specific filtering
    */
   async get(chart) {
     return this.execute('get chart release issues', async () => {
@@ -104,7 +111,7 @@ class IssueService extends Action {
    * @param {Object} [template={}] - Template configuration
    * @param {string} template.content - Issue template content
    * @param {Object} template.service - Template service instance
-   * @returns {Promise<Object|null>} - Created issue data or null on failure
+   * @returns {Promise<Object|null>} Created issue data or null on failure
    */
   async report(context, label, template = {}) {
     return this.execute('report workflow issue', async () => {

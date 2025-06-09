@@ -1,5 +1,5 @@
 library:
   - name: common
     description: Common library for Helm charts
-    state: added
+    status: added
     version: 1.0.0

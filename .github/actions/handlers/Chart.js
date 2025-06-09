@@ -1,7 +1,6 @@
 /**
  * Chart handler for chart operations
  * 
- * @class Chart
  * @module handlers/Chart
  * @author AXIVO
  * @license BSD-3-Clause
@@ -13,9 +12,17 @@ const FileService = require('../services/File');
 const GitService = require('../services/Git');
 const GitHubService = require('../services/github');
 
+/**
+ * Chart handler for chart operations
+ * 
+ * Provides high-level orchestration for chart update operations including
+ * file processing, dependency updates, linting, and documentation generation.
+ * 
+ * @class ChartHandler
+ */
 class ChartHandler extends Action {
   /**
-   * Creates a new Chart instance
+   * Creates a new ChartHandler instance
    * 
    * @param {Object} params - Handler parameters
    */

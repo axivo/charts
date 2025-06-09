@@ -1,7 +1,6 @@
 /**
  * Chart service for managing Helm charts
  * 
- * @class Chart
  * @module services/chart
  * @author AXIVO
  * @license BSD-3-Clause
@@ -13,9 +12,17 @@ const HelmService = require('../helm');
 const ShellService = require('../Shell');
 const UpdateService = require('./Update');
 
+/**
+ * Chart service for managing Helm charts
+ * 
+ * Provides comprehensive Helm chart management including discovery,
+ * validation, linting, and inventory operations.
+ * 
+ * @class ChartService
+ */
 class ChartService extends Action {
   /**
-   * Creates a new Chart instance
+   * Creates a new ChartService instance
    * 
    * @param {Object} params - Service parameters
    */
@@ -54,29 +61,26 @@ class ChartService extends Action {
   /**
    * Discovers all charts in the repository
    * 
-   * @returns {Promise<Object>} - Object containing application and library chart paths
+   * @returns {Promise<Object>} Object containing application and library chart paths
    */
   async discover() {
     return this.execute('discover charts', async () => {
       const charts = { application: [], library: [], total: 0 };
-      const types = [
-        { name: 'application', path: this.config.get('repository.chart.type.application') },
-        { name: 'library', path: this.config.get('repository.chart.type.library') }
-      ];
-      for (const type of types) {
-        const dirs = await this.fileService.listDir(type.path);
-        for (const dir of dirs) {
-          if (dir.endsWith('.yaml') || dir.endsWith('.yml') || dir.endsWith('.md')) continue;
-          const chartPath = path.basename(dir);
-          const chartYamlPath = path.join(type.path, chartPath, 'Chart.yaml');
-          if (await this.fileService.exists(chartYamlPath)) {
-            charts[type.name].push(path.join(type.path, chartPath));
-            charts.total++;
-          }
-        }
-      }
+      const chartTypes = this.config.getChartTypes();
+      const inventories = await Promise.all(
+        chartTypes.map(type => this.fileService.readYaml(`${this.config.get(`repository.chart.type.${type}`)}/inventory.yaml`))
+      );
+      chartTypes.forEach((type, index) => {
+        const inventory = inventories[index];
+        const activeCharts = (inventory?.[this.config.get(`repository.chart.type.${type}`)] || [])
+          .filter(chart => chart.status !== 'removed');
+        charts[type] = activeCharts.map(chart =>
+          path.join(this.config.get(`repository.chart.type.${type}`), chart.name)
+        );
+        charts.total += activeCharts.length;
+      });
       const word = charts.total === 1 ? 'chart' : 'charts';
-      this.logger.info(`Discovered ${charts.total} ${word} in repository`);
+      this.logger.info(`Discovered ${charts.total} ${word} from inventory`);
       return charts;
     }, false);
   }
@@ -84,63 +88,57 @@ class ChartService extends Action {
   /**
    * Finds charts affected by file changes
    * 
-   * @param {Array<string>} files - List of changed files to check
-   * @returns {Promise<Object>} - Object containing application and library chart paths
+   * @param {Array<string>} [files=[]] - List of changed files to check
+   * @returns {Promise<Object>} Object containing application and library chart paths
    */
   async find(files = []) {
     return this.execute('find modified charts', async () => {
-      const charts = { application: [], library: [], total: 0 };
-      if (!files || !files.length) return charts;
-      const chartTypes = this.config.get('repository.chart.type');
-      const chartDirs = this.fileService.filterPath(files, chartTypes);
-      for (const chartDir of chartDirs) {
-        const [type, chartPath] = chartDir.split(':');
-        const chartYamlPath = path.join(chartPath, 'Chart.yaml');
-        if (await this.fileService.exists(chartYamlPath)) {
-          charts[type].push(chartPath);
-          charts.total++;
+      const result = { application: [], library: [], total: 0 };
+      if (!files || !files.length) return result;
+      const chartPaths = new Set();
+      const chartTypes = this.config.getChartTypes();
+      const inventory = await Promise.all(chartTypes.map(type => this.getInventory(type)));
+      chartTypes.forEach((type, index) => {
+        const typePath = this.config.get(`repository.chart.type.${type}`);
+        inventory[index]
+          .filter(chart => chart.status !== 'removed')
+          .forEach(chart => chartPaths.add(`${typePath}/${chart.name}`));
+      });
+      const chartDirs = this.fileService.filterPath(files, this.config.get('repository.chart.type'));
+      for (const directory of chartDirs) {
+        const [type, chartPath] = directory.split(':');
+        if (chartPaths.has(chartPath)) {
+          result[type].push(chartPath);
+          result.total++;
         }
       }
-      if (charts.total) {
-        const word = charts.total === 1 ? 'chart' : 'charts';
-        this.logger.info(`Found ${charts.total} modified ${word}`);
+      if (result.total) {
+        const word = result.total === 1 ? 'chart' : 'charts';
+        this.logger.info(`Found ${result.total} modified ${word}`);
       }
-      return charts;
+      return result;
     }, false);
   }
 
   /**
-   * Returns all charts from inventory file for that type
+   * Returns all charts from inventory file
    * 
    * @param {string} type - Chart type ('application' or 'library')
-   * @returns {Promise<Array<Object>>} - Array of chart objects with name and state
+   * @returns {Promise<Array<Object>>} Array of chart objects with metadata
    */
   async getInventory(type) {
     return this.execute(`get '${type}' charts`, async () => {
       const inventoryPath = `${type}/inventory.yaml`;
-      let inventory = await this.fileService.readYaml(inventoryPath);
-      const charts = inventory && inventory[type] ? inventory[type] : [];
-      const needsBootstrap = !inventory || !Array.isArray(charts) || charts.length === 0;
-      if (needsBootstrap) {
-        this.logger.info(`Bootstrapping inventory for '${type}' charts...`);
-        const discoveredCharts = await this.discover();
-        const initialCharts = discoveredCharts[type].map(chartPath => ({
-          name: path.basename(chartPath),
-          status: 'modified'
-        }));
-        inventory = { [type]: initialCharts };
-        await this.fileService.writeYaml(inventoryPath, inventory);
-        this.logger.info(`Bootstrapped ${initialCharts.length} '${type}' charts`);
-      }
-      return inventory[type] || [];
+      const inventory = await this.fileService.readYaml(inventoryPath);
+      return inventory && inventory[type] ? inventory[type] : [];
     }, false);
   }
 
   /**
    * Lints multiple charts
    * 
-   * @param {Array<string>} charts - Charts to lint
-   * @returns {Promise<boolean>} - True if all charts passed linting
+   * @param {Array<string>} [charts=[]] - Charts to lint
+   * @returns {Promise<boolean>} True if all charts passed linting
    */
   async lint(charts = []) {
     return this.execute('lint charts', async () => {
@@ -157,7 +155,7 @@ class ChartService extends Action {
    * Validates a chart for release
    * 
    * @param {string} directory - Chart directory
-   * @returns {Promise<boolean>} - True if validation passed
+   * @returns {Promise<boolean>} True if validation passed
    */
   async validate(directory) {
     return this.execute('validate chart', async () => {
