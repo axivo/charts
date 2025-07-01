@@ -1,13 +1,26 @@
 /**
  * Error handling class for standardized error management
  * 
- * @class ActionError
- * @module core
+ * @module core/Error
  * @author AXIVO
  * @license BSD-3-Clause
  */
 
+/**
+ * Error handling class for standardized error management
+ * 
+ * Provides consistent error reporting, GitHub annotations, and
+ * workflow failure management with proper context preservation.
+ * 
+ * @class ActionError
+ */
 class ActionError {
+  /**
+   * Global error handler registration flag
+   * 
+   * @static
+   * @type {boolean}
+   */
   static handler = false;
 
   /**
@@ -97,6 +110,8 @@ class ActionError {
 
   /**
    * Sets up global error handler for uncaught exceptions, unhandled rejections and warnings
+   * 
+   * @returns {void}
    */
   setHandler() {
     if (ActionError.handler) {

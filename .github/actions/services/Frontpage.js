@@ -1,7 +1,6 @@
 /**
  * Frontpage service for repository frontpage operations
  * 
- * @class FrontpageService
  * @module services/Frontpage
  * @author AXIVO
  * @license BSD-3-Clause
@@ -12,6 +11,14 @@ const ChartService = require('./chart');
 const FileService = require('./File');
 const TemplateService = require('./Template');
 
+/**
+ * Frontpage service for repository frontpage operations
+ * 
+ * Provides repository frontpage generation and Jekyll theme setup
+ * for GitHub Pages deployment with chart inventory integration.
+ * 
+ * @class FrontpageService
+ */
 class FrontpageService extends Action {
   /**
    * Creates a new FrontpageService instance
@@ -33,31 +40,25 @@ class FrontpageService extends Action {
   async generate() {
     return this.execute('generate repository frontpage', async () => {
       this.logger.info('Generating repository frontpage...');
-      const charts = await this.chartService.discover();
-      const chartEntries = {};
-      const allCharts = [
-        ...charts.application.map(directory => ({ directory, type: 'application' })),
-        ...charts.library.map(directory => ({ directory, type: 'library' }))
-      ];
-      await Promise.all(allCharts.map(async ({ directory, type }) => {
-        const chartName = path.basename(directory);
-        const chartYamlPath = path.join(directory, 'Chart.yaml');
-        const chartYaml = await this.fileService.readYaml(chartYamlPath);
-        chartEntries[chartName] = {
-          description: chartYaml.description || '',
-          type,
-          version: chartYaml.version || ''
-        };
-      }));
-      const sortedCharts = Object.entries(chartEntries)
-        .sort(([currentName, currentData], [nextName, nextData]) => {
-          return currentData.type.localeCompare(nextData.type) || currentName.localeCompare(nextName);
-        })
-        .map(([name, data]) => ({
-          Description: data.description || '',
-          Name: name,
-          Type: data.type || 'application',
-          Version: data.version || ''
+      const chartTypes = this.config.getChartTypes();
+      const inventories = await Promise.all(
+        chartTypes.map(type => this.fileService.readYaml(`${this.config.get(`repository.chart.type.${type}`)}/inventory.yaml`))
+      );
+      const allCharts = chartTypes.flatMap((type, index) => {
+        const inventory = inventories[index];
+        return (inventory?.[this.config.get(`repository.chart.type.${type}`)])
+        .filter(chart => chart.status !== 'removed')
+        .map(chart => ({ ...chart, type }));
+      });
+      const sortedCharts = allCharts
+        .sort((current, next) => [
+          current.type.localeCompare(next.type), current.name.localeCompare(next.name)
+        ].find(Boolean))
+        .map(chart => ({
+          Description: chart.description,
+          Name: chart.name,
+          Type: chart.type,
+          Version: chart.version
         }));
       const templatePath = this.config.get('theme.frontpage.template');
       const templateContent = await this.fileService.read(templatePath);

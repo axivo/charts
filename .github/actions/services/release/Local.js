@@ -1,7 +1,6 @@
 /**
  * Local release service for local development chart operations
  * 
- * @class LocalService
  * @module services/release/Local
  * @author AXIVO
  * @license BSD-3-Clause
@@ -14,6 +13,14 @@ const GitService = require('../Git');
 const HelmService = require('../helm');
 const ShellService = require('../Shell');
 
+/**
+ * Local release service for local development chart operations
+ * 
+ * Provides specialized handling for local development workflows including
+ * dependency validation, chart processing, and local packaging operations.
+ * 
+ * @class LocalService
+ */
 class LocalService extends Action {
   /**
    * Creates a new LocalService instance
@@ -43,68 +50,64 @@ class LocalService extends Action {
       ];
       let allDepsAvailable = true;
       this.logger.info('Checking required dependencies...');
-      try {
-        this.logger.info('Connecting to Kubernetes cluster (this may take a moment)...');
-        const clusterResult = await this.shellService.execute('kubectl', ['cluster-info'], {
+      this.logger.info('Connecting to Kubernetes cluster (this may take a moment)...');
+      const clusterResult = await this.shellService.execute('kubectl', ['cluster-info'], {
+        output: true,
+        returnFullResult: true,
+        throwOnError: false
+      });
+      if (clusterResult.exitCode !== 0) {
+        this.logger.error('❌ Kubernetes cluster is not accessible');
+        allDepsAvailable = false;
+      } else {
+        const clusterInfo = clusterResult.stdout.split('\n')[0];
+        this.logger.info(`✅ Kubernetes cluster endpoint ${clusterInfo.replace('Kubernetes control plane is running at ', '')}`);
+      }
+      for (const tool of requiredTools) {
+        const result = await this.shellService.execute(tool.name, tool.command, {
           output: true,
           returnFullResult: true,
           throwOnError: false
         });
-        if (clusterResult.exitCode !== 0) {
-          this.logger.error('❌ Kubernetes cluster is not accessible');
+        if (result.exitCode !== 0) {
+          this.logger.error(`❌ ${tool.name} is not properly installed or configured`);
           allDepsAvailable = false;
         } else {
-          const clusterInfo = clusterResult.stdout.split('\n')[0];
-          this.logger.info(`✅ Kubernetes cluster endpoint ${clusterInfo.replace('Kubernetes control plane is running at ', '')}`);
-        }
-      } catch (error) {
-        this.logger.error('❌ Kubernetes cluster is not accessible');
-        allDepsAvailable = false;
-      }
-      for (const tool of requiredTools) {
-        try {
-          const result = await this.shellService.execute(tool.name, tool.command, {
-            output: true,
-            returnFullResult: true,
-            throwOnError: false
-          });
-          if (result.exitCode !== 0) {
-            this.logger.error(`❌ ${tool.name} is not properly installed or configured`);
-            allDepsAvailable = false;
-          } else {
-            const version = result.stdout.trim().split('\n')[0];
-            let displayName = tool.name;
-            switch (tool.name) {
-              case 'git':
-                displayName = `${tool.name} ${version.replace('git version ', '')}`;
-                break;
-              case 'helm':
-                displayName = `${tool.name} ${version}`;
-                break;
-              case 'kubectl':
-                displayName = `${tool.name} ${version.toLowerCase().replace('client version: ', 'client ')}`;
-                break;
-            }
-            this.logger.info(`✅ ${displayName}`);
+          const version = result.stdout.trim().split('\n')[0];
+          let displayName = tool.name;
+          switch (tool.name) {
+            case 'git':
+              displayName = `${tool.name} ${version.replace('git version ', '')}`;
+              break;
+            case 'helm':
+              displayName = `${tool.name} ${version}`;
+              break;
+            case 'kubectl':
+              displayName = `${tool.name} ${version.toLowerCase().replace('client version: ', 'client ')}`;
+              break;
           }
-        } catch (error) {
-          this.logger.error(`❌ ${tool.name} is not installed`);
-          allDepsAvailable = false;
+          this.logger.info(`✅ ${displayName}`);
         }
       }
-      const requiredPackages = ['@actions/exec', 'glob', 'handlebars', 'js-yaml', 'sharp'];
+      const requiredPackages = ['@actions/exec', 'glob', 'handlebars', 'js-yaml'];
       for (const pkg of requiredPackages) {
-        try {
+        const packageResolved = this.execute(`resolve '${pkg}' package`, async () => {
           require.resolve(pkg);
+          return true;
+        }, false);
+        if (await packageResolved) {
           let version = 'installed';
-          try {
+          const versionResult = await this.execute(`get '${pkg}' version`, async () => {
             const pkgJson = require(`${pkg}/package.json`);
-            version = pkgJson.version || 'installed';
-          } catch (versionError) {
-            this.logger.info(`Note: Could not determine version for '${pkg}': ${versionError.message}`);
+            return pkgJson.version || 'installed';
+          }, false);
+          if (versionResult) {
+            version = versionResult;
+          } else {
+            this.logger.info(`Note: Could not determine version for '${pkg}'`);
           }
           this.logger.info(`✅ Node.js package '${pkg}' ${version}`);
-        } catch (error) {
+        } else {
           this.logger.error(`❌ Node.js package '${pkg}' is missing. Run: npm install ${pkg}`);
           allDepsAvailable = false;
         }
@@ -120,12 +123,14 @@ class LocalService extends Action {
    */
   async getLocalFiles() {
     return this.execute('get local files', async () => {
-      const appChartType = this.config.get('repository.chart.type.application');
-      const libChartType = this.config.get('repository.chart.type.library');
+      const chartTypes = this.config.getChartTypes();
+      const chartTypePaths = chartTypes.map(type =>
+        this.config.get(`repository.chart.type.${type}`)
+      );
       const status = await this.gitService.getStatus();
       const allFiles = [...status.modified, ...status.untracked];
       const chartFiles = allFiles.filter(file =>
-        file.startsWith(appChartType) || file.startsWith(libChartType)
+        chartTypePaths.some(typePath => file.startsWith(typePath))
       );
       const files = {};
       chartFiles.forEach(file => { files[file] = 'modified'; });
@@ -141,29 +146,29 @@ class LocalService extends Action {
    */
   async processCharts(charts) {
     return this.execute('process charts for local development', async () => {
-      const chartDirs = [...charts.application, ...charts.library];
+      const chartTypes = this.config.getChartTypes();
+    const chartDirs = chartTypes.flatMap(type => charts[type]);
       const localPackagesDir = './.cr-local-packages';
       this.logger.info(`Creating ${localPackagesDir} directory...`);
       await this.fileService.createDir(localPackagesDir);
       this.logger.info(`Successfully created ${localPackagesDir} directory`);
-      const validCharts = [];
-      for (const chartDir of chartDirs) {
+      const validCharts = await Promise.all(chartDirs.map(async chartDir => {
         if (await this.validateChart(chartDir, localPackagesDir)) {
           this.logger.info(`Packaging '${chartDir}' chart for local testing...`);
           this.logger.info(`Updating dependencies for '${chartDir}' chart...`);
           await this.helmService.updateDependencies(chartDir);
           await this.helmService.package(chartDir, { destination: localPackagesDir });
-          validCharts.push(chartDir);
+          return chartDir;
         }
-      }
+      }));
       if (!validCharts.length) {
         this.logger.info('No charts required for packaging');
-        return { processed: charts.application.length + charts.library.length, published: 0 };
+        return { processed: chartDirs.length, published: 0 };
       }
       const word = validCharts.length === 1 ? 'chart' : 'charts';
       this.logger.info(`Successfully packaged ${validCharts.length} ${word}`);
       await this.helmService.generateIndex(localPackagesDir);
-      return { processed: charts.application.length + charts.library.length, published: validCharts.length };
+      return { processed: chartDirs.length, published: validCharts.length };
     });
   }
 

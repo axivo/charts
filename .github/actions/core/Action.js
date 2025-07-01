@@ -1,17 +1,21 @@
 /**
  * Base Action class for GitHub Actions
  * 
- * Provides dependency injection, context management, and error handling
- * for implementing GitHub Actions functionality.
- * 
- * @class Action
- * @module core
+ * @module core/Action
  * @author AXIVO
  * @license BSD-3-Clause
  */
 const ActionError = require('./Error');
 const Logger = require('./Logger');
 
+/**
+ * Base Action class for GitHub Actions
+ * 
+ * Provides dependency injection, context management, and error handling
+ * for implementing GitHub Actions functionality.
+ * 
+ * @class Action
+ */
 class Action {
   /**
    * Creates a new Action instance
