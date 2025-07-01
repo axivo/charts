@@ -46,9 +46,9 @@ class FrontpageService extends Action {
       );
       const allCharts = chartTypes.flatMap((type, index) => {
         const inventory = inventories[index];
-        return (inventory?.[this.config.get(`repository.chart.type.${type}`)] || [])
-          .filter(chart => chart.status !== 'removed')
-          .map(chart => ({ ...chart, type: this.config.get(`repository.chart.type.${type}`) }));
+        return (inventory?.[this.config.get(`repository.chart.type.${type}`)])
+        .filter(chart => chart.status !== 'removed')
+        .map(chart => ({ ...chart, type }));
       });
       const sortedCharts = allCharts
         .sort((current, next) => [

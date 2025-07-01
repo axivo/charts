@@ -146,29 +146,29 @@ class LocalService extends Action {
    */
   async processCharts(charts) {
     return this.execute('process charts for local development', async () => {
-      const chartDirs = [...charts.application, ...charts.library];
+      const chartTypes = this.config.getChartTypes();
+    const chartDirs = chartTypes.flatMap(type => charts[type]);
       const localPackagesDir = './.cr-local-packages';
       this.logger.info(`Creating ${localPackagesDir} directory...`);
       await this.fileService.createDir(localPackagesDir);
       this.logger.info(`Successfully created ${localPackagesDir} directory`);
-      const validCharts = [];
-      for (const chartDir of chartDirs) {
+      const validCharts = await Promise.all(chartDirs.map(async chartDir => {
         if (await this.validateChart(chartDir, localPackagesDir)) {
           this.logger.info(`Packaging '${chartDir}' chart for local testing...`);
           this.logger.info(`Updating dependencies for '${chartDir}' chart...`);
           await this.helmService.updateDependencies(chartDir);
           await this.helmService.package(chartDir, { destination: localPackagesDir });
-          validCharts.push(chartDir);
+          return chartDir;
         }
-      }
+      }));
       if (!validCharts.length) {
         this.logger.info('No charts required for packaging');
-        return { processed: charts.application.length + charts.library.length, published: 0 };
+        return { processed: chartDirs.length, published: 0 };
       }
       const word = validCharts.length === 1 ? 'chart' : 'charts';
       this.logger.info(`Successfully packaged ${validCharts.length} ${word}`);
       await this.helmService.generateIndex(localPackagesDir);
-      return { processed: charts.application.length + charts.library.length, published: validCharts.length };
+      return { processed: chartDirs.length, published: validCharts.length };
     });
   }
 

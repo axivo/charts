@@ -50,10 +50,6 @@ class FileService extends Action {
   async copy(source, destination, options = {}) {
     return this.execute(`copy '${source}' file to '${destination}'`, async () => {
       await this.createDir(path.dirname(destination), { silent: true });
-      if (!options.overwrite && await this.exists(destination)) {
-        this.logger.warning(`File '${destination}' already exists`);
-        return null;
-      }
       await fs.copyFile(source, destination);
       this.logger.info(`Successfully copied '${source}' file to '${destination}'`);
     });
@@ -233,10 +229,6 @@ class FileService extends Action {
    */
   async read(file, options = {}) {
     return this.execute(`read '${file}' file`, async () => {
-      if (!await this.exists(file)) {
-        this.logger.warning(`File '${file}' not found`);
-        return null;
-      }
       return await fs.readFile(file, options.encoding || 'utf8');
     });
   }

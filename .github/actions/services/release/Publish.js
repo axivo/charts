@@ -88,11 +88,10 @@ class PublishService extends Action {
    * @param {string} object.source - Chart package filename
    * @param {string} object.type - Chart type
    * @param {string} directory - Path to packages directory
-   * @param {string} type - Application type for comparison
    * @returns {Promise<Object|null>} Prepared chart data or null
    */
-  async #publish(object, directory, type) {
-    const chartType = object.type === type ? 'application' : 'library';
+  async #publish(object, directory) {
+    const chartType = object.type;
     const chartDir = path.join(this.config.get(`repository.chart.type.${chartType}`), 'chart-name');
     const chartPath = path.join(directory, object.type, object.source);
     const iconPath = path.join(chartDir, this.config.get('repository.chart.icon'));
@@ -260,11 +259,10 @@ class PublishService extends Action {
         this.logger.info('No charts to publish to GitHub');
         return result;
       }
-      const appType = this.config.get('repository.chart.type.application');
       const word = packages.length === 1 ? 'release' : 'releases';
       this.logger.info(`Publishing ${packages.length} GitHub ${word}...`);
       for (const release of packages) {
-        const chart = await this.#publish(release, directory, appType);
+        const chart = await this.#publish(release, directory);
         if (!chart) continue;
         const tagName = this.config.get('repository.release.title')
           .replace('{{ .Name }}', chart.name)

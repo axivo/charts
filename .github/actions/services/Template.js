@@ -36,7 +36,7 @@ class TemplateService extends Action {
    * @param {string} [options.repoUrl] - Repository URL for repo-specific helpers
    * @returns {string} Rendered template
    */
-  render(template, context, options = {}) {
+  async render(template, context, options = {}) {
     return this.execute('render template', () => {
       this.handlebars.registerHelper('equal', function (key, value) {
         return key === value;
