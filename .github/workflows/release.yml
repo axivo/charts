@@ -62,7 +62,6 @@ jobs:
             await workflow.configureRepository();
 
       - name: Setup repository charts linter
-        if: steps.workflow.outputs.publish != 'true'
         uses: helm/chart-testing-action@v2
 
       - name: Process chart releases
