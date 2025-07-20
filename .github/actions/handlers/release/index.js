@@ -93,7 +93,7 @@ class ReleaseHandler extends Action {
       const packages = await this.#package(charts);
       if (packages.length) {
         const directory = this.config.get('repository.release.packages');
-        await this.publishService.gitHub(packages, directory);
+        await this.publishService.release(packages, directory);
         if (this.config.get('repository.chart.packages.enabled')) {
           await this.publishService.generateIndexes();
         }
