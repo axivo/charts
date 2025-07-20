@@ -242,48 +242,6 @@ class PublishService extends Action {
   }
 
   /**
-   * Publishes charts to GitHub repository
-   * 
-   * @param {Array} packages - List of packaged charts
-   * @param {string} directory - Path to packages directory
-   * @returns {Promise<Array>} List of published releases
-   */
-  async release(packages, directory) {
-    return this.execute('publish to GitHub', async () => {
-      let result = [];
-      if (!this.config.get('repository.chart.packages.enabled')) {
-        this.logger.info('Publishing of chart packages is disabled');
-        return result;
-      }
-      if (!packages.length) {
-        this.logger.info('No charts to publish to GitHub');
-        return result;
-      }
-      const word = packages.length === 1 ? 'release' : 'releases';
-      this.logger.info(`Publishing ${packages.length} GitHub ${word}...`);
-      for (const release of packages) {
-        const chart = await this.#publish(release, directory);
-        if (!chart) continue;
-        const tagName = this.config.get('repository.release.title')
-          .replace('{{ .Name }}', chart.name)
-          .replace('{{ .Version }}', chart.version);
-        const existingRelease = await this.restService.getReleaseByTag(tagName);
-        if (existingRelease) {
-          this.logger.info(`Release '${tagName}' already exists, skipping`);
-          continue;
-        }
-        const publish = await this.#create(chart, tagName);
-        if (publish) result.push(publish);
-      }
-      if (result.length) {
-        const keyword = result.length === 1 ? 'release' : 'releases';
-        this.logger.info(`Successfully published ${result.length} GitHub ${keyword}`);
-      }
-      return result;
-    });
-  }
-
-  /**
    * Publishes charts to OCI registry
    * 
    * @param {Array} packages - List of packaged charts
@@ -321,6 +279,48 @@ class PublishService extends Action {
       if (result.length) {
         const keyword = result.length === 1 ? 'package' : 'packages';
         this.logger.info(`Successfully published ${result.length} OCI ${keyword}`);
+      }
+      return result;
+    });
+  }
+
+  /**
+   * Publishes charts to GitHub releases
+   * 
+   * @param {Array} packages - List of packaged charts
+   * @param {string} directory - Path to packages directory
+   * @returns {Promise<Array>} List of published releases
+   */
+  async release(packages, directory) {
+    return this.execute('publish to GitHub releases', async () => {
+      let result = [];
+      if (!this.config.get('repository.chart.packages.enabled')) {
+        this.logger.info('Publishing of chart packages is disabled');
+        return result;
+      }
+      if (!packages.length) {
+        this.logger.info('No charts to publish to GitHub releases');
+        return result;
+      }
+      const word = packages.length === 1 ? 'release' : 'releases';
+      this.logger.info(`Publishing ${packages.length} GitHub ${word}...`);
+      for (const release of packages) {
+        const chart = await this.#publish(release, directory);
+        if (!chart) continue;
+        const tagName = this.config.get('repository.release.title')
+          .replace('{{ .Name }}', chart.name)
+          .replace('{{ .Version }}', chart.version);
+        const existingRelease = await this.restService.getReleaseByTag(tagName);
+        if (existingRelease) {
+          this.logger.info(`Release '${tagName}' already exists, skipping`);
+          continue;
+        }
+        const publish = await this.#create(chart, tagName);
+        if (publish) result.push(publish);
+      }
+      if (result.length) {
+        const keyword = result.length === 1 ? 'release' : 'releases';
+        this.logger.info(`Successfully published ${result.length} GitHub ${keyword}`);
       }
       return result;
     });
