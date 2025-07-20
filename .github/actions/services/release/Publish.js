@@ -151,7 +151,7 @@ class PublishService extends Action {
         Type: chart.type,
         Name: chartName
       };
-      const redirectHtml = this.templateService.render(redirectContent, redirectContext);
+      const redirectHtml = await this.templateService.render(redirectContent, redirectContext);
       const redirectPath = path.join(directory, 'index.html');
       await this.fileService.write(redirectPath, redirectHtml);
       return true;
