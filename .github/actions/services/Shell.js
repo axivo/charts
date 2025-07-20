@@ -1,16 +1,23 @@
 /**
  * Shell service for executing shell commands
  * 
- * @class Shell
  * @module services/Shell
  * @author AXIVO
  * @license BSD-3-Clause
  */
 const Action = require('../core/Action');
 
+/**
+ * Shell service for executing shell commands
+ * 
+ * Provides comprehensive shell command execution with error handling,
+ * output capture, and flexible execution options.
+ * 
+ * @class ShellService
+ */
 class ShellService extends Action {
   /**
-   * Creates a new Shell service instance
+   * Creates a new ShellService instance
    * 
    * @param {Object} params - Service parameters
    */
@@ -23,12 +30,12 @@ class ShellService extends Action {
    * 
    * @param {string} command - Command to execute
    * @param {string[]} args - Command arguments
-   * @param {Object} options - Execution options
-   * @param {boolean} options.silent - Whether to suppress command output (default: true)
-   * @param {boolean} options.output - Whether to capture and return command output (default: false)
-   * @param {boolean} options.throwOnError - Whether to throw on non-zero exit code (default: true)
-   * @param {boolean} options.returnFullResult - Whether to return full result object (default: false)
-   * @returns {Promise<string|Object>} - Command output or result object
+   * @param {Object} [options={}] - Execution options
+   * @param {boolean} [options.silent=true] - Whether to suppress command output
+   * @param {boolean} [options.output=false] - Whether to capture and return command output
+   * @param {boolean} [options.throwOnError=true] - Whether to throw on non-zero exit code
+   * @param {boolean} [options.returnFullResult=false] - Whether to return full result object
+   * @returns {Promise<string|Object>} Command output or result object
    */
   async execute(command, args, options = {}) {
     const {

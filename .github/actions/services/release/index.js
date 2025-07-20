@@ -1,7 +1,6 @@
 /**
  * Release service for managing chart releases
  * 
- * @class Release
  * @module services/release
  * @author AXIVO
  * @license BSD-3-Clause
@@ -13,9 +12,17 @@ const FileService = require('../File');
 const GitHubService = require('../github');
 const HelmService = require('../helm');
 
+/**
+ * Release service for managing chart releases
+ * 
+ * Provides comprehensive chart release management including packaging,
+ * validation, deletion, and file-based chart discovery.
+ * 
+ * @class ReleaseService
+ */
 class ReleaseService extends Action {
   /**
-   * Creates a new Release service instance
+   * Creates a new ReleaseService instance
    * 
    * @param {Object} params - Service parameters
    */
@@ -28,73 +35,20 @@ class ReleaseService extends Action {
   }
 
   /**
-   * Deletes GitHub releases for deleted charts
+   * Gets all charts from inventory
    * 
-   * @param {Array} [files=[]] - List of deleted chart files
-   * @returns {Promise<number>} Number of deleted releases
-   */
-  async delete(files = []) {
-    let result = 0;
-    return this.execute('delete releases', async () => {
-      if (!files.length) return result;
-      const word = files.length === 1 ? 'release' : 'releases';
-      this.logger.info(`Deleting ${files.length} chart ${word}...`);
-      for (const filePath of files) {
-        try {
-          const appType = this.config.get('repository.chart.type.application');
-          const chartPath = path.dirname(filePath);
-          const name = path.basename(chartPath);
-          const type = chartPath.startsWith(appType) ? 'application' : 'library';
-          if (this.config.get('repository.chart.packages.enabled')) {
-            await this.githubService.deleteReleases(name);
-          }
-          if (this.config.get('repository.oci.packages.enabled')) {
-            await this.githubService.deletePackage(name, type);
-          }
-          result++;
-        } catch (error) {
-          this.logger.error(`Failed to delete releases for '${filePath}' chart: ${error.message}`);
-        }
-      }
-      return result;
-    }, false);
-  }
-
-  /**
-   * Finds release-eligible charts based on file changes
-   * 
-   * @param {Object} [files={}] - Object mapping file paths to their Git change status
    * @returns {Promise<Object>} Object containing categorized charts
-   * @returns {Array<string>} returns.application - Array of application chart directory paths
-   * @returns {Array<string>} returns.library - Array of library chart directory paths
-   * @returns {Array<string>} returns.deleted - Array of deleted Chart.yaml file paths
-   * @returns {number} returns.total - Total count of eligible charts (application + library)
    */
-  async find(files = {}) {
-    let result = { application: [], library: [], deleted: [], total: 0 };
-    return this.execute('find release-eligible charts', async () => {
-      this.logger.info('Finding charts...');
-      const appType = this.config.get('repository.chart.type.application');
-      const libType = this.config.get('repository.chart.type.library');
-      const fileList = Object.keys(files);
-      for (const file of fileList) {
-        if (!file.endsWith('Chart.yaml')) continue;
-        const dir = path.dirname(file);
-        const isApp = dir.startsWith(appType);
-        const isLib = dir.startsWith(libType);
-        if (!isApp && !isLib) continue;
-        if (files[file] === 'removed') {
-          result.deleted.push(file);
-          continue;
-        }
-        if (isApp) result.application.push(dir);
-        else result.library.push(dir);
+  async getCharts() {
+    let result = { application: [], library: [], total: 0 };
+    return this.execute('get inventory charts', async () => {
+      const chartTypes = this.config.getChartTypes();
+      for (const type of chartTypes) {
+        const typePath = this.config.get(`repository.chart.type.${type}`);
+        const inventory = await this.chartService.getInventory(type);
+        result[type] = inventory.map(chart => path.join(typePath, chart.name));
       }
       result.total = result.application.length + result.library.length;
-      const word = (count) => count === 1 ? 'chart' : 'charts';
-      const released = `${result.total} released ${word(result.total)}`;
-      const deleted = `${result.deleted.length} deleted ${word(result.deleted.length)}`;
-      this.logger.info(`Found ${released} and ${deleted}`);
       return result;
     }, false);
   }
@@ -107,68 +61,33 @@ class ReleaseService extends Action {
    */
   async package(charts) {
     let result = [];
-    return this.execute('package release', async () => {
-      if (!charts.application.length && !charts.library.length) {
-        this.logger.info('No charts to package');
-        return result;
-      }
+    return this.execute('package charts', async () => {
       const root = this.config.get('repository.release.packages');
-      const appType = this.config.get('repository.chart.type.application');
-      const libType = this.config.get('repository.chart.type.library');
+      const chartTypes = this.config.getChartTypes();
       await this.fileService.createDir(root);
-      const application = path.join(root, appType);
-      const library = path.join(root, libType);
-      await this.fileService.createDir(application);
-      await this.fileService.createDir(library);
-      const directory = { root, application, library };
-      const chartDirs = [...charts.application, ...charts.library];
-      this.logger.info(`Packaging ${chartDirs.length} charts...`);
-      result = await Promise.all(chartDirs.map(async (chartDir) => {
-        try {
-          this.logger.info(`Packaging '${chartDir}' chart...`);
-          this.logger.info(`Updating dependencies for '${chartDir}' chart...`);
-          await this.helmService.updateDependencies(chartDir);
-          const isAppChartType = chartDir.startsWith(appType);
-          const packageDest = isAppChartType ? directory.application : directory.library;
-          await this.helmService.package(chartDir, { destination: packageDest });
-          return {
-            chartDir,
-            success: true,
-            type: isAppChartType ? 'application' : 'library'
-          };
-        } catch (error) {
-          this.actionError.report({
-            operation: `package ${chartDir} chart`,
-            fatal: false
-          }, error);
-          return {
-            chartDir,
-            success: false,
-            type: chartDir.startsWith(appType) ? 'application' : 'library'
-          };
-        }
+      const directories = {};
+      await Promise.all(chartTypes.map(async type => {
+        directories[type] = path.join(root, this.config.get(`repository.chart.type.${type}`));
+        await this.fileService.createDir(directories[type]);
       }));
-      const successCount = result.filter(operation => operation.success).length;
-      const word = successCount === 1 ? 'chart' : 'charts';
-      this.logger.info(`Successfully packaged ${successCount} ${word}`);
-      return result.filter(operation => operation.success);
-    }, false);
-  }
-
-  /**
-   * Validates a release-eligible chart
-   * 
-   * @param {string} directory - Chart directory path
-   * @returns {Promise<boolean>} True if chart is eligible for release
-   */
-  async validate(directory) {
-    return this.execute('validate release-eligible chart', async () => {
-      return await this.chartService.validate(directory);
+      this.logger.info(`Packaging ${charts.total} charts...`);
+      const allChartPromises = chartTypes.flatMap(type =>
+        charts[type].map(chartDir =>
+          this.execute(`package '${chartDir}' chart`, async () => {
+            await this.helmService.updateDependencies(chartDir);
+            await this.helmService.package(chartDir, { destination: directories[type] });
+            return { chartDir, success: true, type };
+          }, false)
+        )
+      );
+      result = (await Promise.all(allChartPromises)).filter(operation => operation && operation.success);
+      const word = result.length === 1 ? 'chart' : 'charts';
+      this.logger.info(`Successfully packaged ${result.length} ${word}`);
+      return result;
     }, false);
   }
 }
 
-// Attach specialized services
 ReleaseService.Local = require('./Local');
 ReleaseService.Package = require('./Package');
 ReleaseService.Publish = require('./Publish');

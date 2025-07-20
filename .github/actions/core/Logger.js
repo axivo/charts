@@ -1,23 +1,29 @@
 /**
  * Logging class for standardized log management
  * 
+ * @module core/Logger
+ * @author AXIVO
+ * @license BSD-3-Clause
+ */
+
+/**
+ * Logging class for standardized log management
+ * 
  * Provides structured logging, timing information, and log levels for
  * consistent output across GitHub Actions.
  * 
  * @class Logger
- * @module core
- * @author AXIVO
- * @license BSD-3-Clause
  */
 class Logger {
   /**
    * Creates a new Logger instance
    * 
-   * @param {Object} core - GitHub Actions Core API for logging
+   * @param {Object} params - Logger parameters
+   * @param {Object} params.core - GitHub Actions Core API for logging
    * @param {Object} options - Logger configuration options
-   * @param {String} options.context - Context identifier for log entries
-   * @param {Boolean} options.timestamp - Whether to include timestamps
-   * @param {String} options.level - Minimum log level ('debug'|'info'|'warning'|'error')
+   * @param {string} options.context - Context identifier for log entries
+   * @param {boolean} options.timestamp - Whether to include timestamps
+   * @param {string} options.level - Minimum log level ('debug'|'info'|'warning'|'error')
    */
   constructor(params, options = {}) {
     const { core } = params;
@@ -32,8 +38,8 @@ class Logger {
    * Determines if a log level should be displayed
    * 
    * @private
-   * @param {String} level - The log level to check
-   * @returns {Boolean} Whether the log level should be displayed
+   * @param {string} level - The log level to check
+   * @returns {boolean} Whether the log level should be displayed
    */
   #allow(level) {
     return this.levelPriority[level] >= this.levelPriority[this.level];
@@ -43,9 +49,9 @@ class Logger {
    * Formats a log message with metadata
    * 
    * @private
-   * @param {String} message - The message to format
+   * @param {string} message - The message to format
    * @param {Object} meta - Additional metadata
-   * @returns {String} The formatted message
+   * @returns {string} The formatted message
    */
   #format(message, meta = {}) {
     const parts = [`[${this.context}]`];
@@ -58,8 +64,9 @@ class Logger {
   /**
    * Logs a debug message
    * 
-   * @param {String} message - The message to log
+   * @param {string} message - The message to log
    * @param {Object} meta - Additional metadata
+   * @returns {void}
    */
   debug(message, meta = {}) {
     if (!this.#allow('debug')) return;
@@ -70,8 +77,9 @@ class Logger {
   /**
    * Logs an error message
    * 
-   * @param {String} message - The message to log
+   * @param {string} message - The message to log
    * @param {Object} meta - Additional metadata
+   * @returns {void}
    */
   error(message, meta = {}) {
     if (!this.#allow('error')) return;
@@ -94,8 +102,9 @@ class Logger {
   /**
    * Logs an info message
    * 
-   * @param {String} message - The message to log
+   * @param {string} message - The message to log
    * @param {Object} meta - Additional metadata
+   * @returns {void}
    */
   info(message, meta = {}) {
     if (!this.#allow('info')) return;
@@ -106,8 +115,9 @@ class Logger {
   /**
    * Logs a warning message
    * 
-   * @param {String} message - The message to log
+   * @param {string} message - The message to log
    * @param {Object} meta - Additional metadata
+   * @returns {void}
    */
   warning(message, meta = {}) {
     if (!this.#allow('warning')) return;

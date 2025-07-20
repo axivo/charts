@@ -1,7 +1,6 @@
 /**
  * Helm service for Helm CLI operations
  * 
- * @class Helm
  * @module services/helm
  * @author AXIVO
  * @license BSD-3-Clause
@@ -10,9 +9,17 @@ const path = require('path');
 const Action = require('../../core/Action');
 const ShellService = require('../Shell');
 
+/**
+ * Helm service for Helm CLI operations
+ * 
+ * Provides comprehensive Helm CLI operations including registry management,
+ * chart packaging, template rendering, and dependency updates.
+ * 
+ * @class HelmService
+ */
 class HelmService extends Action {
   /**
-   * Creates a new Helm service instance
+   * Creates a new HelmService instance
    * 
    * @param {Object} params - Service parameters
    */
@@ -27,7 +34,7 @@ class HelmService extends Action {
    * @param {string} registry - OCI registry URL
    * @param {string} username - Registry username
    * @param {string} password - Registry password
-   * @returns {Promise<boolean>} - True if login was successful
+   * @returns {Promise<boolean>} True if login was successful
    */
   async login(registry, username, password) {
     return this.execute(`login to '${registry}' OCI registry`, async () => {
@@ -45,11 +52,11 @@ class HelmService extends Action {
    * Generates a Helm repository index file
    * 
    * @param {string} directory - Directory containing chart packages
-   * @param {Object} options - Index options
-   * @param {string} options.url - URL prefix for chart references
-   * @param {string} options.merge - Path to existing index file to merge with
-   * @param {boolean} options.generateMetadata - Generate missing metadata from chart contents
-   * @returns {Promise<boolean>} - True if index was generated successfully
+   * @param {Object} [options={}] - Index options
+   * @param {string} [options.url] - URL prefix for chart references
+   * @param {string} [options.merge] - Path to existing index file to merge with
+   * @param {boolean} [options.generateMetadata] - Generate missing metadata from chart contents
+   * @returns {Promise<boolean>} True if index was generated successfully
    */
   async generateIndex(directory, options = {}) {
     return this.execute(`generate index file for '${directory}' directory`, async () => {
@@ -68,9 +75,9 @@ class HelmService extends Action {
    * Packages a chart
    * 
    * @param {string} directory - Chart directory
-   * @param {Object} options - Package options
-   * @param {string} options.destination - Destination directory
-   * @returns {Promise<string>} - Path to packaged chart
+   * @param {Object} [options={}] - Package options
+   * @param {string} [options.destination] - Destination directory
+   * @returns {Promise<string>} Path to packaged chart
    */
   async package(directory, options = {}) {
     return this.execute(`package chart from '${directory}' directory`, async () => {
@@ -97,10 +104,10 @@ class HelmService extends Action {
    * Renders chart templates
    * 
    * @param {string} directory - Chart directory
-   * @param {Object} options - Template options
-   * @param {string} options.values - Values file path
-   * @param {string} options.set - Set values on command line
-   * @returns {Promise<string>} - Rendered template output
+   * @param {Object} [options={}] - Template options
+   * @param {string} [options.values] - Values file path
+   * @param {string} [options.set] - Set values on command line
+   * @returns {Promise<string>} Rendered template output
    */
   async template(directory, options = {}) {
     return this.execute(`render templates for '${directory}' chart`, async () => {
@@ -118,7 +125,7 @@ class HelmService extends Action {
    * Updates chart dependencies
    * 
    * @param {string} directory - Chart directory
-   * @returns {Promise<boolean>} - True if dependencies were updated
+   * @returns {Promise<boolean>} True if dependencies were updated
    */
   async updateDependencies(directory) {
     return this.execute(`update '${directory}' chart dependencies`, async () => {
