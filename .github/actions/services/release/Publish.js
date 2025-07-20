@@ -242,13 +242,13 @@ class PublishService extends Action {
   }
 
   /**
-   * Publishes charts to GitHub
+   * Publishes charts to GitHub repository
    * 
    * @param {Array} packages - List of packaged charts
    * @param {string} directory - Path to packages directory
    * @returns {Promise<Array>} List of published releases
    */
-  async gitHub(packages, directory) {
+  async release(packages, directory) {
     return this.execute('publish to GitHub', async () => {
       let result = [];
       if (!this.config.get('repository.chart.packages.enabled')) {
