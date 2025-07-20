@@ -47,10 +47,10 @@ class PackageService extends Action {
     return sources
       .filter(source => source.endsWith('.tgz'))
       .map(source => {
-        const filename = source.replace('.tgz', '');
+        const filename = path.basename(source).replace('.tgz', '');
         const lastDashIndex = filename.lastIndexOf('-');
         const name = filename.substring(0, lastDashIndex);
-        return { source, name };
+        return { source: path.basename(source), name };
       });
   }
 
