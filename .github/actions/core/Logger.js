@@ -55,7 +55,7 @@ class Logger {
    */
   #format(message, meta = {}) {
     const parts = [`[${this.context}]`];
-    if (meta.level && meta.level !== 'info') parts.push(`[${meta.level.toUpperCase()}]`);
+    if (meta.level) parts.push(`[${meta.level.toUpperCase()}]`);
     if (meta.timestamp) parts.push(`[${new Date().toISOString()}]`);
     if (meta.component) parts.push(`[${meta.component}]`);
     return `${parts.join('')} ${message}`;
