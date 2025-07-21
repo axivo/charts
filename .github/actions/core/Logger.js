@@ -123,6 +123,8 @@ class Logger {
     if (!this.#allow('warning')) return;
     const logMeta = { level: 'warning', ...meta };
     const formattedMessage = this.#format(message, logMeta);
+    console.log('DEBUG RAW:', JSON.stringify(formattedMessage));
+    console.log('DEBUG RAW MESSAGE:', JSON.stringify(message));
     if (meta.file) {
       const params = {
         file: meta.file,
