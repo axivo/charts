@@ -96,7 +96,6 @@ class WorkflowHandler extends Action {
       const templateContent = await this.fileService.read(templatePath);
       const issue = await this.issueService.report(
         this.context,
-        this.labelService,
         {
           content: templateContent,
           service: this.templateService
