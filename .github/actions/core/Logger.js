@@ -82,7 +82,7 @@ class Logger {
       };
       this.core.info(formattedMessage, params);
     } else {
-      this.core.info(message);
+      this.core.info(formattedMessage);
     }
   }
 
@@ -107,7 +107,7 @@ class Logger {
       };
       this.core.error(formattedMessage, params);
     } else {
-      this.core.error(message);
+      this.core.error(formattedMessage);
     }
   }
 
@@ -132,7 +132,7 @@ class Logger {
       };
       this.core.info(formattedMessage, params);
     } else {
-      this.core.info(message);
+      this.core.info(formattedMessage);
     }
   }
 
@@ -157,7 +157,7 @@ class Logger {
       };
       this.core.warning(formattedMessage, params);
     } else {
-      this.core.warning(message);
+      this.core.warning(formattedMessage);
     }
   }
 }
