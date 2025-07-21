@@ -147,10 +147,8 @@ class ChartService extends Action {
       this.logger.info(`Linting ${charts.length} ${word}...`);
       const result = await this.shellService.execute('ct', ['lint', '--charts', charts.join(','), '--skip-helm-dependencies'], {
         silent: false,
-        output: true,
-        returnFullResult: true
+        output: true
       });
-      this.logger.info(`DEBUG: CT command result:`, result);
       this.logger.info(`Successfully linted ${charts.length} ${word}`);
       return true;
     }, false);
@@ -164,6 +162,7 @@ class ChartService extends Action {
    */
   async validate(directory) {
     return this.execute('validate chart', async () => {
+      await this.helmService.updateDependencies(directory);
       if (!await this.lint([directory])) {
         return false;
       }
