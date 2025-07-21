@@ -75,6 +75,7 @@ class LabelService extends Action {
       if (this.context.workflow === 'Chart') {
         const message = 'Set "createLabels: false" after initial setup';
         await this.restService.createAnnotation(message, { level: 'warning' });
+        this.logger.warning(message);
       }
       const labelNames = Object.keys(this.config.get('issue.labels'));
       const results = await Promise.all(
