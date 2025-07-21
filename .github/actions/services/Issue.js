@@ -81,7 +81,7 @@ class IssueService extends Action {
   async report(context, template = {}) {
     return this.execute('report workflow issue', async () => {
       const { content, service } = template;
-      const annotations = await this.RestService.getAnnotations();
+      const annotations = await this.restService.getAnnotations();
       if (!annotations.length) return null;
       const repoUrl = context.payload.repository.html_url;
       const isPullRequest = Boolean(context.payload.pull_request);
