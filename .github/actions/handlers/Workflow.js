@@ -15,7 +15,7 @@ const GitService = require('../services/Git');
 const IssueService = require('../services/Issue');
 const LabelService = require('../services/Label');
 const ReleaseHandler = require('./release');
-const RestService = require('./github/Rest');
+const RestService = require('../services/github/Rest');
 const TemplateService = require('../services/Template');
 
 /**
