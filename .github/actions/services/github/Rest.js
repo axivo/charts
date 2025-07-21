@@ -5,7 +5,6 @@
  * @author AXIVO
  * @license BSD-3-Clause
  */
-const fs = require('fs');
 const ApiService = require('./Api');
 const GraphQLService = require('./GraphQL');
 
@@ -394,20 +393,18 @@ class RestService extends ApiService {
    * @param {Object} [options={}] - Asset options
    * @param {string} options.name - Asset name
    * @param {string} [options.type] - Asset content type
-   * @param {string} [options.directory] - Path to asset file
    * @param {Buffer|string} [options.data] - Asset data (alternative to directory)
    * @returns {Promise<Object>} Uploaded asset
    */
   async uploadReleaseAsset(id, options = {}) {
-    const { name, type, directory, data } = options;
+    const { name, type, data } = options;
     return this.execute(`upload '${name}' asset to release ${id}`, async () => {
-      const assetData = data || fs.readFileSync(directory);
       const response = await this.github.rest.repos.uploadReleaseAsset({
         owner: this.context.repo.owner,
         repo: this.context.repo.repo,
         release_id: id,
         name,
-        data: assetData,
+        data,
         headers: {
           'content-type': type || 'application/octet-stream',
           'content-length': data.length
