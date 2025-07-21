@@ -71,7 +71,19 @@ class Logger {
   debug(message, meta = {}) {
     if (!this.#allow('debug')) return;
     const logMeta = { level: 'debug', timestamp: true, ...meta };
-    this.core.info(this.#format(message, logMeta));
+    const formattedMessage = this.#format(message, logMeta);
+    if (meta.file) {
+      const params = {
+        file: meta.file,
+        startLine: meta.line || 1,
+        startColumn: meta.col || 1,
+        title: meta.title || 'Debug',
+        message: formattedMessage
+      };
+      this.core.info(formattedMessage, params);
+    } else {
+      this.core.imfo(message);
+    }
   }
 
   /**
@@ -95,7 +107,7 @@ class Logger {
       };
       this.core.error(formattedMessage, params);
     } else {
-      this.core.error(formattedMessage);
+      this.core.error(message);
     }
   }
 
@@ -109,7 +121,19 @@ class Logger {
   info(message, meta = {}) {
     if (!this.#allow('info')) return;
     const logMeta = { level: 'info', ...meta };
-    this.core.info(this.#format(message, logMeta));
+    const formattedMessage = this.#format(message, logMeta);
+    if (meta.file) {
+      const params = {
+        file: meta.file,
+        startLine: meta.line || 1,
+        startColumn: meta.col || 1,
+        title: meta.title || 'Info',
+        message: formattedMessage
+      };
+      this.core.info(formattedMessage, params);
+    } else {
+      this.core.info(message);
+    }
   }
 
   /**
@@ -123,8 +147,6 @@ class Logger {
     if (!this.#allow('warning')) return;
     const logMeta = { level: 'warning', ...meta };
     const formattedMessage = this.#format(message, logMeta);
-    console.log('DEBUG RAW:', JSON.stringify(formattedMessage));
-    console.log('DEBUG RAW MESSAGE:', JSON.stringify(message));
     if (meta.file) {
       const params = {
         file: meta.file,
@@ -135,7 +157,7 @@ class Logger {
       };
       this.core.warning(formattedMessage, params);
     } else {
-      this.core.warning(formattedMessage);
+      this.core.warning(message);
     }
   }
 }
