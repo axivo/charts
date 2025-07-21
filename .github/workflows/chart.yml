@@ -37,6 +37,9 @@ jobs:
         with:
           version: v3.17.3
 
+      - name: Setup helm linter
+        uses: helm/chart-testing-action@v2
+
       - name: Setup node
         uses: actions/setup-node@v4
         with:
@@ -52,9 +55,6 @@ jobs:
             const { Workflow } = require('./.github/actions/handlers');
             const workflow = new Workflow({ github, context, core, exec });
             await workflow.configureRepository();
-
-      - name: Setup repository charts linter
-        uses: helm/chart-testing-action@v2
 
       - name: Update repository issue labels
         uses: actions/github-script@v7
