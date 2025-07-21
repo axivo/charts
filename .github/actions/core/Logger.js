@@ -82,7 +82,7 @@ class Logger {
       };
       this.core.info(formattedMessage, params);
     } else {
-      this.core.imfo(message);
+      this.core.info(message);
     }
   }
 
