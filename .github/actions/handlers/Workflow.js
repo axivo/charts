@@ -92,11 +92,6 @@ class WorkflowHandler extends Action {
   async reportIssue() {
     return this.execute('report workflow issue', async () => {
       this.logger.info('Checking for workflow issues...');
-      if (this.config.get('issue.createLabels') && this.context.workflow === 'Chart') {
-        const message = 'Set "createLabels: false" after initial setup';
-        await this.restService.createAnnotation(message);
-        this.logger.warning(message);
-      }
       const templatePath = this.config.get('workflow.template');
       const templateContent = await this.fileService.read(templatePath);
       const issue = await this.issueService.report(

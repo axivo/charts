@@ -72,6 +72,11 @@ class LabelService extends Action {
         return [];
       }
       this.logger.info('Updating repository issue labels...');
+      if (this.context.workflow === 'Chart') {
+        const message = 'Set "createLabels: false" after initial setup';
+        await this.restService.createAnnotation(message);
+        this.logger.warning(message);
+      }
       const labelNames = Object.keys(this.config.get('issue.labels'));
       const results = await Promise.all(
         labelNames.map(async labelName => {
