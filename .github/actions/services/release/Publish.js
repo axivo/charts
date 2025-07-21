@@ -80,7 +80,7 @@ class PublishService extends Action {
         Type: chart.type,
         Version: chart.version
       };
-      return this.templateService.render(templateContent, templateContext);
+      return this.templateService.render(templateContent, templateContext, { repoUrl });
     });
   }
 
