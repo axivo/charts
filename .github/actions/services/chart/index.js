@@ -145,7 +145,12 @@ class ChartService extends Action {
       if (!charts || !charts.length) return true;
       const word = charts.length === 1 ? 'chart' : 'charts';
       this.logger.info(`Linting ${charts.length} ${word}...`);
-      await this.shellService.execute('ct', ['lint', '--charts', charts.join(','), '--skip-helm-dependencies']);
+      const result = await this.shellService.execute('ct', ['lint', '--charts', charts.join(','), '--skip-helm-dependencies'], {
+        silent: false,
+        output: true,
+        returnFullResult: true
+      });
+      this.logger.info(`DEBUG: CT command result:`, result);
       this.logger.info(`Successfully linted ${charts.length} ${word}`);
       return true;
     }, false);

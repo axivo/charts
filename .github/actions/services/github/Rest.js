@@ -272,10 +272,6 @@ class RestService extends ApiService {
         repo: this.context.repo.repo,
         tag: name
       });
-      if (!response) {
-        this.logger.info(`Release with '${name}' tag not found`);
-        return null;
-      }
       return {
         id: response.data.id,
         htmlUrl: response.data.html_url,
@@ -287,7 +283,7 @@ class RestService extends ApiService {
         draft: response.data.draft,
         prerelease: response.data.prerelease
       };
-    }, false);
+    }, false, true);
   }
 
   /**
