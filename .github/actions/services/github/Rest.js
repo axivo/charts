@@ -99,7 +99,7 @@ class RestService extends ApiService {
    */
   async createAnnotation(message, options = {}) {
     return this.execute('create annotation', async () => {
-      const { level = 'warning', status = 'completed', conclusion = 'neutral' } = options;
+      const { level = 'notice', status = 'completed', conclusion = 'neutral' } = options;
       const checkRun = await this.github.rest.checks.create({
         owner: this.context.repo.owner,
         repo: this.context.repo.repo,
