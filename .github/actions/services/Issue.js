@@ -6,8 +6,7 @@
  * @license BSD-3-Clause
  */
 const Action = require('../core/Action');
-const GraphQLService = require('./github/GraphQL');
-const RestService = require('./github/Rest');
+const GitHubService = require('./github');
 
 /**
  * Issue service for GitHub issue and label operations
@@ -25,8 +24,8 @@ class IssueService extends Action {
    */
   constructor(params) {
     super(params);
-    this.graphqlService = new GraphQLService(params);
-    this.restService = new RestService(params);
+    this.graphqlService = new GitHubService.GraphQL(params);
+    this.restService = new GitHubService.Rest(params);
   }
 
   /**
