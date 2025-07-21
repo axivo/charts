@@ -2,7 +2,7 @@
 
 <img align="right" width="250" height="250" src="https://raw.githubusercontent.com/axivo/charts/main/application/sealed-secrets/icon.png" alt="sealed-secrets" />
 
-![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square)  ![Version: 1.0.7](https://img.shields.io/badge/Version-1.0.7-informational?style=flat-square)  ![AppVersion: 2.17.2](https://img.shields.io/badge/AppVersion-2.17.2-informational?style=flat-square)
+![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square)  ![Version: 1.0.1](https://img.shields.io/badge/Version-1.0.1-informational?style=flat-square)  ![AppVersion: 2.17.2](https://img.shields.io/badge/AppVersion-2.17.2-informational?style=flat-square)
 
 ArgoCD application for the `sealed-secrets` [chart](https://github.com/bitnami-labs/sealed-secrets/blob/helm-v2.17.2/helm/sealed-secrets), deployed into AXIVO [K3s Cluster](https://github.com/axivo/k3s-cluster). Review the cluster [documentation](https://axivo.com/k3s-cluster/), for additional details. The application deployment is also compatible with a generic Kubernetes cluster.
 
@@ -27,7 +27,7 @@ $ kubectl apply -f application/sealed-secrets/application.yaml
 Alternatively, deploy using Helm directly:
 
 ```shell
-$ helm install sealed-secrets oci://ghcr.io/axivo/application/sealed-secrets:1.0.7 -n kube-system
+$ helm install sealed-secrets oci://ghcr.io/axivo/application/sealed-secrets:1.0.1 -n kube-system
 ```
 
 ### Chart Dependencies

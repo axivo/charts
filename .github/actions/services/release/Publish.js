@@ -42,39 +42,78 @@ class PublishService extends Action {
   }
 
   /**
+   * Generates release content from template
+   * 
+   * @private
+   * @param {Object} chart - Chart information
+   * @returns {Promise<string>} Generated release content
+   */
+  async #content(chart) {
+    return this.execute('generate release content', async () => {
+      this.logger.info(`Generating release content for '${chart.type}/${chart.name}' chart...`);
+      const releaseTemplate = this.config.get('repository.release.template');
+      const templateContent = await this.fileService.read(releaseTemplate);
+      const issues = await this.issueService.get({
+        name: chart.name,
+        type: chart.type
+      });
+      const tagName = this.config.get('repository.release.title')
+        .replace('{{ .Name }}', chart.name)
+        .replace('{{ .Version }}', chart.version);
+      const repoUrl = this.context.payload.repository.html_url;
+      const chartYamlSource = `${repoUrl}/blob/${tagName}/${chart.type}/${chart.name}/Chart.yaml`;
+      const templateContext = {
+        AppVersion: chart.metadata.appVersion || '',
+        Branch: this.context.payload.repository.default_branch,
+        Dependencies: (chart.metadata.dependencies || []).map(dependency => ({
+          Name: dependency.name,
+          Repository: dependency.repository,
+          Source: chartYamlSource,
+          Version: dependency.version
+        })),
+        Description: chart.metadata.description || '',
+        Icon: chart.icon ? this.config.get('repository.chart.icon') : null,
+        Issues: issues.length ? issues : null,
+        KubeVersion: chart.metadata.kubeVersion || '',
+        Name: chart.name,
+        RepoURL: repoUrl,
+        Type: chart.type,
+        Version: chart.version
+      };
+      return this.templateService.render(templateContent, templateContext);
+    });
+  }
+
+  /**
    * Creates a GitHub release for a chart
    * 
    * @private
    * @param {Object} chart - Chart information
    * @param {string} chart.name - Chart name
    * @param {string} chart.version - Chart version
+   * @param {string} chart.release - Chart release
    * @param {string} chart.type - Chart type
    * @param {string} chart.path - Path to chart package file
    * @param {Object} chart.metadata - Chart metadata
    * @param {boolean} chart.icon - Whether chart has an icon
-   * @param {string} tag - Release tag name
    * @returns {Promise<Object>} Created release information
    */
-  async #create(chart, tag) {
+  async #create(chart) {
     return this.execute('create release', async () => {
-      this.logger.info(`Processing '${tag}' repository release...`);
-      const body = await this.generateContent(chart);
-      const release = await this.restService.createRelease(
-        tag,
-        tag,
-        body
-      );
+      this.logger.info(`Processing '${chart.release}' repository release...`);
+      const content = await this.#content(chart);
+      const release = await this.restService.createRelease(chart.release, chart.release, content);
       const assetData = await this.fileService.read(chart.path);
       await this.restService.uploadReleaseAsset(release.id, {
         name: `${chart.type}.tgz`,
         type: 'application/gzip',
         data: assetData
       });
-      this.logger.info(`Successfully created '${tag}' repository release`);
+      this.logger.info(`Successfully created '${chart.release}' repository release`);
       return {
         name: chart.name,
         version: chart.version,
-        tagName: tag,
+        tagName: chart.release,
         releaseId: release.id
       };
     });
@@ -86,25 +125,42 @@ class PublishService extends Action {
    * @private
    * @param {Object} object - Package object
    * @param {string} object.source - Chart package filename
+   * @param {string} object.name - Chart name
    * @param {string} object.type - Chart type
    * @param {string} directory - Path to packages directory
-   * @returns {Promise<Object|null>} Prepared chart data or null
+   * @returns {Promise<Object|null>} Prepared chart data
    */
   async #publish(object, directory) {
-    const chartType = object.type;
-    const chartDir = path.join(this.config.get(`repository.chart.type.${chartType}`), 'chart-name');
-    const chartPath = path.join(directory, object.type, object.source);
-    const iconPath = path.join(chartDir, this.config.get('repository.chart.icon'));
-    const iconExists = await this.fileService.exists(iconPath);
-    let metadata = {};
-    return {
-      icon: iconExists,
-      metadata,
-      name: 'chart-name',
-      path: chartPath,
-      type: chartType,
-      version: '1.0.0'
-    };
+    return this.execute('prepare chart data for publishing', async () => {
+      const chartName = object.name;
+      const chartType = object.type;
+      const tagPrefix = this.config.get('repository.release.title')
+        .replace('{{ .Name }}', chartName)
+        .replace('{{ .Version }}', '');
+      const chartVersion = object.source.replace(tagPrefix, '').replace('.tgz', '');
+      const chartRelease = this.config.get('repository.release.title')
+        .replace('{{ .Name }}', chartName)
+        .replace('{{ .Version }}', chartVersion);
+      const chartDir = path.join(this.config.get(`repository.chart.type.${chartType}`), chartName);
+      const chartPath = path.join(directory, chartType, object.source);
+      const iconPath = path.join(chartDir, this.config.get('repository.chart.icon'));
+      const iconExists = await this.fileService.exists(iconPath);
+      let metadata = {};
+      const chartYamlPath = path.join(chartDir, 'Chart.yaml');
+      const chartYamlExists = await this.fileService.exists(chartYamlPath);
+      if (chartYamlExists) {
+        metadata = await this.fileService.readYaml(chartYamlPath);
+      }
+      return {
+        icon: iconExists,
+        metadata,
+        name: chartName,
+        path: chartPath,
+        release: chartRelease,
+        type: chartType,
+        version: chartVersion
+      };
+    }, false);
   }
 
   /**
@@ -200,48 +256,6 @@ class PublishService extends Action {
   }
 
   /**
-   * Generates release content from template
-   * 
-   * @param {Object} chart - Chart information
-   * @returns {Promise<string>} Generated release content
-   */
-  async generateContent(chart) {
-    return this.execute('generate release content', async () => {
-      this.logger.info(`Generating release content for '${chart.type}/${chart.name}' chart...`);
-      const releaseTemplate = this.config.get('repository.release.template');
-      const templateContent = await this.fileService.read(releaseTemplate);
-      const issues = await this.issueService.get({
-        name: chart.name,
-        type: chart.type
-      });
-      const tagName = this.config.get('repository.release.title')
-        .replace('{{ .Name }}', chart.name)
-        .replace('{{ .Version }}', chart.version);
-      const repoUrl = this.context.payload.repository.html_url;
-      const chartYamlSource = `${repoUrl}/blob/${tagName}/${chart.type}/${chart.name}/Chart.yaml`;
-      const templateContext = {
-        AppVersion: chart.metadata.appVersion || '',
-        Branch: this.context.payload.repository.default_branch,
-        Dependencies: (chart.metadata.dependencies || []).map(dependency => ({
-          Name: dependency.name,
-          Repository: dependency.repository,
-          Source: chartYamlSource,
-          Version: dependency.version
-        })),
-        Description: chart.metadata.description || '',
-        Icon: chart.icon ? this.config.get('repository.chart.icon') : null,
-        Issues: issues.length ? issues : null,
-        KubeVersion: chart.metadata.kubeVersion || '',
-        Name: chart.name,
-        RepoURL: repoUrl,
-        Type: chart.type,
-        Version: chart.version
-      };
-      return this.templateService.render(templateContent, templateContext);
-    });
-  }
-
-  /**
    * Publishes charts to OCI registry
    * 
    * @param {Array} packages - List of packaged charts
@@ -315,7 +329,7 @@ class PublishService extends Action {
           this.logger.info(`Release '${tagName}' already exists, skipping`);
           continue;
         }
-        const publish = await this.#create(chart, tagName);
+        const publish = await this.#create(chart);
         if (publish) result.push(publish);
       }
       if (result.length) {
