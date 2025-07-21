@@ -14,7 +14,7 @@ spec:
         - values.yaml
     path: application/sealed-secrets
     repoURL: https://github.com/axivo/charts.git
-    targetRevision: sealed-secrets-1.0.7
+    targetRevision: sealed-secrets-1.0.1
   syncPolicy:
     automated:
       prune: true
