@@ -392,23 +392,18 @@ class RestService extends ApiService {
    * @param {number} id - Release ID
    * @param {Object} [options={}] - Asset options
    * @param {string} options.name - Asset name
-   * @param {string} [options.type] - Asset content type
-   * @param {Buffer|string} [options.data] - Asset data (alternative to directory)
+   * @param {Buffer|string} [options.data] - Asset data
    * @returns {Promise<Object>} Uploaded asset
    */
   async uploadReleaseAsset(id, options = {}) {
-    const { name, type, data } = options;
+    const { name, data } = options;
     return this.execute(`upload '${name}' asset to release ${id}`, async () => {
       const response = await this.github.rest.repos.uploadReleaseAsset({
         owner: this.context.repo.owner,
         repo: this.context.repo.repo,
         release_id: id,
         name,
-        data,
-        headers: {
-          'content-type': type || 'application/octet-stream',
-          'content-length': data.length
-        }
+        data
       });
       return {
         id: response.data.id,
