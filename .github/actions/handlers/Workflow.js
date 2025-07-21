@@ -15,6 +15,7 @@ const GitService = require('../services/Git');
 const IssueService = require('../services/Issue');
 const LabelService = require('../services/Label');
 const ReleaseHandler = require('./release');
+const RestService = require('./github/Rest');
 const TemplateService = require('../services/Template');
 
 /**
@@ -92,8 +93,10 @@ class WorkflowHandler extends Action {
   async reportIssue() {
     return this.execute('report workflow issue', async () => {
       this.logger.info('Checking for workflow issues...');
-      if (this.config.get('issue.createLabels') === true && this.context.workflow === 'Chart') {
-        this.logger.warning('Set "createLabels: false" in config.js after initial setup, to optimize workflow performance.');
+      if (this.config.get('issue.createLabels') && this.context.workflow === 'Chart') {
+        const message = 'Set "createLabels: false" after initial setup';
+        await this.restService.createAnnotation(message);
+        this.logger.warning(message);
       }
       const templatePath = this.config.get('workflow.template');
       const templateContent = await this.fileService.read(templatePath);

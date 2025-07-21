@@ -30,40 +30,6 @@ class IssueService extends Action {
   }
 
   /**
-   * Validates if workflow has issues that warrant creating an issue
-   * 
-   * @private
-   * @param {number} id - Workflow run ID
-   * @returns {Promise<boolean>} True if issues detected
-   */
-  async #validate(id) {
-    return this.execute('validate workflow status', async () => {
-      let hasFailures = false;
-      const workflowRun = await this.restService.getWorkflowRun(id);
-      if (['cancelled', 'failure'].includes(workflowRun.conclusion)) {
-        return true;
-      }
-      const jobs = await this.restService.listJobs();
-      for (const job of jobs) {
-        if (job.steps) {
-          const failedSteps = job.steps.filter(step => step.conclusion !== 'success');
-          if (failedSteps.length) {
-            hasFailures = true;
-            break;
-          }
-        }
-      }
-      const hasWarnings = await this.execute('validate workflow warnings', async () => {
-        const logsData = await this.restService.getWorkflowRunLogs(id);
-        if (!logsData) return false;
-        const regex = /(^|:)warning:/i;
-        return regex.test(logsData);
-      }, false);
-      return hasFailures || hasWarnings;
-    }, false);
-  }
-
-  /**
    * Gets chart-specific issues since the last release
    * 
    * @param {Object} chart - Chart configuration
@@ -107,17 +73,16 @@ class IssueService extends Action {
    * Prepares and creates a workflow issue
    * 
    * @param {Object} context - GitHub Actions context
-   * @param {Object} label - Label service instance
    * @param {Object} [template={}] - Template configuration
    * @param {string} template.content - Issue template content
    * @param {Object} template.service - Template service instance
    * @returns {Promise<Object|null>} Created issue data or null on failure
    */
-  async report(context, label, template = {}) {
+  async report(context, template = {}) {
     return this.execute('report workflow issue', async () => {
       const { content, service } = template;
-      const hasIssues = await this.#validate(context.runId);
-      if (!hasIssues) return null;
+      const annotations = await this.RestService.getAnnotations();
+      if (!annotations.length) return null;
       const repoUrl = context.payload.repository.html_url;
       const isPullRequest = Boolean(context.payload.pull_request);
       const branchName = isPullRequest
@@ -134,14 +99,10 @@ class IssueService extends Action {
         RepoURL: repoUrl
       });
       if (!issueBody) return null;
-      const labelNames = this.config.get('workflow.labels');
-      if (this.config.get('issue.createLabels') && label) {
-        await Promise.all(labelNames.map(labelName => label.add(labelName)));
-      }
       return this.restService.createIssue(
         this.config.get('workflow.title'),
         issueBody,
-        labelNames
+        this.config.get('workflow.labels')
       );
     }, false);
   }
