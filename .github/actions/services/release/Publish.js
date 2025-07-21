@@ -103,11 +103,10 @@ class PublishService extends Action {
       this.logger.info(`Processing '${chart.release}' repository release...`);
       const content = await this.#content(chart);
       const release = await this.restService.createRelease(chart.release, chart.release, content);
-      const assetData = await this.fileService.read(chart.path);
+      const data = await this.fileService.read(chart.path);
       await this.restService.uploadReleaseAsset(release.id, {
         name: `${chart.type}.tgz`,
-        type: 'application/gzip',
-        data: assetData
+        data
       });
       this.logger.info(`Successfully created '${chart.release}' repository release`);
       return {
