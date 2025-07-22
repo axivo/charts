@@ -54,8 +54,8 @@ class WorkflowHandler extends Action {
     return this.execute('configure repository', async () => {
       this.logger.info('Configuring repository for workflow operations...');
       await this.gitService.configure();
-      this.core.setOutput('publish', this.publish());
       this.logger.info('Repository configuration complete');
+      this.core.setOutput('publish', this.publish());
     });
   }
 
