@@ -424,6 +424,33 @@ class RestService extends ApiService {
   }
 
   /**
+  * Updates a label in a repository
+  *
+  * @param {string} name - Label name
+  * @param {string} color - Label color (hex without #)
+  * @param {string} description - Label description
+  * @returns {Promise<Object>} Updated label
+  */
+  async updateLabel(name, color, description) {
+    return this.execute(`update '${name}' label`, async () => {
+      const response = await this.github.rest.issues.updateLabel({
+        owner: this.context.repo.owner,
+        repo: this.context.repo.repo,
+        name,
+        color,
+        description
+      });
+      this.logger.info(`Successfully updated '${name}' label`);
+      return {
+        id: response.data.id,
+        name: response.data.name,
+        color: response.data.color,
+        description: response.data.description
+      };
+    }, false, true);
+  }
+
+  /**
    * Validates context payload for specific event types
    * 
    * @returns {Object} Validation result with valid flag and reason

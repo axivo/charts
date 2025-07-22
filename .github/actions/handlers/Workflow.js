@@ -128,23 +128,11 @@ class WorkflowHandler extends Action {
    */
   async updateCharts() {
     return this.execute('update charts', async () => {
+      if (this.config.get('issue.updateLabels')) await this.labelService.update();
       this.logger.info('Starting the charts update process...');
       await this.chartHandler.process();
-      this.logger.info('Successfully completed the charts update process');
+      this.logger.info('Charts update process complete');
     });
-  }
-
-  /**
-   * Update issue labels
-   * 
-   * @returns {Promise<void>}
-   */
-  async updateLabels() {
-    return this.execute('update issue labels', async () => {
-      this.logger.info('Updating repository issue labels...');
-      await this.labelService.update();
-      this.logger.info('Repository issue labels update complete');
-    }, false);
   }
 }
 
