@@ -88,6 +88,42 @@ class RestService extends ApiService {
   }
 
   /**
+   * Creates an annotation for the current workflow run
+   * 
+   * @param {string} message - Annotation message
+   * @param {Object} [options={}] - Annotation options
+   * @param {Object} [options.level] - Annotation level (notice, warning, error)
+   * @param {Object} [options.status] - Annotation status
+   *  @param {Object} [options.conclusion] - Annotation conclusion
+   * @returns {Promise<Object>} Created check run data
+   */
+  async createAnnotation(message, options = {}) {
+    return this.execute('create annotation', async () => {
+      const { level = 'notice', status = 'completed', conclusion = 'neutral' } = options;
+      const checkRun = await this.github.rest.checks.create({
+        owner: this.context.repo.owner,
+        repo: this.context.repo.repo,
+        name: level,
+        head_sha: this.context.sha,
+        status,
+        conclusion,
+        output: {
+          title: level,
+          summary: message,
+          annotations: [{
+            path: level,
+            start_line: 1,
+            end_line: 1,
+            annotation_level: level,
+            message
+          }]
+        }
+      });
+      return checkRun.data;
+    });
+  }
+
+  /**
   * Creates a GitHub issue
   *
   * @param {string} title - Issue title
@@ -234,6 +270,40 @@ class RestService extends ApiService {
   }
 
   /**
+   * Gets annotations for the current workflow run
+   * 
+   * @returns {Promise<Array<Object>>} Array of annotations
+   */
+  async getAnnotations() {
+    return this.execute('get annotations', async () => {
+      const checkRuns = await this.github.rest.checks.listForRef({
+        owner: this.context.repo.owner,
+        repo: this.context.repo.repo,
+        ref: this.context.sha
+      });
+      const annotations = [];
+      for (const checkRun of checkRuns.data.check_runs) {
+        if (checkRun.output?.annotations_url) {
+          try {
+            const response = await this.github.request(checkRun.output.annotations_url);
+            if (response.data && response.data.length > 0) {
+              annotations.push(...response.data.map(annotation => ({
+                level: annotation.annotation_level,
+                message: annotation.message,
+                path: annotation.path,
+                line: annotation.start_line
+              })));
+            }
+          } catch (error) {
+            continue;
+          }
+        }
+      }
+      return annotations;
+    }, false);
+  }
+
+  /**
   * Gets a label from a repository
   *
   * @param {string} name - Label name
@@ -326,63 +396,6 @@ class RestService extends ApiService {
   }
 
   /**
-   * Gets workflow run data
-   * 
-   * @param {number} id - Workflow run ID
-   * @returns {Promise<Object>} Workflow run data
-   */
-  async getWorkflowRun(id) {
-    return this.execute(`get workflow run '${id}' ID`, async () => {
-      const response = await this.github.rest.actions.getWorkflowRun({
-        owner: this.context.repo.owner,
-        repo: this.context.repo.repo,
-        run_id: id
-      });
-      return {
-        id: response.data.id,
-        status: response.data.status,
-        conclusion: response.data.conclusion,
-        url: response.data.html_url,
-        createdAt: response.data.created_at,
-        updatedAt: response.data.updated_at
-      };
-    }, false);
-  }
-
-  /**
-   * Gets workflow run logs
-   * 
-   * @param {number} id - Workflow run ID
-   * @returns {Promise<string>} Workflow run logs data
-   */
-  async getWorkflowRunLogs(id) {
-    return this.execute(`get workflow run '${id}' logs`, async () => {
-      const response = await this.github.rest.actions.downloadWorkflowRunLogs({
-        owner: this.context.repo.owner,
-        repo: this.context.repo.repo,
-        run_id: parseInt(id, 10)
-      });
-      return response.data;
-    }, false, true);
-  }
-
-  /**
-   * Lists jobs for a workflow run
-   * 
-   * @returns {Promise<Array<Object>>} Array of job objects with steps
-   */
-  async listJobs() {
-    return this.execute('list jobs', async () => {
-      const response = await this.github.rest.actions.listJobsForWorkflowRun({
-        owner: this.context.repo.owner,
-        repo: this.context.repo.repo,
-        run_id: this.context.runId
-      });
-      return response?.data?.jobs || [];
-    }, false, true);
-  }
-
-  /**
    * Uploads an asset to a release
    * 
    * @param {number} id - Release ID
@@ -408,6 +421,33 @@ class RestService extends ApiService {
         size: response.data.size
       };
     });
+  }
+
+  /**
+  * Updates a label in a repository
+  *
+  * @param {string} name - Label name
+  * @param {string} color - Label color (hex without #)
+  * @param {string} description - Label description
+  * @returns {Promise<Object>} Updated label
+  */
+  async updateLabel(name, color, description) {
+    return this.execute(`update '${name}' label`, async () => {
+      const response = await this.github.rest.issues.updateLabel({
+        owner: this.context.repo.owner,
+        repo: this.context.repo.repo,
+        name,
+        color,
+        description
+      });
+      this.logger.info(`Successfully updated '${name}' label`);
+      return {
+        id: response.data.id,
+        name: response.data.name,
+        color: response.data.color,
+        description: response.data.description
+      };
+    }, false, true);
   }
 
   /**

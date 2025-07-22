@@ -54,8 +54,8 @@ class WorkflowHandler extends Action {
     return this.execute('configure repository', async () => {
       this.logger.info('Configuring repository for workflow operations...');
       await this.gitService.configure();
-      this.core.setOutput('publish', this.publish());
       this.logger.info('Repository configuration complete');
+      this.core.setOutput('publish', this.publish());
     });
   }
 
@@ -92,14 +92,10 @@ class WorkflowHandler extends Action {
   async reportIssue() {
     return this.execute('report workflow issue', async () => {
       this.logger.info('Checking for workflow issues...');
-      if (this.config.get('issue.createLabels') === true && this.context.workflow === 'Chart') {
-        this.logger.warning('Set "createLabels: false" in config.js after initial setup, to optimize workflow performance.');
-      }
       const templatePath = this.config.get('workflow.template');
       const templateContent = await this.fileService.read(templatePath);
       const issue = await this.issueService.report(
         this.context,
-        this.labelService,
         {
           content: templateContent,
           service: this.templateService
@@ -132,23 +128,11 @@ class WorkflowHandler extends Action {
    */
   async updateCharts() {
     return this.execute('update charts', async () => {
+      if (this.config.get('issue.updateLabels')) await this.labelService.update();
       this.logger.info('Starting the charts update process...');
       await this.chartHandler.process();
-      this.logger.info('Successfully completed the charts update process');
+      this.logger.info('Charts update process complete');
     });
-  }
-
-  /**
-   * Update issue labels
-   * 
-   * @returns {Promise<void>}
-   */
-  async updateLabels() {
-    return this.execute('update issue labels', async () => {
-      this.logger.info('Updating repository issue labels...');
-      await this.labelService.update();
-      this.logger.info('Repository issue labels update complete');
-    }, false);
   }
 }
 
