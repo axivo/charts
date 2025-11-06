@@ -2,9 +2,9 @@
 
 <img align="right" width="250" height="250" src="https://raw.githubusercontent.com/axivo/charts/main/application/sealed-secrets/icon.png" alt="sealed-secrets" />
 
-![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square)  ![Version: 1.0.8](https://img.shields.io/badge/Version-1.0.8-informational?style=flat-square)  ![AppVersion: 2.17.7](https://img.shields.io/badge/AppVersion-2.17.7-informational?style=flat-square)
+![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square)  ![Version: 1.0.8](https://img.shields.io/badge/Version-1.0.8-informational?style=flat-square)  ![AppVersion: 2.17.9](https://img.shields.io/badge/AppVersion-2.17.9-informational?style=flat-square)
 
-ArgoCD application for the `sealed-secrets` [chart](https://github.com/bitnami-labs/sealed-secrets/blob/helm-v2.17.7/helm/sealed-secrets), deployed into AXIVO [K3s Cluster](https://github.com/axivo/k3s-cluster). Review the cluster [documentation](https://axivo.com/k3s-cluster/), for additional details. The application deployment is also compatible with a generic Kubernetes cluster.
+ArgoCD application for the `sealed-secrets` [chart](https://github.com/bitnami-labs/sealed-secrets/blob/helm-v2.17.9/helm/sealed-secrets), deployed into AXIVO [K3s Cluster](https://github.com/axivo/k3s-cluster). Review the cluster [documentation](https://axivo.com/k3s-cluster/), for additional details. The application deployment is also compatible with a generic Kubernetes cluster.
 
 ### Prerequisites
 
@@ -36,7 +36,7 @@ See the chart dependencies, listed below.
 
 | Repository | Name | Version |
 |------------|------|---------|
-| https://bitnami-labs.github.io/sealed-secrets | sealed-secrets | 2.17.7 |
+| https://bitnami-labs.github.io/sealed-secrets | sealed-secrets | 2.17.9 |
 | oci://ghcr.io/axivo/charts/library | common | 1.0.0 |
 
 ### Chart Values
