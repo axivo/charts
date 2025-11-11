@@ -42,7 +42,7 @@ jobs:
       - name: Setup helm
         uses: azure/setup-helm@v4
         with:
-          version: v3.17.3
+          version: v3.19.1
 
       - name: Setup helm linter
         uses: helm/chart-testing-action@v2
