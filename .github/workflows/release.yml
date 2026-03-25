@@ -101,7 +101,7 @@ jobs:
 
       - name: Deploy pages
         if: steps.workflow.outputs.publish == 'true'
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5
 
       - name: Report workflow issue
         uses: actions/github-script@v7
