@@ -91,7 +91,7 @@ jobs:
       - name: Configure pages
         if: steps.workflow.outputs.publish == 'true'
         id: pages
-        uses: actions/configure-pages@v5
+        uses: actions/configure-pages@v6
 
       - name: Upload pages artifact
         if: steps.workflow.outputs.publish == 'true'
